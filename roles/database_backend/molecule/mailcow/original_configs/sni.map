@@ -1,0 +1,13 @@
+mail.boone-schulz.de /etc/ssl/mail/mail.boone-schulz.de/key.pem /etc/ssl/mail/mail.boone-schulz.de/cert.pem
+autoconfig.boonapart.de /etc/ssl/mail/mail.boone-schulz.de/key.pem /etc/ssl/mail/mail.boone-schulz.de/cert.pem
+autoconfig.boone-schulz.de /etc/ssl/mail/mail.boone-schulz.de/key.pem /etc/ssl/mail/mail.boone-schulz.de/cert.pem
+autoconfig.haus-der-schmerzen.de /etc/ssl/mail/mail.boone-schulz.de/key.pem /etc/ssl/mail/mail.boone-schulz.de/cert.pem
+autoconfig.jasminte.de /etc/ssl/mail/mail.boone-schulz.de/key.pem /etc/ssl/mail/mail.boone-schulz.de/cert.pem
+autodiscover.boonapart.de /etc/ssl/mail/mail.boone-schulz.de/key.pem /etc/ssl/mail/mail.boone-schulz.de/cert.pem
+autodiscover.boone-schulz.de /etc/ssl/mail/mail.boone-schulz.de/key.pem /etc/ssl/mail/mail.boone-schulz.de/cert.pem
+autodiscover.haus-der-schmerzen.de /etc/ssl/mail/mail.boone-schulz.de/key.pem /etc/ssl/mail/mail.boone-schulz.de/cert.pem
+autodiscover.jasminte.de /etc/ssl/mail/mail.boone-schulz.de/key.pem /etc/ssl/mail/mail.boone-schulz.de/cert.pem
+autodiscover.obwandner.de /etc/ssl/mail/mail.boone-schulz.de/key.pem /etc/ssl/mail/mail.boone-schulz.de/cert.pem
+mail.haus-der-schmerzen.de /etc/ssl/mail/mail.boone-schulz.de/key.pem /etc/ssl/mail/mail.boone-schulz.de/cert.pem
+mail.jasminte.de /etc/ssl/mail/mail.boone-schulz.de/key.pem /etc/ssl/mail/mail.boone-schulz.de/cert.pem
+mail.zweit-hirn.de /etc/ssl/mail/mail.boone-schulz.de/key.pem /etc/ssl/mail/mail.boone-schulz.de/cert.pem

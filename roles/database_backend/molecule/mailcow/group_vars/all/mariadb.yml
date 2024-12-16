@@ -1,0 +1,29 @@
+---
+
+# mariadb_use_external_repo: true
+# mariadb_version: 10.5
+
+mariadb_root_password: Y5FZfKXzCeOWGf4kBOiFSp6Il
+
+mariadb_root_password_update: true
+
+mariadb_databases:
+  - name: postfix
+
+mariadb_users:
+  - name: postfix
+    host: "%"
+    password: postfix
+    priv: "postfix.*:ALL"
+    encrypted: false
+
+mariadb_config_mysqld:
+  bind-address: 0.0.0.0
+  socket: "{{ mariadb_socket }}"
+  skip-external-locking:
+  skip-name-resolve: 1
+  performance_schema: 1
+  expire_logs_days: 2
+  max_connections: 20
+
+...

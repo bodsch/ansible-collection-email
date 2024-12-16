@@ -1,0 +1,72 @@
+---
+
+- name: ensure the target directory exists
+  ansible.builtin.file:
+    path: "{{ database_backend_directory }}"
+    mode: "0755"
+
+- name: copy database schema file
+  ansible.builtin.copy:
+    src: "files/{{ database_backend_type }}.sql"
+    dest: "{{ database_backend_directory }}/{{ database_backend_type }}.sql"
+    mode: "0644"
+
+- name: find database schema script
+  ansible.builtin.find:
+    paths: "{{ database_backend_directory }}"
+    file_type: file
+    patterns:
+      - "*.sql"
+    recurse: true
+  register: found_schema
+
+- name: define database schema file
+  ansible.builtin.set_fact:
+    database_backend_schema: "{{ found_schema | bodsch.email.database_schema(database_backend_type) | first }}"
+  when:
+    - found_schema.files is defined
+    - found_schema.files | count > 0
+
+- name: ensure table_schema is created
+  bodsch.core.mysql_schema:
+    login_host: "{{ database_backend_database.host }}"
+    login_user: "{{ database_backend_database.username }}"
+    login_password: "{{ database_backend_database.password }}"
+    table_schema: "{{ database_backend_database.database }}"
+  # no_log: true
+  register: database_backend_schema
+  when:
+    - database_backend_database is defined
+    - database_backend_database.host is defined
+    - database_backend_database.username is defined
+    - database_backend_database.password is defined
+    - database_backend_database.database is defined
+
+- name: database
+  when:
+    - database_backend_schema is defined
+    - database_backend_schema.exists is defined
+    - not database_backend_schema.exists
+  block:
+    - name: import database schema
+      community.mysql.mysql_db:
+        state: import
+        login_host: "{{ database_backend_database.host }}"
+        login_user: "{{ database_backend_database.user }}"
+        login_password: "{{ database_backend_database.password }}"
+        config_file: ''
+        name: "{{ database_backend_database.database }}"
+        target: "{{ database_backend_schema }}"
+      # no_log: true
+      register: database_backend_schema
+
+    - name: error
+      ansible.builtin.fail:
+        msg:
+          - "ERROR: {{ database_backend_schema }}"
+      when:
+        - database_backend_schema is defined
+        - database_backend_schema.failed is defined
+        - database_backend_schema.failed
+
+...

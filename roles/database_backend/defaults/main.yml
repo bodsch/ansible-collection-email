@@ -1,0 +1,15 @@
+---
+
+database_backend_directory: /usr/share/email_database_backend
+
+database_backend_type: "" # mailcow | postfixadmin
+
+database_backend_database:
+  host: ""
+  username: ""
+  password: ""
+  database: ""
+
+
+
+...

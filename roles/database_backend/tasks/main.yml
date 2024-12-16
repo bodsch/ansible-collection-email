@@ -1,0 +1,27 @@
+---
+
+- name: prepare
+  ansible.builtin.include_tasks: prepare.yml
+  tags:
+    - icingadb
+    - icingadb_install
+    - icingadb_configure
+
+- name: installation
+  ansible.builtin.include_tasks: installation.yml
+  tags:
+    - icingadb
+    - icingadb_install
+
+- name: configure
+  ansible.builtin.include_tasks: configure.yml
+  tags:
+    - icingadb
+    - icingadb_configure
+
+- name: service
+  ansible.builtin.include_tasks: service.yml
+  tags:
+    - icingadb
+    - icingadb_service
+...

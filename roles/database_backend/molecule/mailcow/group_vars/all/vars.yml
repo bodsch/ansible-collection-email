@@ -1,0 +1,18 @@
+---
+
+_database_defaults: &DATABASE_DEFAULTS
+  username: postfix
+  password: postfix
+  host: database
+  dbname: postfix
+
+database_backend_type: "mailcow" # mailcow | postfixadmin
+
+database_backend_database:
+  <<: *DATABASE_DEFAULTS
+  # host: ""
+  # username: ""
+  # password: ""
+  # database: ""
+
+...
