@@ -30,8 +30,8 @@ class PostfixValidateCerts(object):
           runner
         """
         res = dict(
-            failed = False,
-            msg = "module init"
+            failed=False,
+            msg="module init"
         )
 
         if isinstance(self.config, dict):
@@ -89,13 +89,13 @@ class PostfixValidateCerts(object):
 
         # self.module.log(f"res     : {res}")
 
-        result_failed  = {k: v for k, v in res.items() if v.get('failed', True)}
+        result_failed = {k: v for k, v in res.items() if v.get('failed', True)}
 
         # find all failed and define our variable
         failed = (len(result_failed) > 0)
 
         final_result = dict(
-            failed = failed
+            failed=failed
         )
 
         if failed:
@@ -112,19 +112,19 @@ class PostfixValidateCerts(object):
 
         if file_name.startswith("$"):
             result = dict(
-                failed = False,
-                msg = f"{file_name} is an variable."
+                failed=False,
+                msg=f"{file_name} is an variable."
             )
         else:
             if not os.path.exists(file_name):
                 result = dict(
-                    failed = True,
-                    msg = f"file {file_name} does not exists."
+                    failed=True,
+                    msg=f"file {file_name} does not exists."
                 )
             else:
                 result = dict(
-                    failed = False,
-                    msg = f"file {file_name} exists."
+                    failed=False,
+                    msg=f"file {file_name} exists."
                 )
 
         return result
@@ -143,7 +143,7 @@ def main():
             ),
             config=dict(
                 type=dict,
-                required= True
+                required=True
             )
         ),
         supports_check_mode=True,

@@ -6,7 +6,7 @@
 
 from __future__ import absolute_import, division, print_function
 import os
-import hashlib
+# import hashlib
 import json
 
 from ansible.module_utils.basic import AnsibleModule
@@ -101,9 +101,9 @@ class PostfixMaps(object):
         _state, _changed, _failed, state, changed, failed = results(self.module, result_state)
 
         result = dict(
-            changed = _changed,
-            failed = _failed,
-            result = result_state
+            changed=_changed,
+            failed=_failed,
+            result=result_state
         )
 
         return result
@@ -187,7 +187,6 @@ class PostfixMaps(object):
     def map_data(self, data):
         """
             input: [{'virtual': 'webmaster@yourdomain.com', 'alias': 'personal_email@gmail.com'}, {'virtual': 'billandbob@yourdomain.com', 'alias': 'bill@gmail.com, bob@gmail.com'}, {'virtual': 'ann-katrin@yourdomain.com', 'aliases': ['ann@gmail.com', 'bob@gmail.com', 'katrin@gmail.com']}]
-
             output: {{'webmaster@yourdomain.com': 'personal_email@gmail.com'}, {'billandbob@yourdomain.com': 'bill@gmail.com, bob@gmail.com'}, {'ann-katrin@yourdomain.com': 'ann@gmail.com, bob@gmail.com, katrin@gmail.com'}}
         """
         key = None
@@ -213,8 +212,8 @@ class PostfixMaps(object):
         rc, out, err = self.module.run_command(cmd, check_rc=True)
 
         if rc != 0:
-            _out  = out.split("\n")
-            _err  = err.split("\n")
+            _out = out.split("\n")
+            _err = err.split("\n")
             self.module.log(f" - out: '{out}' ({type(out)}) - {len(out)}")
             self.module.log(f" - err: '{err}' ({type(err)}) - {len(err)}")
             self.module.log(f" - out: '{_out}'")
@@ -233,8 +232,8 @@ def main():
     """
     args = dict(
         maps=dict(
-            required = True,
-            type = "list",
+            required=True,
+            type="list",
         )
     )
 

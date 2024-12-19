@@ -34,8 +34,8 @@ class FilterModule(object):
         """
         msg = "failed, because ... tree"
         result = dict(
-            valid = False,
-            msg = msg
+            valid=False,
+            msg=msg
         )
 
         return result
@@ -88,7 +88,7 @@ class FilterModule(object):
         # display.v(f"=result: {result}")
         return result
 
-    def sasl_data(self, data, mxlookup = False):
+    def sasl_data(self, data, mxlookup=False):
         """
             enhance sasl data for valid relay host and port
         """
@@ -112,7 +112,7 @@ class FilterModule(object):
 
         return data
 
-    def relay_data(self, data, sasl_data, mxlookup = False):
+    def relay_data(self, data, sasl_data, mxlookup=False):
         """
             enhance sasl data for valid relay host and port
         """
