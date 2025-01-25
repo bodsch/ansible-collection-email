@@ -1,0 +1,18 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+# {{ ansible_managed }}
+
+[Unit]
+Description         = prune unused container images, and only if older than 10 days.
+Requires            = docker.service
+After               = docker.service
+
+[Service]
+Type                = oneshot
+WorkingDirectory    = /tmp
+User                = root
+Group               = root
+
+ExecStart           = /usr/bin/docker image prune --all --force --filter "until=240h"
+
+[Install]
+WantedBy            = multi-user.target

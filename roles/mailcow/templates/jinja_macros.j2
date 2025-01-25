@@ -1,0 +1,17 @@
+{#
+  List of macros for dovecot configurations
+#}
+{% set print = self %}
+
+{% macro include_paramaters(data, include_type="include_try") %}
+  {% set attr_include_type = ["include", "include_try"] %}
+  {% for incl in dovecot_auth.includes %}
+    {% if incl is defined and not incl == None %}
+      {% if incl[0] != "#" %}
+!{{ include_type }} auth.d/{{ incl }}
+      {% else %}
+# !{{ include_type }} auth.d/{{ incl }}
+      {% endif %}
+    {% endif %}
+  {% endfor -%}
+{% endmacro %}

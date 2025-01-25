@@ -1,0 +1,123 @@
+---
+
+# - name: propagate mailcow.zip
+#   become: true
+#   ansible.builtin.copy:
+#     src: "{{ mailcow_local_tmp_directory }}/mailcow_{{ mailcow_version }}.zip"
+#     dest: /tmp
+#     mode: "0640"
+#   register: transfer_mailcow_archive
+#
+# - name: d
+#   debug:
+#     msg: "{{ transfer_mailcow_archive }}"
+
+- name: detect cloned mailcow repository - {{ mailcow_tmp_directory }}/update.sh
+  ansible.builtin.stat:
+    path: "{{ mailcow_tmp_directory }}/update.sh"
+  register: stat_mailcow_repository
+
+- name: detect installed mailcow updater
+  ansible.builtin.stat:
+    path: "{{ mailcow_install_path }}/{{ mailcow_version }}/update.sh"
+  register: stat_mailcow_installed
+
+- name: detect activated mailcow binary
+  ansible.builtin.stat:
+    path: "{{ mailcow_install_path }}/active/update.sh"
+  register: stat_mailcow_activated
+
+- name: d
+  debug:
+    msg:
+      - "running_in_check_mode  : {{ running_in_check_mode }}"
+      - "stat_mailcow_repository: {{ stat_mailcow_repository.stat.exists | default('false') }}"
+      - "stat_mailcow_installed : {{ stat_mailcow_installed.stat.exists | default('false') }}"
+      - "stat_mailcow_activated : {{ stat_mailcow_activated.stat.exists | default('false') }}"
+      - "                       : {{ not stat_mailcow_activated.stat | bodsch.core.linked_version(mailcow_install_path, mailcow_version) }}"
+      - "{{ stat_mailcow_activated.stat | bodsch.core.linked_version(mailcow_install_path, mailcow_version) }}"
+
+- name: install mailcow
+  when:
+    - not running_in_check_mode
+    - stat_mailcow_repository.stat is defined
+    - stat_mailcow_repository.stat.exists | default('false')
+    - stat_mailcow_installed.stat is defined
+    - not stat_mailcow_installed.stat.exists | default('false')
+  block:
+    - name: install mailcow from git repository
+      become: true
+      ansible.builtin.copy:
+        src: "{{ mailcow_tmp_directory }}"
+        dest: "{{ mailcow_install_path }}"
+        mode: "0640"
+        remote_src: true
+      register: transfer_mailcow_archive
+
+    # - name: d
+    #   debug:
+    #     msg: "{{ transfer_mailcow_archive }}"
+
+- name: activate version {{ mailcow_version }}
+  when:
+    - not running_in_check_mode
+    - stat_mailcow_activated.stat is defined
+    - not stat_mailcow_activated.stat.exists | default('false') or
+      (not stat_mailcow_activated.stat | bodsch.core.linked_version(mailcow_install_path, mailcow_version))
+  block:
+    - name: create link from {{ mailcow_version }} to active
+      ansible.builtin.file:
+        src: "{{ mailcow_install_path }}/{{ mailcow_version }}"
+        dest: "{{ mailcow_install_path }}/active"
+        state: link
+        force: true
+        follow: false
+      notify:
+        - restart mailcow
+
+  rescue:
+    - name: delete install directory
+      ansible.builtin.file:
+        path: "{{ mailcow_install_path }}/{{ mailcow_version }}"
+        state: absent
+
+    - name: exit with fail
+      ansible.builtin.fail:
+        msg: A serious error occurred during the installation of the binary.
+
+
+- name: systemd
+  when:
+    - ansible_service_mgr | lower == "systemd"
+    - not running_in_check_mode
+  block:
+    - name: create systemd service unit
+      ansible.builtin.template:
+        src: "init/systemd/mailcow.service.j2"
+        dest: "{{ systemd_lib_directory }}/mailcow.service"
+        owner: root
+        group: root
+        mode: 0644
+      notify:
+        - daemon-reload
+
+    - name: create systemd service unit docker-cleanup.service
+      ansible.builtin.template:
+        src: "init/systemd/docker-cleanup.service.j2"
+        dest: "{{ systemd_lib_directory }}/docker-cleanup.service"
+        owner: root
+        group: root
+        mode: 0644
+      notify:
+        - daemon-reload
+
+    - name: create systemd timer unit docker-cleanup.timer
+      ansible.builtin.template:
+        src: "init/systemd/docker-cleanup.timer.j2"
+        dest: "{{ systemd_lib_directory }}/docker-cleanup.timer"
+        owner: root
+        group: root
+        mode: 0644
+      notify:
+        - daemon-reload
+...

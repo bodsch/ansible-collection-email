@@ -1,0 +1,39 @@
+---
+
+- name: daemon-reload
+  ansible.builtin.systemd:
+    daemon_reload: true
+    force: true
+  notify: restart mailcow
+  when:
+    - ansible_service_mgr == 'systemd'
+
+- name: validate config
+  ansible.builtin.command: /bin/true
+  register: mailcow_valid_config
+  when:
+    - not running_in_check_mode
+    - mailcow_config is defined
+    - mailcow_config.changed is defined
+    - mailcow_config.changed
+  notify:
+    - restart mailcow
+
+- name: reload mailcow
+  become: true
+  ansible.builtin.service:
+    name: mailcow
+    state: reloaded
+  when:
+    - not running_in_check_mode
+
+- name: restart mailcow
+  become: true
+  ansible.builtin.service:
+    name: mailcow
+    state: restarted
+  when:
+    - not running_in_check_mode
+    - mailcow_valid_config is defined
+    - mailcow_valid_config.rc is defined
+    - mailcow_valid_config.rc == 0

@@ -65,6 +65,7 @@ jobs:
         collection_role:
           - postfix
           - dovecot
+          - mailcow
 
     steps:
       - name: check out the codebase.

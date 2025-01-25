@@ -1,0 +1,101 @@
+---
+
+- name: create download directory
+  become: false
+  delegate_to: localhost
+  ansible.builtin.file:
+    path: "{{ mailcow_local_tmp_directory }}"
+    state: directory
+    mode: "0750"
+
+- name: clone mailcow repository to ansible-host
+  when:
+    - mailcow_source == "git"
+  block:
+    - name: create temp directory
+      ansible.builtin.file:
+        path: "{{ mailcow_tmp_directory }}"
+        state: directory
+        mode: "0750"
+
+    - name: clone git sources to temp directory
+      become: false
+      ansible.builtin.git:
+        repo: "{{ mailcow_git.repository }}"
+        version: "{{ mailcow_git.version | default('master') }}"
+        dest: "{{ mailcow_tmp_directory }}"
+        depth: 1
+        update: true
+        force: true
+
+    # - name: create local temp directory
+    #   become: false
+    #   delegate_to: localhost
+    #   ansible.builtin.file:
+    #     path: "{{ mailcow_local_tmp_directory }}/mailcow/{{ mailcow_version }}"
+    #     state: directory
+    #     mode: "0750"
+    #
+    # - name: download git sources to local directory
+    #   become: false
+    #   delegate_to: localhost
+    #   ansible.builtin.git:
+    #     repo: "{{ mailcow_git.repository }}"
+    #     version: "{{ mailcow_git.version | default('master') }}"
+    #     dest: "{{ mailcow_local_tmp_directory }}/mailcow/{{ mailcow_version }}"
+    #     depth: 1
+    #     update: true
+    #     force: true
+    #
+    # - name: create transfer archive
+    #   become: false
+    #   delegate_to: localhost
+    #   community.general.archive:
+    #     path: "{{ mailcow_local_tmp_directory }}/mailcow/{{ mailcow_version }}"
+    #     dest: "{{ mailcow_local_tmp_directory }}/mailcow_{{ mailcow_version }}.zip"
+    #     mode: "0660"
+    #     remove: false
+    #     format: zip
+    #     exclude_path:
+    #       - "{{ mailcow_local_tmp_directory }}/mailcow/{{ mailcow_version }}/.git*"
+    #     exclusion_patterns:
+    #       - "{{ mailcow_local_tmp_directory }}/mailcow/{{ mailcow_version }}/.git*"
+    #       - "{{ mailcow_local_tmp_directory }}/mailcow/{{ mailcow_version }}/.env"
+    #   no_log: true
+    #
+    # - name: define mailcow download directory
+    #   ansible.builtin.set_fact:
+    #     mailcow_download_directory: "/tmp/mailcow/{{ mailcow_version }}"
+
+# - name: download mailcow archive to ansible-host
+#   when:
+#     - mailcow_source == "archive"
+#   block:
+#     - name: detect the downloaded mailcow archive
+#       become: false
+#       delegate_to: localhost
+#       run_once: true
+#       ansible.builtin.stat:
+#         path: "{{ mailcow_local_tmp_directory }}/mailcow_{{ mailcow_version }}.zip"
+#       register: stat_mailcow_archive
+#
+#     - name: download mailcow archive
+#       when:
+#         - stat_mailcow_archive.stat is defined
+#         - not stat_mailcow_archive.stat.exists | default('false')
+#       become: false
+#       delegate_to: localhost
+#       run_once: true
+#       ansible.builtin.get_url:
+#         url: "{{ mailcow_archive }}"
+#         dest: "{{ mailcow_local_tmp_directory }}/mailcow_{{ mailcow_version }}.zip"
+#         mode: "0640"
+#       register: _download_archive
+#       until: _download_archive is succeeded
+#       retries: 5
+#       delay: 2
+#       check_mode: false
+#
+#     - name: define mailcow download directory
+#       ansible.builtin.set_fact:
+#         mailcow_download_directory: "/tmp/mailcow/{{ mailcow_version }}"

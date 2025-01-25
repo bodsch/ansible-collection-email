@@ -1,0 +1,40 @@
+---
+
+galaxy_info:
+  role_name: mailcow
+
+  author: Bodo Schulz
+  description: ansible role to install and configure dockerized mailcow
+
+  license: Apache
+  min_ansible_version: "2.9"
+
+  platforms:
+    - name: ArchLinux
+    - name: Debian
+      versions:
+        # 10
+        - buster
+        # 11
+        - bullseye
+        # 12
+        - bookworm
+    - name: Ubuntu
+      versions:
+        # 20.04 LTS (Focal Fossa)
+        - focal
+        # 22.04 LTS (Jammy Jellyfish)
+        - jammy
+        # 22.10 (Kinetic Kudu)
+        # - kinetic
+        # 23.04 (Lunar Lobster)
+        # - lunar
+
+  galaxy_tags:
+    - mail
+    - mailcow
+    - mailserver
+
+dependencies: []
+  # role: docker / collection bodsch.docker
+...

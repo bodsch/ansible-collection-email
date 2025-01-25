@@ -1,0 +1,26 @@
+---
+
+- name: create mailcow.conf
+  ansible.builtin.template:
+    force: true
+    src: mailcow.conf.j2
+    dest: "{{ mailcow_install_path }}/active/mailcow.conf"
+    owner: root
+    group: root
+    mode: "0640"
+  register: mailcow_config
+  notify:
+    - validate config
+  when:
+    - not running_in_check_mode
+
+- name: enable mailcow.conf
+  ansible.builtin.file:
+    src: "{{ mailcow_install_path }}/active/mailcow.conf"
+    dest: "{{ mailcow_install_path }}/active/.env"
+    state: link
+    force: true
+    follow: false
+  when:
+    - not running_in_check_mode
+...

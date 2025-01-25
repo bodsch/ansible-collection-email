@@ -1,0 +1,13 @@
+---
+
+- name: start and enable service
+  ansible.builtin.service:
+    name: mailcow
+    state: "{{ mailcow_service.state | default('started') }}"
+    enabled: "{{ mailcow_service.enabled | default('true') | bool }}"
+  tags:
+    - configuration
+    - mailcow
+    - mailcow-service
+
+...
