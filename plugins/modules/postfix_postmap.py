@@ -75,9 +75,9 @@ class PostfixPostmap(object):
 
         if not os.path.exists(self.filename):
             return dict(
-                failed = True,
-                changed = False,
-                msg = f"file {self.file_name} does not exists."
+                failed=True,
+                changed=False,
+                msg=f"file {self.file_name} does not exists."
             )
 
         args = []
@@ -118,13 +118,13 @@ def main():
     module = AnsibleModule(
         argument_spec=dict(
             map_type=dict(
-                type = "str",
-                choices = ["btree", "cdb", "dbm", "fail", "lmdb", "sdbm"],
-                default = "lmdb",
+                type="str",
+                choices=["btree", "cdb", "dbm", "fail", "lmdb", "sdbm"],
+                default="lmdb",
             ),
             filename=dict(
-                required = True,
-                type = "str"
+                required=True,
+                type="str"
             ),
         ),
         supports_check_mode=True,

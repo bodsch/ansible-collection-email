@@ -97,11 +97,11 @@ class PostfixCheck(object):
             self.module.log(f" - err: '{err}' ({type(err)}) - {len(err)}")
 
             if isinstance(out, list):
-                _out  = out.split("\n")
+                _out = out.split("\n")
             else:
                 _out = out
             if isinstance(err, list):
-                _err  = err.split("\n")
+                _err = err.split("\n")
             else:
                 _err = err
 
