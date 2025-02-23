@@ -69,6 +69,12 @@
       ansible.builtin.fail:
         msg: A serious error occurred during the installation of the binary.
 
+- name: create compose-update file
+  ansible.builtin.copy:
+    src: compose-update.py
+    dest: "{{ mailcow_install_path }}/active/compose-update.py"
+    mode: "0770"
+
 - name: merge mailcow configuration between defaults and custom
   ansible.builtin.set_fact:
     mailcow_config: "{{ mailcow_default_config | combine(mailcow_config, recursive=True) }}"

@@ -8,62 +8,113 @@
 import os
 import re
 import requests
+import argparse
 
-def get_registry_and_image(image_name):
-    if "/" in image_name and not image_name.startswith("library/"):
-        registry, image = image_name.split("/", 1)
-        if "." in registry or ":" in registry:  # Custom registry detected
-            return registry, image
-    return "registry.hub.docker.com", image_name  # Default to Docker Hub
 
-def get_latest_tag(image_name, registry, current_tag):
-    if registry == "registry.hub.docker.com":
-        url = f"https://registry.hub.docker.com/v2/repositories/{image_name}/tags/"
-    else:
-        url = f"https://{registry}/v2/{image_name}/tags/list"
+class ComposeUpdate():
+    """
+    """
 
-    response = requests.get(url)
-    if response.status_code == 200:
+    def __init__(self):
+        """
+        """
+        self.args = {}
+        self.parse_args()
+
+        self.compose_directory = self.args.directory
+
+    def run(self):
+        """
+        """
+        if os.path.exists(self.compose_directory):
+            self.parse_docker_images(self.compose_directory)
+
+    def parse_args(self):
+        """
+            parse arguments
+        """
+        p = argparse.ArgumentParser(description='create mariadb backups')
+
+        p.add_argument(
+            "-d",
+            "--directory",
+            required=False,
+            help="backup directory to store",
+            default=os.getcwd()  # "docker-compose.d"
+        )
+
+        self.args = p.parse_args()
+
+    def get_registry_and_image(self, image_name):
+        if "/" in image_name and not image_name.startswith("library/"):
+            registry, image = image_name.split("/", 1)
+            if "." in registry or ":" in registry:  # Custom registry detected
+                return registry, image
+        return "registry.hub.docker.com", image_name  # Default to Docker Hub
+
+    def get_latest_tag(self, image_name, registry, current_tag):
         if registry == "registry.hub.docker.com":
-            tags = response.json().get("results", [])
-            filtered_tags = [tag["name"] for tag in tags if not re.search(r"snapshot|nightly|dev", tag["name"], re.IGNORECASE)]
-            if current_tag == "latest" or not re.match(r"^\d+", current_tag):
-                return current_tag  # Behalte latest oder nicht-numerische Tags
-            numeric_tags = [t for t in filtered_tags if re.match(r"^\d+(\.\d+)*(-\w+)?$", t)]
-            if numeric_tags:
-                return sorted(numeric_tags, key=lambda v: list(map(int, re.findall(r"\d+", v))), reverse=True)[0]
+            url = f"https://registry.hub.docker.com/v2/repositories/{image_name}/tags/"
         else:
-            filtered_tags = [tag for tag in response.json().get("tags", []) if not re.search(r"snapshot|nightly|dev", tag, re.IGNORECASE)]
-            if current_tag == "latest" or not re.match(r"^\d+", current_tag):
-                return current_tag  # Behalte latest oder nicht-numerische Tags
-            numeric_tags = [t for t in filtered_tags if re.match(r"^\d+(\.\d+)*(-\w+)?$", t)]
-            if numeric_tags:
-                return sorted(numeric_tags, key=lambda v: list(map(int, re.findall(r"\d+", v))), reverse=True)[0]
-    return current_tag
+            url = f"https://{registry}/v2/{image_name}/tags/list"
 
-def parse_docker_images(directory):
-    image_pattern = re.compile(r"image:\s*(\S+)")
+        response = requests.get(url)
+        if response.status_code == 200:
+            if registry == "registry.hub.docker.com":
+                tags = response.json().get("results", [])
+                filtered_tags = [tag["name"] for tag in tags if not re.search(
+                    r"snapshot|nightly|dev", tag["name"], re.IGNORECASE)]
+                if current_tag == "latest" or not re.match(r"^\d+", current_tag):
+                    return current_tag  # Behalte latest oder nicht-numerische Tags
+                numeric_tags = [t for t in filtered_tags if re.match(
+                    r"^\d+(\.\d+)*(-\w+)?$", t)]
+                if numeric_tags:
+                    return sorted(numeric_tags, key=lambda v: list(map(int, re.findall(r"\d+", v))), reverse=True)[0]
+            else:
+                filtered_tags = [tag for tag in response.json().get(
+                    "tags", []) if not re.search(r"snapshot|nightly|dev", tag, re.IGNORECASE)]
+                if current_tag == "latest" or not re.match(r"^\d+", current_tag):
+                    return current_tag  # Behalte latest oder nicht-numerische Tags
+                numeric_tags = [t for t in filtered_tags if re.match(
+                    r"^\d+(\.\d+)*(-\w+)?$", t)]
+                if numeric_tags:
+                    return sorted(numeric_tags, key=lambda v: list(map(int, re.findall(r"\d+", v))), reverse=True)[0]
+        return current_tag
 
-    if not os.path.isdir(directory):
-        print(f"Verzeichnis {directory} existiert nicht.")
-        return
+    def parse_docker_images(self, directory):
+        """
+        """
+        image_pattern = re.compile(r"image:\s*(\S+)")
 
-    for filename in os.listdir(directory):
-        filepath = os.path.join(directory, filename)
+        if not os.path.isdir(directory):
+            print(f"Verzeichnis {directory} existiert nicht.")
+            return
 
-        if not os.path.isfile(filepath):
-            continue
+        for filename in os.listdir(directory):
+            filepath = os.path.join(directory, filename)
 
-        with open(filepath, "r", encoding="utf-8") as file:
-            for line in file:
-                match = image_pattern.search(line)
-                if match:
-                    image = match.group(1)
-                    registry, image_name = get_registry_and_image(image)
-                    image_name, tag = (image_name.split(":", 1) if ":" in image_name else (image_name, "latest"))
-                    latest_tag = get_latest_tag(image_name, registry, tag)
-                    update_available = latest_tag != tag
-                    print(f"Datei: {filename} -> Registry: {registry}, Image: {image_name}, Aktuelle Version: {tag}, Neueste Version: {latest_tag}, Update verfügbar: {update_available}")
+            if not os.path.isfile(filepath):
+                continue
 
-if __name__ == "__main__":
-    parse_docker_images("docker-compose.d")
+            with open(filepath, "r", encoding="utf-8") as file:
+                for line in file:
+                    match = image_pattern.search(line)
+                    if match:
+                        image = match.group(1)
+                        registry, image_name = self.get_registry_and_image(
+                            image)
+                        image_name, tag = (image_name.split(
+                            ":", 1) if ":" in image_name else (image_name, "latest"))
+                        latest_tag = self.get_latest_tag(
+                            image_name, registry, tag)
+                        update_available = latest_tag != tag
+                        print(
+                            f"Datei: {filename} -> Registry: {registry}, Image: {image_name}, Aktuelle Version: {tag}, Neueste Version: {latest_tag}, Update verfügbar: {update_available}")
+
+
+if __name__ == '__main__':
+    """
+    """
+    r = ComposeUpdate()
+
+    r.run()
