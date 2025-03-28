@@ -3,51 +3,92 @@
 - name: detect cloned mailcow repository - {{ mailcow_tmp_directory }}/update.sh
   ansible.builtin.stat:
     path: "{{ mailcow_tmp_directory }}/update.sh"
+  no_log: true
   register: stat_mailcow_repository
 
 - name: detect installed mailcow updater
   ansible.builtin.stat:
     path: "{{ mailcow_install_path }}/{{ mailcow_version }}/update.sh"
+  no_log: true
   register: stat_mailcow_installed
 
 - name: detect activated mailcow binary
   ansible.builtin.stat:
     path: "{{ mailcow_install_path }}/active/update.sh"
+  no_log: true
   register: stat_mailcow_activated
 
-# - name: d
-#   debug:
-#     msg:
-#       - "running_in_check_mode  : {{ running_in_check_mode }}"
-#       - "stat_mailcow_repository: {{ stat_mailcow_repository.stat.exists | default('false') }}"
-#       - "stat_mailcow_installed : {{ stat_mailcow_installed.stat.exists | default('false') }}"
-#       - "stat_mailcow_activated : {{ stat_mailcow_activated.stat.exists | default('false') }}"
-#       - "                       : {{ not stat_mailcow_activated.stat | bodsch.core.linked_version(mailcow_install_path, mailcow_version) }}"
-#       - "{{ stat_mailcow_activated.stat | bodsch.core.linked_version(mailcow_install_path, mailcow_version) }}"
+- name: obtain git information from download path
+  become: true
+  bodsch.scm.git_info:
+    work_dir: "{{ mailcow_tmp_directory }}"
+  register: mailcow_repository_information
+  when:
+    - stat_mailcow_repository.stat.exists | default('false')
+
+- name: obtain git information from install path
+  become: true
+  bodsch.scm.git_info:
+    work_dir: "{{ mailcow_install_path }}/active"
+  register: mailcow_installed_information
+  when:
+    - stat_mailcow_installed.stat is defined
+    - stat_mailcow_installed.stat.exists | default('false')
+
+- name: merge mailcow configuration between defaults and custom
+  ansible.builtin.set_fact:
+    _mailcow_repo_cloned: "{{ stat_mailcow_repository.stat.exists | default('false') }}"
+    _mailcow_installed: "{{ stat_mailcow_installed.stat.exists | default('false') }}"
+    _mailcow_activated: "{{ stat_mailcow_activated.stat.exists | default('false') }}"
+    _mailcow_new_version: "{{ not mailcow_repository_information.git.commit_short_id | default('left') ==
+        mailcow_installed_information.git.commit_short_id | default('right') }}"
 
 - name: install mailcow
   when:
     - not running_in_check_mode
-    - stat_mailcow_repository.stat is defined
-    - stat_mailcow_repository.stat.exists | default('false')
-    - stat_mailcow_installed.stat is defined
-    - not stat_mailcow_installed.stat.exists | default('false')
+    - _mailcow_repo_cloned
+    - _mailcow_new_version
+  become: true
   block:
     - name: install mailcow from git repository
-      become: true
       ansible.builtin.copy:
         src: "{{ mailcow_tmp_directory }}"
         dest: "{{ mailcow_install_path }}"
         mode: "0640"
         remote_src: true
-      register: transfer_mailcow_archive
+
+    - name: create data/web/inc directory
+      ansible.builtin.file:
+        path: "{{ mailcow_install_path }}/{{ mailcow_version }}/data/web/inc"
+        state: directory
+        mode: "0750"
+
+    - name: obtain git information for installed mailcow
+      bodsch.scm.git_info:
+        work_dir: "{{ mailcow_install_path }}/{{ mailcow_version }}"
+      register: mailcow_information
+
+    - name: create app_info.inc.php
+      ansible.builtin.template:
+        force: true
+        src: data/web/inc/app_info.inc.php.j2
+        dest: "{{ mailcow_install_path }}/{{ mailcow_version }}/data/web/inc/app_info.inc.php"
+        owner: root
+        group: root
+        mode: "0640"
+
+    - name: create custom fact file
+      bodsch.core.facts:
+        name: mailcow
+        facts:
+          version: "{{ mailcow_information.git.version }}"
+          commit: "{{ mailcow_information.git.commit_short_id }}"
+          commit_date: "{{ mailcow_information.git.commit_date }}"
 
 - name: activate version {{ mailcow_version }}
   when:
     - not running_in_check_mode
-    - stat_mailcow_activated.stat is defined
-    - not stat_mailcow_activated.stat.exists | default('false') or
-      (not stat_mailcow_activated.stat | bodsch.core.linked_version(mailcow_install_path, mailcow_version))
+    - not _mailcow_activated
   block:
     - name: create link from {{ mailcow_version }} to active
       ansible.builtin.file:
@@ -63,6 +104,11 @@
     - name: delete install directory
       ansible.builtin.file:
         path: "{{ mailcow_install_path }}/{{ mailcow_version }}"
+        state: absent
+
+    - name: delete mailcow facts
+      ansible.builtin.file:
+        path: /etc/ansible/facts.d/mailcow.fact
         state: absent
 
     - name: exit with fail
@@ -118,4 +164,5 @@
         mode: "0644"
       notify:
         - daemon-reload
+
 ...

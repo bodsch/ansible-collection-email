@@ -1,6 +1,8 @@
 ---
 
 - name: create download directory
+  when:
+    - not mailcow_source == "git"
   become: false
   delegate_to: localhost
   ansible.builtin.file:
@@ -27,3 +29,5 @@
         depth: 1
         update: true
         force: true
+      no_log: true
+      register: mailcow_repository_changed

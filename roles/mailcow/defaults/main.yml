@@ -6,7 +6,7 @@ mailcow_source: git
 
 mailcow_git:
   repository: 'https://github.com/bodsch/mailcow-dockerized.git'
-  version: feature/full-disable-of-sogo
+  version: master
 
 mailcow_install_path: "/var/lib/mailcow"
 

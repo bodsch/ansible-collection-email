@@ -1,0 +1,13 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+<?php
+  // {{ ansible_managed }}
+  $MAILCOW_GIT_VERSION="{{ mailcow_information.git.version }}";
+  $MAILCOW_LAST_GIT_VERSION="";
+  $MAILCOW_GIT_OWNER="mailcow";
+  $MAILCOW_GIT_REPO="mailcow-dockerized";
+  $MAILCOW_GIT_URL="{{ mailcow_git.repository }}";
+  $MAILCOW_GIT_COMMIT="{{ mailcow_information.git.commit_id }}";
+  $MAILCOW_GIT_COMMIT_DATE="{{ mailcow_information.git.commit_date }}";
+  $MAILCOW_BRANCH="{{ mailcow_git.version }}";
+  $MAILCOW_UPDATEDAT="{{ now(utc=true).timestamp() | int }}";
+?>

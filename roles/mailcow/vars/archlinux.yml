@@ -3,5 +3,6 @@
 mailcow_dependencies:
   - docker-compose
   - python-ruamel-yaml
+  - python-git
 
 ...

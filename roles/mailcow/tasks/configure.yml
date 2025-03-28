@@ -34,7 +34,7 @@
     owner: root
     group: root
     mode: "0640"
-  register: mailcow_config
+  # register: mailcow_config
   notify:
     - restart mailcow
   when:
@@ -61,5 +61,6 @@
       ssl_ca: "{{ mailcow_tls_certificate.source_files.ca | default(omit) }}"
       ssl_dh: "{{ mailcow_tls_certificate.source_files.dh | default(omit) }}"
     destination: "{{ mailcow_install_path }}/active/data/assets/ssl/"
+
 
 ...
