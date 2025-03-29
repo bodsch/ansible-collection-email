@@ -1,7 +1,7 @@
 
 # Ansible Role:  `bodsch.email.mailcow`
 
-Ansible role to install and configure mailcow on various linux systems.
+Ansible role to install and configure [mailcow](https://github.com/mailcow/mailcow-dockerized) on various linux systems.
 
 ## usage 
 
@@ -11,14 +11,21 @@ mailcow_version: latest
 mailcow_source: git
 
 mailcow_git:
-  repository: 'https://github.com/bodsch/mailcow-dockerized.git'
-  version: feature/full-disable-of-sogo
+  repository: https://github.com/mailcow/mailcow-dockerized
+  version: master
 
-mailcow_install_path: "/var/lib/mailcow"
+mailcow_install_path: "/opt/mailcow"
 
-mailcow_service:
-  state: stopped
-  enabled: false
+mailcow_services:
+  mailcow:
+    state: stopped
+    enabled: false
+  mailcow-config:
+    state: stopped
+    enabled: true
+  mailcow-pull:
+    state: stopped
+    enabled: true
 
 mailcow_config:
   hostname: "{{ inventory_hostname }}"

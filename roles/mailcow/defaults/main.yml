@@ -8,11 +8,18 @@ mailcow_git:
   repository: 'https://github.com/bodsch/mailcow-dockerized.git'
   version: master
 
-mailcow_install_path: "/var/lib/mailcow"
+mailcow_install_path: "/opt/mailcow"
 
-mailcow_service:
-  state: started
-  enabled: true
+mailcow_services:
+  mailcow:
+    state: stopped
+    enabled: false
+  mailcow-config:
+    state: stopped
+    enabled: true
+  mailcow-pull:
+    state: stopped
+    enabled: true
 
 mailcow_config: {}
   # hostname: "{{ inventory_hostname }}"

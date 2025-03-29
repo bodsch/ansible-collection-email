@@ -18,7 +18,7 @@
   no_log: true
   register: stat_mailcow_activated
 
-- name: obtain git information from download path
+- name: obtain git information from download path ({{ mailcow_tmp_directory }})
   become: true
   bodsch.scm.git_info:
     work_dir: "{{ mailcow_tmp_directory }}"
@@ -26,7 +26,7 @@
   when:
     - stat_mailcow_repository.stat.exists | default('false')
 
-- name: obtain git information from install path
+- name: obtain git information from install path ({{ mailcow_install_path }}/active)
   become: true
   bodsch.scm.git_info:
     work_dir: "{{ mailcow_install_path }}/active"
@@ -35,13 +35,14 @@
     - stat_mailcow_installed.stat is defined
     - stat_mailcow_installed.stat.exists | default('false')
 
-- name: merge mailcow configuration between defaults and custom
+- name: define fact variables
   ansible.builtin.set_fact:
     _mailcow_repo_cloned: "{{ stat_mailcow_repository.stat.exists | default('false') }}"
     _mailcow_installed: "{{ stat_mailcow_installed.stat.exists | default('false') }}"
     _mailcow_activated: "{{ stat_mailcow_activated.stat.exists | default('false') }}"
     _mailcow_new_version: "{{ not mailcow_repository_information.git.commit_short_id | default('left') ==
         mailcow_installed_information.git.commit_short_id | default('right') }}"
+    _mailcow_information: "{{ mailcow_installed_information.git }}"
 
 - name: install mailcow
   when:
@@ -68,6 +69,10 @@
         work_dir: "{{ mailcow_install_path }}/{{ mailcow_version }}"
       register: mailcow_information
 
+    - name: define fact variable
+      ansible.builtin.set_fact:
+        _mailcow_information: "{{ mailcow_information.git }}"
+
     - name: create app_info.inc.php
       ansible.builtin.template:
         force: true
@@ -81,9 +86,9 @@
       bodsch.core.facts:
         name: mailcow
         facts:
-          version: "{{ mailcow_information.git.version }}"
-          commit: "{{ mailcow_information.git.commit_short_id }}"
-          commit_date: "{{ mailcow_information.git.commit_date }}"
+          version: "{{ _mailcow_information.version }}"
+          commit: "{{ _mailcow_information.commit_short_id }}"
+          commit_date: "{{ _mailcow_information.commit_date }}"
 
 - name: activate version {{ mailcow_version }}
   when:

@@ -144,7 +144,7 @@ def test_service_running_and_enabled(host, get_vars):
     """
     service_name = "mailcow"
 
-    mailcow_service = get_vars.get("mailcow_service")
+    mailcow_service = get_vars.get("mailcow_services", {}).get(service_name, False)
 
     service = host.service(service_name)
     if mailcow_service.get("state") == "started":
@@ -168,7 +168,7 @@ def test_listening_socket(host, get_vars):
         "tcp://0.0.0.0:995",
     ]
 
-    mailcow_service = get_vars.get("mailcow_service")
+    mailcow_service = get_vars.get("mailcow_services", {}).get("mailcow", False)
 
     for spec in listen:
         socket = host.socket(spec)

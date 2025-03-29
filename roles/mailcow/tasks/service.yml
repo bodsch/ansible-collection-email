@@ -3,7 +3,7 @@
 - name: enable service mailcow-config
   ansible.builtin.service:
     name: mailcow-config
-    enabled: "{{ mailcow_service.enabled | default('true') | bool }}"
+    enabled: "{{ mailcow_services['mailcow-config'].enabled | default('true') | bool }}"
   tags:
     - mailcow
     - mailcow-service
@@ -11,7 +11,7 @@
 - name: enable service mailcow-pull
   ansible.builtin.service:
     name: mailcow-pull
-    enabled: "{{ mailcow_service.enabled | default('true') | bool }}"
+    enabled: "{{ mailcow_services['mailcow-pull'].enabled | default('true') | bool }}"
   tags:
     - mailcow
     - mailcow-service
@@ -19,8 +19,8 @@
 - name: start and enable service mailcow
   ansible.builtin.service:
     name: mailcow
-    state: "{{ mailcow_service.state | default('started') }}"
-    enabled: "{{ mailcow_service.enabled | default('true') | bool }}"
+    state: "{{ mailcow_services.mailcow.state | default('started') }}"
+    enabled: "{{ mailcow_services.mailcow.enabled | default('true') | bool }}"
   tags:
     - mailcow
     - mailcow-service

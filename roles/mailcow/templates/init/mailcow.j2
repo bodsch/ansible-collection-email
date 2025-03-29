@@ -1,9 +1,14 @@
 #jinja2: trim_blocks: True, lstrip_blocks: True
 # {{ ansible_managed }}
+{% set _version = "unknown" %}
+{% if _mailcow_information is defined %}
+{% set _version = _mailcow_information.version %}
+{% endif %}
 {% set _networks =  mailcow_compose_networks | bodsch.email.mailcow_compose_active() %}
-{% set _services =  mailcow_compose_services | bodsch.email.mailcow_compose_active() %}
+{% set _services =  mailcow_compose_services | bodsch.email.mailcow_compose_active(_version) %}
 {% set _volumes =  mailcow_compose_volumes | bodsch.email.mailcow_compose_active() %}
 {% set _files = _networks + _services + _volumes %}
+MAILCOW_VERSION={{ _version }}
 
 OPTIONS_CONFIG=" \
   --env-file {{ mailcow_install_path }}/active/mailcow.conf \
