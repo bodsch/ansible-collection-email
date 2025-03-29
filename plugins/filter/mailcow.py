@@ -52,13 +52,12 @@ class FilterModule(object):
             # https://mailcow.email/posts/2025/release-2025-01/
             # With 2025-01 SOLR is saying arrivederci to mailcow.
             # It will be replaced with Flatcurve instead, which is not using a seperate container like SOLR and is directly integrated into the Dovecot Core.
-            compare = self.version_compare(git_version,'2025-01', '>=')
+            compare = self.version_compare(git_version, '2025-01', '>=')
             if compare:
                 import re
-                result = [x for x in result if not re.search(rf".*solr.*", x)]
+                result = [x for x in result if not re.search(r".*solr.*", x)]
 
         return result
-
 
     def version_compare(self, value, version, compare_operator='eq'):
         ''' Perform a version comparison on a value '''
