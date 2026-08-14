@@ -1,5 +1,6 @@
 # python 3 headers, required if submitting to Ansible
-from __future__ import (absolute_import, division, print_function)
+from __future__ import absolute_import, division, print_function
+
 __metaclass__ = type
 
 from ansible.utils.display import Display
@@ -8,21 +9,19 @@ display = Display()
 
 
 class FilterModule(object):
-    """
-    """
+    """ """
 
     def filters(self):
         return {
-            'postfix_map_data': self.postfix_map_data,
-            'valid_list_data': self.valid_list_data,
-            'sasl_data': self.sasl_data,
-            'relay_data': self.relay_data,
+            "postfix_map_data": self.postfix_map_data,
+            "valid_list_data": self.valid_list_data,
+            "sasl_data": self.sasl_data,
+            "relay_data": self.relay_data,
         }
 
     def postfix_map_data(self, data):
-        """
-        """
-        # display.v(f"postfix_map_data({data})")
+        """ """
+        # display.v(f"bodsch.email::postfix_map_data({data})")
 
         key = None
         values = None
@@ -37,8 +36,7 @@ class FilterModule(object):
         return key, values
 
     def valid_list_data(self, data, valid_entries):
-        """
-        """
+        """ """
         result = []
 
         if isinstance(data, list):
@@ -51,7 +49,7 @@ class FilterModule(object):
 
     def sasl_data(self, data, mxlookup=False):
         """
-            enhance sasl data for valid relay host and port
+        enhance sasl data for valid relay host and port
         """
         if isinstance(data, dict):
             username = data.get("username", None)
@@ -75,7 +73,7 @@ class FilterModule(object):
 
     def relay_data(self, data, sasl_data, mxlookup=False):
         """
-            enhance relay data for valid relay host and port
+        enhance relay data for valid relay host and port
         """
         result = None
 
@@ -84,12 +82,19 @@ class FilterModule(object):
             host = data.get("host", None)
             port = data.get("port", None)
 
-            sasl = {k: v for data in sasl_data for k, v in data.items() if data.get("username") == username}
+            sasl = {
+                k: v
+                for data in sasl_data
+                for k, v in data.items()
+                if data.get("username") == username
+            }
 
             if len(sasl) == 0:
 
                 data["error"] = True
-                data["msg"] = f"The user name '{username}' is not present in the SASL configuration."
+                data["msg"] = (
+                    f"The user name '{username}' is not present in the SASL configuration."
+                )
 
                 result = data
 

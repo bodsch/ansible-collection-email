@@ -1,6 +1,7 @@
 # python 3 headers, required if submitting to Ansible
 
-from __future__ import (absolute_import, division, print_function)
+from __future__ import absolute_import, division, print_function
+
 __metaclass__ = type
 
 from ansible.utils.display import Display
@@ -10,26 +11,25 @@ display = Display()
 
 class FilterModule(object):
     """
-      ansible filter
+    ansible filter
     """
 
     def filters(self):
         return {
-            'config_value': self.config_value,
-            'database_connection': self.database_connection,
+            "config_value": self.config_value,
+            "database_connection": self.database_connection,
         }
 
     def config_value(self, data, default=None):
-        """
-        """
-        # display.v(f"config_value({data}, {default})")
+        """ """
+        # display.v(f"bodsch.email::config_value({data}, {default})")
 
         result = None
 
         if type(data) is None:
             result = False
         elif type(data) is bool:
-            result = 'yes' if data else 'no'
+            result = "yes" if data else "no"
         else:
             result = data
 
@@ -37,9 +37,8 @@ class FilterModule(object):
         return result
 
     def database_connection(self, data):
-        """
-        """
-        # display.v(f"database_connection({data})")
+        """ """
+        # display.v(f"bodsch.email::database_connection({data})")
 
         result = ""
 

@@ -8,6 +8,8 @@ from __future__ import absolute_import, division, print_function
 
 from ansible.module_utils.basic import AnsibleModule
 
+# ----------------------------------------------------------------------
+
 DOCUMENTATION = r"""
 ---
 module: postfix_newaliases
@@ -36,22 +38,23 @@ RETURN = r"""
 
 class PostfixNewaliases(object):
     """
-      Main Class
+    Main Class
     """
+
     module = None
 
     def __init__(self, module):
         """
-          Initialize all needed Variables
+        Initialize all needed Variables
         """
         self.module = module
 
-        self._newaliases = module.get_bin_path('newaliases', True)
+        self._newaliases = module.get_bin_path("newaliases", True)
         self.alias_database = module.params.get("alias_database")
 
     def run(self):
         """
-          runner
+        runner
         """
         result = dict(
             rc=127,
@@ -69,19 +72,18 @@ class PostfixNewaliases(object):
         rc, out, err = self._exec(args)
 
         if rc == 0:
-            result['failed'] = False
-            result['changed'] = True
-            result['msg'] = out
+            result["failed"] = False
+            result["changed"] = True
+            result["msg"] = out
         else:
-            result['failed'] = True
-            result['changed'] = False
-            result['msg'] = err
+            result["failed"] = True
+            result["changed"] = False
+            result["msg"] = err
 
         return result
 
     def _exec(self, cmd):
-        """
-        """
+        """ """
         rc, out, err = self.module.run_command(cmd, check_rc=True)
 
         return rc, out, err
@@ -112,7 +114,7 @@ def main():
 
 
 # import module snippets
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
 """

@@ -2,7 +2,7 @@
 
 postfix_inet:
   interfaces:
-    - "{{ ansible_default_ipv4.address }}"
+    - "{{ ansible_facts.default_ipv4.address }}"
 
 postfix_aliases:
   - root: you@yourdomain.org
@@ -100,7 +100,7 @@ postfix_sender:
     - pattern: 'pflogsumm@yourdomain.org'
       result: 'DUNNO'
     - pattern: '*'
-      result: "smtp:{{ ansible_lo['ipv4']['address'] }}:1025"
+      result: "smtp:{{ ansible_facts.lo['ipv4']['address'] }}:1025"
 
 postfix_recipient:
   canonical_maps_files: ""
@@ -114,7 +114,7 @@ postfix_transport:
     - pattern: 'root@yourdomain.org'
       result: ':'
     - pattern: '*'
-      result: "smtp:{{ ansible_lo['ipv4']['address'] }}:1025"
+      result: "smtp:{{ ansible_facts.lo['ipv4']['address'] }}:1025"
 
 postfix_postscreen:
   dnsbl_sites:

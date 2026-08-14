@@ -12,7 +12,7 @@ dovecot_defaults_config:
     - "*"
     - "::"
   base_dir: /run/dovecot/
-  instance_name: "{{ ansible_fqdn }}"
+  instance_name: "{{ ansible_facts.fqdn }}"
   login_greeting: "Dovecot ready."
   login_trusted_networks: []
   login_access_sockets: []

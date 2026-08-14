@@ -5,33 +5,50 @@
 # Apache (see LICENSE or https://opensource.org/licenses/Apache-2.0)
 
 from __future__ import absolute_import, print_function
-import shutil
-import os
+
 # import grp
 # import pwd
 import hashlib
+import os
+import shutil
 
 # from ansible.module_utils import distro
 from ansible.module_utils.basic import AnsibleModule
 
-__metaclass__ = type
+# ----------------------------------------------------------------------
 
-ANSIBLE_METADATA = {
-    'metadata_version': '0.1',
-    'status': ['preview'],
-    'supported_by': 'community'
-}
+
+DOCUMENTATION = r"""
+---
+module: mailcow_tls_certificates
+author: Bodo 'bodsch' Schulz <bodo@boone-schulz.de>
+version_added: 1.0.0
+
+short_description: TBD
+description:
+    - TBD
+
+"""
+
+EXAMPLES = r"""
+"""
+
+RETURN = r"""
+"""
+
+# ----------------------------------------------------------------------
 
 
 class MailcowTLSCerts(object):
     """
-        Main Class
+    Main Class
     """
+
     module = None
 
     def __init__(self, module):
         """
-          Initialize all needed Variables
+        Initialize all needed Variables
         """
         self.module = module
         self.source = module.params.get("source")
@@ -61,8 +78,7 @@ class MailcowTLSCerts(object):
     #     )
 
     def run(self):
-        """
-        """
+        """ """
         failed = False
         changed = False
         msg = "module init."
@@ -70,24 +86,20 @@ class MailcowTLSCerts(object):
         verify_sources, msg = self.verify_source_files()
 
         if not verify_sources:
-            return dict(
-                changed=False,
-                failed=verify_sources,
-                msg=msg
-            )
+            return dict(changed=False, failed=verify_sources, msg=msg)
 
         if len(self.destination) == 0:
             return dict(
                 changed=False,
                 failed=True,
-                msg="The destination directory was not properly defined!"
+                msg="The destination directory was not properly defined!",
             )
 
         result = self.create_destination_directory()
 
-        if not result.get('failed', False):
+        if not result.get("failed", False):
             """
-                cert file
+            cert file
             """
             changed, failed = self.copy_file(source=self.ssl_cert, dest="cert.pem")
             changed, failed = self.copy_file(source=self.ssl_key, dest="key.pem")
@@ -99,15 +111,10 @@ class MailcowTLSCerts(object):
             else:
                 msg = "The certificate files are up to date."
 
-        return dict(
-            failed=failed,
-            changed=changed,
-            msg=msg
-        )
+        return dict(failed=failed, changed=changed, msg=msg)
 
     def verify_source_files(self):
-        """
-        """
+        """ """
         missing = []
 
         if len(self.ssl_files) < 3:
@@ -121,7 +128,10 @@ class MailcowTLSCerts(object):
                 missing.append("dh")
 
         if len(missing) > 0:
-            return False, f"The source files were not specified completely! The following files are missing: {', '.join(missing)}"
+            return (
+                False,
+                f"The source files were not specified completely! The following files are missing: {', '.join(missing)}",
+            )
 
         for f in self.ssl_files:
             if not os.path.exists(f):
@@ -133,13 +143,12 @@ class MailcowTLSCerts(object):
         return True, ""
 
     def create_destination_directory(self):
-        """
-        """
+        """ """
         if os.path.isdir(self.destination):
             return dict(
                 failed=False,
                 changed=False,
-                msg=f"Directory {self.destination} already exists."
+                msg=f"Directory {self.destination} already exists.",
             )
 
         # Create the directory
@@ -149,24 +158,15 @@ class MailcowTLSCerts(object):
 
             # shutil.chown(self.destination, self.owner, self.group)
 
-            return dict(
-                failed=False,
-                changed=True,
-                msg=msg
-            )
+            return dict(failed=False, changed=True, msg=msg)
 
         except OSError as error:
             msg = f"Directory '{self.destination}' can not be created. ({error})"
 
-            return dict(
-                failed=True,
-                changed=False,
-                msg=msg
-            )
+            return dict(failed=True, changed=False, msg=msg)
 
     def copy_files(self):
-        """
-        """
+        """ """
         changed = False
         failed = False
 
@@ -195,8 +195,7 @@ class MailcowTLSCerts(object):
         return changed, failed
 
     def copy_file(self, source, dest=None):
-        """
-        """
+        """ """
         changed = False
         failed = False
 
@@ -216,8 +215,7 @@ class MailcowTLSCerts(object):
         return changed, failed
 
     def verify(self, source_file, destination_file):
-        """
-        """
+        """ """
         # self.module.log(msg=f"verify({source_file} : {destination_file})")
         s_checksum = None
         d_checksum = None
@@ -236,32 +234,26 @@ class MailcowTLSCerts(object):
             return False
 
     def __create_checksum_file(self, filename):
-        """
-        """
+        """ """
         with open(filename, "r") as d:
-            _data = d.read().rstrip('\n')
+            _data = d.read().rstrip("\n")
             return self.__checksum(_data)
 
     def __checksum(self, plaintext):
-        """
-        """
-        _bytes = plaintext.encode('utf-8')
+        """ """
+        _bytes = plaintext.encode("utf-8")
         _hash = hashlib.sha256(_bytes)
         return _hash.hexdigest()
 
 
 def main():
-    """
-    """
+    """ """
     specs = dict(
         source=dict(
             required=True,
-            type='dict',
+            type="dict",
         ),
-        destination=dict(
-            required=True,
-            type='path'
-        ),
+        destination=dict(required=True, type="path"),
     )
 
     module = AnsibleModule(
@@ -278,5 +270,5 @@ def main():
 
 
 # import module snippets
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

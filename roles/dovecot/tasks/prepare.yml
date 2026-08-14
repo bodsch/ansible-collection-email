@@ -8,29 +8,25 @@
         - "vars"
       files:
         # eg. debian-10 / ubuntu-20 / centos-8 / oraclelinux-8
-        - "{{ ansible_distribution | lower }}-{{ ansible_distribution_major_version }}.yml"
+        - "{{ ansible_facts.distribution | lower }}-{{ ansible_facts.distribution_major_version }}.yml"
         # eg. archlinux-systemd / archlinux-openrc
-        - "{{ ansible_distribution | lower }}-{{ ansible_service_mgr | lower }}.yml"
+        - "{{ ansible_facts.distribution | lower }}-{{ ansible_facts.service_mgr | lower }}.yml"
         # eg. debian / ubuntu / centos / oraclelinux
-        - "{{ ansible_distribution | lower }}.yml"
+        - "{{ ansible_facts.distribution | lower }}.yml"
         # eg. redhat / debian
-        - "{{ ansible_os_family | lower }}.yml"
+        - "{{ ansible_facts.os_family | lower }}.yml"
         # artixlinux
-        - "{{ ansible_os_family | lower | replace(' ', '') }}.yml"
+        - "{{ ansible_facts.os_family | lower | replace(' ', '') }}.yml"
         # artixlinux-openrc
-        - "{{ ansible_distribution | lower | replace(' ', '') }}-{{ ansible_service_mgr | lower }}.yml"
+        - "{{ ansible_facts.distribution | lower | replace(' ', '') }}-{{ ansible_facts.service_mgr | lower }}.yml"
         - default.yml
       skip: true
 
 - name: detect docker environment
   ansible.builtin.set_fact:
     is_docker_guest: "{{
-      ansible_virtualization_role | default('host') == 'guest' and
-      ansible_virtualization_type | default('none') == 'docker' }}"
-
-# - name: update package cache
-#   ansible.builtin.package:
-#     update_cache: true
+      ansible_facts.virtualization_role | default('host') == 'guest' and
+      ansible_facts.virtualization_type | default('none') == 'docker' }}"
 
 - name: install dependencies
   ansible.builtin.package:
@@ -38,58 +34,5 @@
     state: present
   when:
     - dovecot_dependencies | default([]) | count > 0
-
-- name: user and group handling
-  when:
-    - dovecot_virtual_user.name != "root"
-  block:
-    - name: create dovecot virtual user group
-      ansible.builtin.group:
-        name: "{{ dovecot_virtual_user.name }}"
-        state: present
-        system: false
-        gid: "{{ dovecot_virtual_user.gid }}"
-
-    - name: create dovecot virtual user
-      ansible.builtin.user:
-        name: "{{ dovecot_virtual_user.name }}"
-        groups: "{{ dovecot_virtual_user.name }}"
-        append: true
-        shell: /usr/sbin/nologin
-        system: false
-        uid: "{{ dovecot_virtual_user.uid }}"
-        createhome: true
-        home: "{{ dovecot_virtual_user.home }}"
-
-- name: gathering facts now
-  ansible.builtin.setup:
-
-- name: merge dovecot configuration between defaults and custom
-  ansible.builtin.set_fact:
-    dovecot_config: "{{ dovecot_defaults_config | combine(dovecot_config, recursive=True) }}"
-    dovecot_auth: "{{ dovecot_defaults_auth | combine(dovecot_auth, recursive=True) }}"
-    dovecot_director: "{{ dovecot_defaults_director | combine(dovecot_director, recursive=True) }}"
-    dovecot_logging: "{{ dovecot_defaults_logging | combine(dovecot_logging, recursive=True) }}"
-    dovecot_mail: "{{ dovecot_defaults_mail | combine(dovecot_mail, recursive=True) }}"
-    dovecot_master: "{{ dovecot_defaults_master | combine(dovecot_master, recursive=True) }}"
-    dovecot_ssl: "{{ dovecot_defaults_ssl | combine(dovecot_ssl, recursive=True) }}"
-    dovecot_tcpwrapper: "{{ dovecot_defaults_tcpwrapper | combine(dovecot_tcpwrapper, recursive=True) }}"
-    dovecot_lda: "{{ dovecot_defaults_lda | combine(dovecot_lda, recursive=True) }}"
-    dovecot_mailboxes: "{{ dovecot_defaults_mailboxes | combine(dovecot_mailboxes, recursive=True) }}"
-    dovecot_imap: "{{ dovecot_defaults_imap | combine(dovecot_imap, recursive=True) }}"
-    dovecot_lmtp: "{{ dovecot_defaults_lmtp | combine(dovecot_lmtp, recursive=True) }}"
-    dovecot_managesieve: "{{ dovecot_defaults_managesieve | combine(dovecot_managesieve, recursive=True) }}"
-    dovecot_pop3: "{{ dovecot_defaults_pop3 | combine(dovecot_pop3, recursive=True) }}"
-    dovecot_submission: "{{ dovecot_defaults_submission | combine(dovecot_submission, recursive=True) }}"
-    dovecot_acl: "{{ dovecot_defaults_acl | combine(dovecot_acl, recursive=True) }}"
-    dovecot_plugin: "{{ dovecot_defaults_plugin | combine(dovecot_plugin, recursive=True) }}"
-    dovecot_quota: "{{ dovecot_defaults_quota | combine(dovecot_quota, recursive=True) }}"
-    dovecot_sieve_extprograms: "{{ dovecot_defaults_sieve_extprograms | combine(dovecot_sieve_extprograms, recursive=True) }}"
-    dovecot_sieve: "{{ dovecot_defaults_sieve | combine(dovecot_sieve, recursive=True) }}"
-    dovecot_authentications: "{{ dovecot_defaults_authentications | combine(dovecot_authentications, recursive=True) }}"
-    dovecot_dict_auth: "{{ dovecot_defaults_dict_auth | combine(dovecot_dict_auth, recursive=True) }}"
-    dovecot_dict_sql: "{{ dovecot_defaults_dict_sql | combine(dovecot_dict_sql, recursive=True) }}"
-    dovecot_ldap: "{{ dovecot_defaults_ldap | combine(dovecot_ldap, recursive=True) }}"
-    dovecot_sql: "{{ dovecot_defaults_sql | combine(dovecot_sql, recursive=True) }}"
 
 ...

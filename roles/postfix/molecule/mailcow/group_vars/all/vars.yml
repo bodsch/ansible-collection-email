@@ -2,7 +2,7 @@
 
 postfix_inet:
   interfaces:
-    - "{{ ansible_default_ipv4.address }}"
+    - "{{ ansible_facts.default_ipv4.address }}"
 
 postfix_smtpd:
   banner: "$myhostname ESMTP $mail_name"

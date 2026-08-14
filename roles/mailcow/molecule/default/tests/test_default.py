@@ -1,16 +1,14 @@
+import json
+import os
 
+import pytest
+import testinfra.utils.ansible_runner
 from ansible.parsing.dataloader import DataLoader
 from ansible.template import Templar
 
-import json
-import pytest
-import os
-
-import testinfra.utils.ansible_runner
-
-
 testinfra_hosts = testinfra.utils.ansible_runner.AnsibleRunner(
-    os.environ['MOLECULE_INVENTORY_FILE']).get_hosts('all')
+    os.environ["MOLECULE_INVENTORY_FILE"]
+).get_hosts("all")
 
 
 def pp_json(json_thing, sort=True, indents=2):
@@ -22,11 +20,10 @@ def pp_json(json_thing, sort=True, indents=2):
 
 
 def base_directory():
-    """
-    """
+    """ """
     cwd = os.getcwd()
 
-    if 'group_vars' in os.listdir(cwd):
+    if "group_vars" in os.listdir(cwd):
         directory = "../.."
         molecule_directory = "."
     else:
@@ -37,8 +34,7 @@ def base_directory():
 
 
 def read_ansible_yaml(file_name, role_name):
-    """
-    """
+    """ """
     read_file = None
 
     for e in ["yml", "yaml"]:
@@ -53,19 +49,19 @@ def read_ansible_yaml(file_name, role_name):
 @pytest.fixture()
 def get_vars(host):
     """
-        parse ansible variables
-        - defaults/main.yml
-        - vars/main.yml
-        - vars/${DISTRIBUTION}.yaml
-        - molecule/${MOLECULE_SCENARIO_NAME}/group_vars/all/vars.yml
+    parse ansible variables
+    - defaults/main.yml
+    - vars/main.yml
+    - vars/${DISTRIBUTION}.yaml
+    - molecule/${MOLECULE_SCENARIO_NAME}/group_vars/all/vars.yml
     """
     base_dir, molecule_dir = base_directory()
     distribution = host.system_info.distribution
     operation_system = None
 
-    if distribution in ['debian', 'ubuntu']:
+    if distribution in ["debian", "ubuntu"]:
         operation_system = "debian"
-    elif distribution in ['arch', 'artix']:
+    elif distribution in ["arch", "artix"]:
         operation_system = f"{distribution}linux"
 
     # print(" -> {} / {}".format(distribution, os))
@@ -73,14 +69,32 @@ def get_vars(host):
 
     file_defaults = read_ansible_yaml(f"{base_dir}/defaults/main", "role_defaults")
     file_vars = read_ansible_yaml(f"{base_dir}/vars/main", "role_vars")
-    file_distibution = read_ansible_yaml(f"{base_dir}/vars/{operation_system}", "role_distibution")
-    file_molecule = read_ansible_yaml(f"{molecule_dir}/group_vars/all/vars", "test_vars")
+    file_distibution = read_ansible_yaml(
+        f"{base_dir}/vars/{operation_system}", "role_distibution"
+    )
+    file_molecule = read_ansible_yaml(
+        f"{molecule_dir}/group_vars/all/vars", "test_vars"
+    )
     # file_host_molecule = read_ansible_yaml("{}/host_vars/{}/vars".format(base_dir, HOST), "host_vars")
 
-    defaults_vars = host.ansible("include_vars", file_defaults).get("ansible_facts").get("role_defaults")
-    vars_vars = host.ansible("include_vars", file_vars).get("ansible_facts").get("role_vars")
-    distibution_vars = host.ansible("include_vars", file_distibution).get("ansible_facts").get("role_distibution")
-    molecule_vars = host.ansible("include_vars", file_molecule).get("ansible_facts").get("test_vars")
+    defaults_vars = (
+        host.ansible("include_vars", file_defaults)
+        .get("ansible_facts")
+        .get("role_defaults")
+    )
+    vars_vars = (
+        host.ansible("include_vars", file_vars).get("ansible_facts").get("role_vars")
+    )
+    distibution_vars = (
+        host.ansible("include_vars", file_distibution)
+        .get("ansible_facts")
+        .get("role_distibution")
+    )
+    molecule_vars = (
+        host.ansible("include_vars", file_molecule)
+        .get("ansible_facts")
+        .get("test_vars")
+    )
     # host_vars          = host.ansible("include_vars", file_host_molecule).get("ansible_facts").get("host_vars")
 
     ansible_vars = defaults_vars
@@ -97,7 +111,7 @@ def get_vars(host):
 
 def local_facts(host):
     """
-      return local facts
+    return local facts
     """
     local_fact = host.ansible("setup").get("ansible_facts").get("ansible_local")
 
@@ -115,7 +129,7 @@ def test_directories(host, get_vars):
 
     directories = [
         f"{install_path}/active/data",
-        f"{install_path}/active/data/assets/ssl"
+        f"{install_path}/active/data/assets/ssl",
     ]
 
     for dirs in directories:
@@ -130,7 +144,7 @@ def test_files(host, get_vars):
     files = [
         f"{install_path}/active/docker-compose.yml",
         f"{install_path}/active/mailcow.conf",
-        f"{install_path}/active/.env"
+        f"{install_path}/active/.env",
     ]
 
     for f in files:
@@ -140,7 +154,7 @@ def test_files(host, get_vars):
 
 def test_service_running_and_enabled(host, get_vars):
     """
-      running service
+    running service
     """
     service_name = "mailcow"
 
@@ -154,8 +168,7 @@ def test_service_running_and_enabled(host, get_vars):
 
 
 def test_listening_socket(host, get_vars):
-    """
-    """
+    """ """
     listening = host.socket.get_listening_sockets()
 
     for i in listening:
@@ -165,7 +178,6 @@ def test_listening_socket(host, get_vars):
 
     mailcow_service = get_vars.get("mailcow_services")
     if mailcow_service.get(service_name).get("state") == "started":
-
 
         listen = [
             "tcp://0.0.0.0:110",

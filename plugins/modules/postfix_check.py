@@ -8,6 +8,8 @@ from __future__ import absolute_import, division, print_function
 
 from ansible.module_utils.basic import AnsibleModule
 
+# ----------------------------------------------------------------------
+
 DOCUMENTATION = r"""
 ---
 module: postfix_check
@@ -18,11 +20,6 @@ short_description: TBD
 description:
     - TBD
 
-options:
-  verbose:
-    description: TBD
-    required: false
-    type: str
 """
 
 EXAMPLES = r"""
@@ -36,22 +33,23 @@ RETURN = r"""
 
 class PostfixCheck(object):
     """
-      Main Class
+    Main Class
     """
+
     module = None
 
     def __init__(self, module):
         """
-          Initialize all needed Variables
+        Initialize all needed Variables
         """
         self.module = module
 
-        self._postfix = module.get_bin_path('postfix', True)
+        self._postfix = module.get_bin_path("postfix", True)
         self.verbose = module.params.get("verbose")
 
     def run(self):
         """
-          runner
+        runner
         """
         result = dict(
             rc=127,
@@ -72,20 +70,19 @@ class PostfixCheck(object):
 
         rc, out, err = self._exec(args)
 
-        result['rc'] = rc
+        result["rc"] = rc
 
         if rc == 0:
-            result['failed'] = False
-            result['msg'] = out
+            result["failed"] = False
+            result["msg"] = out
         else:
-            result['failed'] = True
-            result['msg'] = err
+            result["failed"] = True
+            result["msg"] = err
 
         return result
 
     def _exec(self, cmd):
-        """
-        """
+        """ """
         self.module.log(f"cmd: '{cmd}'")
 
         rc, out, err = self.module.run_command(cmd, encoding=None, check_rc=False)
@@ -138,5 +135,5 @@ def main():
 
 
 # import module snippets
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

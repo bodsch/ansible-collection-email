@@ -5,35 +5,34 @@
 # Apache-2.0 (see LICENSE or https://opensource.org/license/apache-2-0)
 # SPDX-License-Identifier: Apache-2.0
 
-import os
-import sys
-import git
-import re
-import yaml
-import docker
 import argparse
-
-from urllib.parse import urlparse, urlunparse
-from pathlib import Path
+import os
+import re
+import sys
 from collections import defaultdict
+from pathlib import Path
+from urllib.parse import urlparse, urlunparse
+
+import docker
+import git
+import yaml
 
 
 class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKCYAN = '\033[96m'
-    OKGREEN = '\033[92m'
-    DEBUG = '\033[1m\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
+    HEADER = "\033[95m"
+    OKBLUE = "\033[94m"
+    OKCYAN = "\033[96m"
+    OKGREEN = "\033[92m"
+    DEBUG = "\033[1m\033[92m"
+    WARNING = "\033[93m"
+    FAIL = "\033[91m"
+    ENDC = "\033[0m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
 
 
-class DiffImageLists():
-    """
-    """
+class DiffImageLists:
+    """ """
 
     def __init__(self, local_images, remote_images):
         self.local_images = local_images
@@ -41,19 +40,19 @@ class DiffImageLists():
 
     def parse_image(self, image):
         """
-            Gibt ('registry/namespace/image', 'tag') zurück
+        Gibt ('registry/namespace/image', 'tag') zurück
         """
-        if ':' in image:
-            name, tag = image.rsplit(':', 1)
+        if ":" in image:
+            name, tag = image.rsplit(":", 1)
         else:
-            name, tag = image, 'latest'
+            name, tag = image, "latest"
         return name, tag
 
     def basename(self, image_name):
         """
-            Extracts image name without registry or namespace.
+        Extracts image name without registry or namespace.
         """
-        parts = image_name.split('/')
+        parts = image_name.split("/")
 
         return parts[-1]
 
@@ -62,7 +61,7 @@ class DiffImageLists():
 
     def normalize_image_list_with_basename(self, image_list):
         """
-            Returns a dict of full_name -> tag and a dict base:tag -> list of full names.
+        Returns a dict of full_name -> tag and a dict base:tag -> list of full names.
         """
         full_map = {}
         base_map = defaultdict(list)
@@ -96,9 +95,15 @@ class DiffImageLists():
             tag_note = ""
 
             if local_tag != remote_tag:
-                tag_note = " <-- different" if local_tag and remote_tag else " <-- added/removed"
+                tag_note = (
+                    " <-- different"
+                    if local_tag and remote_tag
+                    else " <-- added/removed"
+                )
 
-            output_lines.append(f"{name:<40} | {local_tag:<15} | {remote_tag:<15}{tag_note}")
+            output_lines.append(
+                f"{name:<40} | {local_tag:<15} | {remote_tag:<15}{tag_note}"
+            )
 
         print("\n".join(output_lines))
 
@@ -186,13 +191,11 @@ class DiffImageLists():
         print("\n".join(output_lines))
 
 
-class GitHandler():
-    """
-    """
+class GitHandler:
+    """ """
 
     def __init__(self, clone_path, repo_url, branch, git_user=None, git_token=None):
-        """
-        """
+        """ """
         self.clone_path = clone_path
         self.git_branch = branch
         self.git_repo_url = repo_url
@@ -202,7 +205,7 @@ class GitHandler():
         print(self.git_repo_url)
 
         sections = urlparse(self.git_repo_url)
-        repo = sections.path.split('/')[-1]
+        repo = sections.path.split("/")[-1]
         repo_name = Path(repo).stem
 
         print(repo_name)
@@ -230,15 +233,15 @@ class GitHandler():
             self.repo.remotes.origin.pull(target)
 
         # Existiert als Remote-Branch
-        elif f'origin/{target}' in self.repo.refs:
+        elif f"origin/{target}" in self.repo.refs:
             print(f"Checkout remote branch: {target}")
-            self.repo.git.checkout('-b', target, f'origin/{target}')
+            self.repo.git.checkout("-b", target, f"origin/{target}")
             self.repo.remotes.origin.pull(target)
 
         # Existiert als Tag
         elif target in self.repo.tags:
             print(f"Checkout tag: {target}")
-            self.repo.git.checkout(f'tags/{target}')
+            self.repo.git.checkout(f"tags/{target}")
             print("Note: Detached HEAD state, no pull will be performed.")
 
         # Vielleicht ein Commit-Hash?
@@ -255,13 +258,11 @@ class GitHandler():
         print(f"Checked out commit: {self.last_commit_hash}")
 
     def clone_repo(self):
-        """
-        """
+        """ """
         try:
             if not os.path.exists(f"{self.clone_path}/.git"):
                 print(f"Cloning git repo {self.git_repo_url}")
-                self.repo = git.Repo.clone_from(
-                    self._git_remote_url(), self.clone_path)
+                self.repo = git.Repo.clone_from(self._git_remote_url(), self.clone_path)
             else:
                 print("Repo already cloned.")
                 self.repo = git.Repo(self.clone_path)
@@ -279,16 +280,13 @@ class GitHandler():
         return True
 
     def clone_git_repo(self):
-        """
-        """
+        """ """
         try:
             if not os.path.exists(f"{self.clone_path}/.git"):
                 # print(f"Cloning git repo {self.git_repo_url}")
-                self.repo = git.Repo.clone_from(
-                    self._git_remote_url(), self.clone_path)
+                self.repo = git.Repo.clone_from(self._git_remote_url(), self.clone_path)
             else:
-                print(
-                    "Repo already cloned, pulling latest changes.")
+                print("Repo already cloned, pulling latest changes.")
 
                 try:
                     self.repo = git.Repo(self.clone_path)
@@ -314,7 +312,7 @@ class GitHandler():
 
     def show_content(self, content):
         """
-            Zeigt den Inhalt einer Datei im aktuell ausgecheckten Zustand (Branch, Tag oder Commit).
+        Zeigt den Inhalt einer Datei im aktuell ausgecheckten Zustand (Branch, Tag oder Commit).
         """
         try:
             # HEAD steht für den aktuell ausgecheckten Commit, egal ob Branch, Tag, SHA
@@ -324,13 +322,11 @@ class GitHandler():
             return None
 
 
-class MailcowUpdater():
-    """
-    """
+class MailcowUpdater:
+    """ """
 
     def __init__(self):
-        """
-        """
+        """ """
         self.args = {}
         self.parse_args()
 
@@ -346,16 +342,12 @@ class MailcowUpdater():
 
     def parse_args(self):
         """
-            parse arguments
+        parse arguments
         """
-        p = argparse.ArgumentParser(description='update mailcow container.')
+        p = argparse.ArgumentParser(description="update mailcow container.")
 
         p.add_argument(
-            "-C",
-            "--compose",
-            required=False,
-            help="compose file",
-            default=None
+            "-C", "--compose", required=False, help="compose file", default=None
         )
 
         # TODO
@@ -364,7 +356,7 @@ class MailcowUpdater():
             "--compose-dir",
             required=False,
             help="directory with many compose files",
-            default=None
+            default=None,
         )
 
         p.add_argument(
@@ -372,7 +364,7 @@ class MailcowUpdater():
             "--git-url",
             required=False,
             help="git urls for update",
-            default="https://github.com/mailcow/mailcow-dockerized.git"
+            default="https://github.com/mailcow/mailcow-dockerized.git",
         )
 
         p.add_argument(
@@ -380,31 +372,30 @@ class MailcowUpdater():
             "--branch",
             required=False,
             help="update againt branch ...",
-            default="master"
+            default="master",
         )
 
         p.add_argument(
             "--dry-run",
             required=False,
             help="do nothing.",
-            action='store_true',
-            default=True
+            action="store_true",
+            default=True,
         )
 
         self.args = p.parse_args()
 
     def run(self):
-        """
-        """
+        """ """
         compose_data = None
         if self.compose_dir:
             compose_data = self.read_compose_dir()
 
         self.compare_images(
-            compose_data = compose_data,
-            local_file_path = self.compose_file,
-            remote_url = self.update_url,
-            branch = self.update_branch
+            compose_data=compose_data,
+            local_file_path=self.compose_file,
+            remote_url=self.update_url,
+            branch=self.update_branch,
         )
 
         # if len(added_images) > 0:
@@ -412,8 +403,7 @@ class MailcowUpdater():
         #         self.pull_new_container(added_images)
 
     def read_compose_dir(self):
-        """
-        """
+        """ """
         data = dict()
         data["services"] = dict()
         for compose_file in os.listdir(self.compose_dir):
@@ -432,11 +422,11 @@ class MailcowUpdater():
 
     def get_images_from_docker_compose_file(self, compose_data, file_path):
         """
-            Liest die docker-compose.yml Datei und extrahiert alle Image-Namen.
+        Liest die docker-compose.yml Datei und extrahiert alle Image-Namen.
         """
 
         if not compose_data:
-            with open(file_path, 'r') as file:
+            with open(file_path, "r") as file:
                 docker_compose_content = yaml.safe_load(file)
         else:
             docker_compose_content = compose_data
@@ -444,20 +434,20 @@ class MailcowUpdater():
         # Suche nach allen Image-Referenzen
         images = []
         if isinstance(docker_compose_content, dict):
-            images = [conf.get("image") for service, conf in docker_compose_content.get('services', {}).items()]
+            images = [
+                conf.get("image")
+                for service, conf in docker_compose_content.get("services", {}).items()
+            ]
 
         images = sorted(images)
 
         return images
 
-    def get_images_from_remote_docker_compose(self, remote_url=None, repo_path="/tmp/mailcow", branch="master"):
-        """
-        """
-        _git = GitHandler(
-            clone_path=repo_path,
-            repo_url=remote_url,
-            branch=branch
-        )
+    def get_images_from_remote_docker_compose(
+        self, remote_url=None, repo_path="/tmp/mailcow", branch="master"
+    ):
+        """ """
+        _git = GitHandler(clone_path=repo_path, repo_url=remote_url, branch=branch)
         _git.clone_repo()
 
         docker_compose_content = _git.show_content("docker-compose.yml")
@@ -473,8 +463,7 @@ class MailcowUpdater():
         return images
 
     def pull_new_container(self, images):
-        """
-        """
+        """ """
         client = docker.from_env()
 
         for image in images:
@@ -486,13 +475,13 @@ class MailcowUpdater():
                 print(f"Error when pulling the image {image}: {str(e)}")
 
     def side_by_side_diff(self, local_images, remote_images):
-        """
-        """
+        """ """
+
         def split_image(image):
-            if ':' in image:
-                name, tag = image.split(':', 1)
+            if ":" in image:
+                name, tag = image.split(":", 1)
             else:
-                name, tag = image, 'latest'
+                name, tag = image, "latest"
             return name, tag
 
         # Indexiere beide Listen nach dem Image-Namen
@@ -513,8 +502,12 @@ class MailcowUpdater():
         """
         Vergleicht die Image-Namen der lokalen und der Remote docker-compose.yml.
         """
-        local_images = self.get_images_from_docker_compose_file(compose_data, local_file_path)
-        remote_images = self.get_images_from_remote_docker_compose(remote_url=remote_url, repo_path="/tmp/mailcow", branch=branch)
+        local_images = self.get_images_from_docker_compose_file(
+            compose_data, local_file_path
+        )
+        remote_images = self.get_images_from_remote_docker_compose(
+            remote_url=remote_url, repo_path="/tmp/mailcow", branch=branch
+        )
 
         diff = DiffImageLists(local_images, remote_images)
         print("")
@@ -546,8 +539,7 @@ class MailcowUpdater():
 
 
 def main(requirements_file="collections.yml"):
-    """
-    """
+    """ """
     updater = MailcowUpdater()
     updater.run()
 

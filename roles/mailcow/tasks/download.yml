@@ -26,8 +26,8 @@
         repo: "{{ mailcow_git.repository }}"
         version: "{{ mailcow_git.version | default('master') }}"
         dest: "{{ mailcow_tmp_directory }}"
-        depth: 1
+        # depth: 1
         update: true
         force: true
-      no_log: true
+      # no_log: true
       register: mailcow_repository_changed

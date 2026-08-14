@@ -5,9 +5,13 @@
 # BSD 2-clause (see LICENSE or https://opensource.org/licenses/BSD-2-Clause)
 
 from __future__ import absolute_import, division, print_function
+
 import os
 
 from ansible.module_utils.basic import AnsibleModule
+
+
+# ----------------------------------------------------------------------
 
 DOCUMENTATION = r"""
 ---
@@ -49,23 +53,24 @@ RETURN = r"""
 
 class PostfixPostmap(object):
     """
-      Main Class
+    Main Class
     """
+
     module = None
 
     def __init__(self, module):
         """
-          Initialize all needed Variables
+        Initialize all needed Variables
         """
         self.module = module
 
-        self._postmap = module.get_bin_path('postmap', True)
+        self._postmap = module.get_bin_path("postmap", True)
         self.map_type = module.params.get("map_type")
         self.filename = module.params.get("filename")
 
     def run(self):
         """
-          runner
+        runner
         """
         result = dict(
             rc=127,
@@ -77,7 +82,7 @@ class PostfixPostmap(object):
             return dict(
                 failed=True,
                 changed=False,
-                msg=f"file {self.file_name} does not exists."
+                msg=f"file {self.file_name} does not exists.",
             )
 
         args = []
@@ -86,22 +91,21 @@ class PostfixPostmap(object):
 
         rc, out, err = self._exec(args)
 
-        result['rc'] = rc
+        result["rc"] = rc
 
         if rc == 0:
-            result['failed'] = False
-            result['changed'] = True
-            result['msg'] = out
+            result["failed"] = False
+            result["changed"] = True
+            result["msg"] = out
         else:
-            result['failed'] = True
-            result['changed'] = False
-            result['msg'] = err
+            result["failed"] = True
+            result["changed"] = False
+            result["msg"] = err
 
         return result
 
     def _exec(self, cmd):
-        """
-        """
+        """ """
         rc, out, err = self.module.run_command(cmd, check_rc=True)
 
         return rc, out, err
@@ -113,8 +117,7 @@ class PostfixPostmap(object):
 
 
 def main():
-    """
-    """
+    """ """
     module = AnsibleModule(
         argument_spec=dict(
             map_type=dict(
@@ -122,10 +125,7 @@ def main():
                 choices=["btree", "cdb", "dbm", "fail", "lmdb", "sdbm"],
                 default="lmdb",
             ),
-            filename=dict(
-                required=True,
-                type="str"
-            ),
+            filename=dict(required=True, type="str"),
         ),
         supports_check_mode=True,
     )
@@ -139,7 +139,7 @@ def main():
 
 
 # import module snippets
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
 """

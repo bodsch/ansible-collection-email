@@ -6,21 +6,20 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import argparse
+import logging
 import os
 import time
-import yaml
+
 import docker
-import logging
-import argparse
+import yaml
 
 
-class ContainerVolumeBackup():
-    """
-    """
+class ContainerVolumeBackup:
+    """ """
 
     def __init__(self):
-        """
-        """
+        """ """
         self.args = {}
         self.parse_args()
 
@@ -31,17 +30,16 @@ class ContainerVolumeBackup():
 
     def parse_args(self):
         """
-            parse arguments
+        parse arguments
         """
-        p = argparse.ArgumentParser(
-            description='create docker volume backups.')
+        p = argparse.ArgumentParser(description="create docker volume backups.")
 
         p.add_argument(
             "-c",
             "--compose-file",
             required=False,
             help="bdocker compose file to parse volume definitions",
-            default=f"{os.getcwd()}/docker-compose.yml"
+            default=f"{os.getcwd()}/docker-compose.yml",
         )
 
         p.add_argument(
@@ -49,14 +47,13 @@ class ContainerVolumeBackup():
             "--backup-directory",
             required=False,
             help="backup directory to store",
-            default=os.getcwd()
+            default=os.getcwd(),
         )
 
         self.args = p.parse_args()
 
     def run(self):
-        """
-        """
+        """ """
         logging.basicConfig(level=logging.INFO)
         relevant_volumes = self.get_relevant_volumes(self.compose_file)
 
@@ -112,34 +109,31 @@ class ContainerVolumeBackup():
                 command=f"/bin/tar --warning='no-file-ignored' --use-compress-program='pigz - -rsyncable - p 1' -Pcvpf /backup/backup_{volume}.tar.gz /{volume}",
                 volumes={
                     volume: {
-                        'bind': f"{self.backup_directory}/mailcow-{self.datetime_readable}",
-                        'target': "/backup",
-                        "mode": "rw"
+                        "bind": f"{self.backup_directory}/mailcow-{self.datetime_readable}",
+                        "target": "/backup",
+                        "mode": "rw",
                     },
-                    volume: {
-                        'bind': f"/{volume}",
-                        'mode': 'ro'
-                    }
+                    volume: {"bind": f"/{volume}", "mode": "ro"},
                 },
                 name=f"backup_{volume}",
-                detach=True
+                detach=True,
             )
             container.start()
 
-            with open(backup_file, 'wb') as f:
-                bits, _ = container.get_archive('/data')
+            with open(backup_file, "wb") as f:
+                bits, _ = container.get_archive("/data")
                 for chunk in bits:
                     f.write(chunk)
 
             container.stop()
             container.remove()
             logging.info(
-                f"Backup für Volume '{volume}' erfolgreich erstellt: {backup_file}")
+                f"Backup für Volume '{volume}' erfolgreich erstellt: {backup_file}"
+            )
 
 
 if __name__ == "__main__":
-    """
-    """
+    """ """
     r = ContainerVolumeBackup()
 
     r.run()

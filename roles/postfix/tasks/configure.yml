@@ -56,7 +56,7 @@
 
 - name: virtual file
   when:
-    - ansible_distribution | lower in ["archlinux", "artix linux"]
+    - ansible_facts.distribution | lower in ["archlinux", "artix linux"]
   block:
     - name: detect virtual file
       ansible.builtin.stat:
