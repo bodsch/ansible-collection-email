@@ -8,12 +8,19 @@ options {
   pidfile = "$RUNDIR/rspamd.pid";
   .include "$CONFDIR/options.inc"
   .include(try=true; priority=1,duplicate=merge) "$LOCAL_CONFDIR/local.d/options.inc"
-  .include(try=true; priority=10) "$LOCAL_CONFDIR/override.d/options.conf"
+  .include(try=true; priority=10) "$LOCAL_CONFDIR/override.d/options.inc"
 }
 
 .include(try=true; duplicate=merge) "$CONFDIR/cgp.inc"
 .include(try=true; priority=1,duplicate=merge) "$LOCAL_CONFDIR/local.d/cgp.inc"
-.include(try=true; priority=10) "$LOCAL_CONFDIR/override.d/cgp.conf"
+.include(try=true; priority=10) "$LOCAL_CONFDIR/override.d/cgp.inc"
+
+lang_detection {
+  .include "$CONFDIR/lang_detection.inc"
+  .include(try=true; priority=1,duplicate=merge) "$LOCAL_CONFDIR/local.d/lang_detection.inc"
+  .include(try=true; priority=10) "$LOCAL_CONFDIR/override.d/lang_detection.inc"
+}
+
 
 {#
   - https://rspamd.com/doc/configuration/logging.html#configuration-parameters
@@ -33,7 +40,7 @@ logging {
 {% endif %}
   .include "$CONFDIR/logging.inc"
   .include(try=true; priority=1,duplicate=merge) "$LOCAL_CONFDIR/local.d/logging.inc"
-  .include(try=true; priority=10) "$LOCAL_CONFDIR/override.d/logging.conf"
+  .include(try=true; priority=10) "$LOCAL_CONFDIR/override.d/logging.inc"
 }
 
 {% if rspamd_workers is defined and
@@ -51,7 +58,7 @@ worker "{{ worker }}" {
       {% endif %}
   .include "$CONFDIR/{{ worker_include_name }}.inc"
   .include(try=true; priority=1,duplicate=merge) "$LOCAL_CONFDIR/local.d/{{ worker_include_name }}.inc"
-  .include(try=true; priority=10) "$LOCAL_CONFDIR/override.d/{{ worker_include_name }}.conf"
+  .include(try=true; priority=10) "$LOCAL_CONFDIR/override.d/{{ worker_include_name }}.inc"
 }
 
     {% endif %}

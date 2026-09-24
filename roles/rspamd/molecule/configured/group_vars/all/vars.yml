@@ -9,7 +9,7 @@ rspamd_logging:
   ## facility                Logging facility for syslog type (required if this type is used)
   ## level                   Defines logging level (error, warning, info or debug).
   level: info
-  ## log_buffered            Flag that controls whether logging is buffered.
+  log_buffered: true              ## Flag that controls whether logging is buffered.
   ## log_buf_size            For file and console logging defines buffer size that will be used for logging output.
   ## log_urls                Flag that defines whether all URLs in message should be logged. Useful for testing. Default: false.
   ## log_re_cache            Output regular expressions statistics after each message. Default: true.
@@ -18,7 +18,9 @@ rspamd_logging:
   ## debug_modules           A list of modules that are enabled for debugging.
   ## log_usec                Log microseconds (e.g. 11:43:16.68071). Default: false.
   ## log_severity (2.8+)     Log severity explicitly (e.g. [info] or [error]). Default: false
-
+  ## ----
+  # type: file
+  # filename: '$LOGDIR/rspamd.log'
 
 rspamd_local_config:
   groups:
@@ -79,10 +81,44 @@ rspamd_local_config:
     expire: 86400
     key_prefix: "rmx"
     enabled: true
+  multimap:
+    GLOBAL_SMTP_FROM_WL:
+      type: from
+      map: "${LOCAL_CONFDIR}/custom/global_smtp_from_whitelist.map"
+      regexp: true
+      score: -2050
+    GLOBAL_SMTP_FROM_BL:
+      type: "from"
+      map: "${LOCAL_CONFDIR}/custom/global_smtp_from_blacklist.map"
+      regexp: true
+      score: 2050
+
+
+# Plain-text map files referenced above (e.g. dkim_signing.sign_networks) and by
+# multimap/rbl-style modules. Each key is rendered verbatim, one line per list entry,
+# to /etc/rspamd/custom/<key>.map.
+rspamd_custom_maps:
+  dovecot_trusted:
+    - "127.0.0.0/8"
+    - "::1"
+    - "10.0.0.0/8"
+    - "192.168.0.0/16"
+  mailcow_networks:
+    - "172.22.1.0/24"
+  whitelisted_domains:
+    - "example.com"
+    - "example.org"
+  bad_words:
+    - "/\\serotic\\s/i"
+  global_smtp_from_blacklist:
+    - "# /.+example\\.com/i"
+  global_smtp_from_whitelist:
+    - "# /.+example\\.de/i"
 
 rspamd_config_overrides:
   redis:
-    servers: "127.0.0.1,redis"
+    servers: "redis"
+
   options:
     neighbours:
       # The controller workers are proxied by nginx with TLS and basic auth
@@ -90,6 +126,7 @@ rspamd_config_overrides:
         host: https://127.0.0.1:443
       spam02:
         host: https://192.168.178.5:443
+    task_timeout: "20s"
 
 # https://rspamd.com/doc/workers/
 rspamd_workers:

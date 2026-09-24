@@ -1,57 +1,87 @@
 ---
 
+- name: merge rspamd configuration between defaults and custom
+  ansible.builtin.set_fact:
+    rspamd_logging: "{{ rspamd_defaults_logging | combine(rspamd_logging, recursive=True) }}"
+    rspamd_workers: "{{ rspamd_defaults_workers | combine(rspamd_workers, recursive=True) }}"
+    rspamd_redis: "{{ rspamd_defaults_redis | combine(rspamd_redis, recursive=True) }}"
+    rspamd_local_config: "{{ rspamd_defaults_local_config | combine(rspamd_local_config, recursive=True) }}"
+    rspamd_config_overrides: "{{ rspamd_defaults_config_overrides | combine(rspamd_config_overrides, recursive=True) }}"
+    rspamd_custom_maps: "{{ rspamd_defaults_custom_maps | combine(rspamd_custom_maps, recursive=True) }}"
+  no_log: true
+
+- name: create rspamd directories
+  when:
+    - not running_in_check_mode
+  bodsch.core.directories:
+    #owner: "{{ forgejo_runner_system_user }}"
+    #group: "{{ forgejo_runner_system_group }}"
+    base_path: /etc/rspamd
+    mode: "0755"
+    paths:
+      - path: local.d
+        mode: "0750"
+      - path: override.d
+        mode: "0750"
+      - path: custom
+        mode: "0750"
+
 - name: create rspamd main config
+  when:
+    - not running_in_check_mode
   ansible.builtin.template:
     src: etc/rspamd/rspamd.conf.j2
     dest: /etc/rspamd/rspamd.conf
-    mode: 0644
+    mode: "0644"
+    backup: true
   notify:
+    - validate rspamd config
     - restart rspamd
 
-- name: create /etc/rspamd/local.d directory
-  ansible.builtin.file:
-    name: /etc/rspamd/local.d
-    state: directory
-    mode: 0750
-
-- name: create /etc/rspamd/override.d directory
-  ansible.builtin.file:
-    name: /etc/rspamd/override.d
-    state: directory
-    mode: 0750
-
 - name: create redis configs
+  when:
+    - not running_in_check_mode
+    - rspamd_redis | count > 0
   ansible.builtin.template:
     src: etc/rspamd/local.d/redis.conf.j2
     dest: "/etc/rspamd/local.d/redis.conf"
-    mode: 0644
-  when:
-    - rspamd_redis | count > 0
+    mode: "0644"
+    backup: true
   notify:
+    - validate rspamd config
     - restart rspamd
 
 - name: create local configs
+  when:
+    - not running_in_check_mode
   ansible.builtin.template:
     src: etc/rspamd/config.conf.j2
-    dest: "/etc/rspamd/local.d/{{ config.key }}.conf"
-    mode: 0644
+    dest: "/etc/rspamd/local.d/{{ config.key }}.inc"
+    mode: "0644"
+    backup: true
   loop: "{{ rspamd_local_config | dict2items }}"
   loop_control:
     loop_var: config
     label: "{{ config.key }}"
   notify:
+    - validate rspamd config
     - restart rspamd
 
 - name: find old local configs to delete
+  when:
+    - not running_in_check_mode
   ansible.builtin.find:
     paths: /etc/rspamd/local.d
     recurse: true
     follow: true
     hidden: true
-    exclude: "{{ rspamd_local_config.keys() | zip_longest([], fillvalue='.conf') | map('join') | list }}"
+    exclude: "{{ rspamd_local_config.keys() | zip_longest([], fillvalue='.inc') | map('join') | list }}"
+  no_log: true
   register: local_files
 
 - name: remove old local configs
+  when:
+    - not running_in_check_mode
   ansible.builtin.file:
     path: "{{ item.path }}"
     state: absent
@@ -60,31 +90,78 @@
     - restart rspamd
 
 - name: create config overrides
+  when:
+    - not running_in_check_mode
   ansible.builtin.template:
     src: etc/rspamd/config.conf.j2
-    dest: "/etc/rspamd/override.d/{{ config.key }}.conf"
-    mode: 0644
+    dest: "/etc/rspamd/override.d/{{ config.key }}.inc"
+    mode: "0644"
+    backup: true
   loop: "{{ rspamd_config_overrides | dict2items }}"
   loop_control:
     loop_var: config
     label: "{{ config.key }}"
   notify:
+    - validate rspamd config
     - restart rspamd
 
 - name: find old config overrides to delete
+  when:
+    - not running_in_check_mode
   ansible.builtin.find:
     paths: /etc/rspamd/override.d
     recurse: true
     follow: true
     hidden: true
-    exclude: "{{ rspamd_config_overrides.keys() | zip_longest([], fillvalue='.conf') | map('join') | list }}"
+    exclude: "{{ rspamd_config_overrides.keys() | zip_longest([], fillvalue='.inc') | map('join') | list }}"
+  no_log: true
   register: override_files
 
 - name: remove old config overrides
+  when:
+    - not running_in_check_mode
   ansible.builtin.file:
     path: "{{ item.path }}"
     state: absent
   loop: "{{ override_files.files }}"
+  notify:
+    - restart rspamd
+
+- name: create custom maps
+  when:
+    - not running_in_check_mode
+  ansible.builtin.template:
+    src: etc/rspamd/custom_map.j2
+    dest: "/etc/rspamd/custom/{{ map.key }}.map"
+    mode: "0644"
+    backup: true
+  loop: "{{ rspamd_custom_maps | dict2items }}"
+  loop_control:
+    loop_var: map
+    label: "{{ map.key }}"
+  notify:
+    - validate rspamd config
+    - restart rspamd
+
+- name: find old custom maps to delete
+  when:
+    - not running_in_check_mode
+  ansible.builtin.find:
+    paths: /etc/rspamd/custom
+    recurse: true
+    follow: true
+    hidden: true
+    exclude: "{{ rspamd_custom_maps.keys() | zip_longest([], fillvalue='.map') | map('join') | list }}"
+  no_log: true
+  register: custom_map_files
+
+- name: remove old custom maps
+  when:
+    - not running_in_check_mode
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ custom_map_files.files }}"
   notify:
     - restart rspamd
 

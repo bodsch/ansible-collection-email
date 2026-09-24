@@ -24,4 +24,18 @@ rspamd_redis: {}
 rspamd_local_config: {}
 rspamd_config_overrides: {}
 
+# Arbitrary plain-text map files, as used e.g. by the multimap or RBL modules
+# (equivalent to mailcow's custom/*.map files). Each key becomes the map's
+# filename (without extension), each value a list of lines written verbatim,
+# one per line, to /etc/rspamd/custom/<key>.map.
+#
+# rspamd_custom_maps:
+#   mailcow_networks:
+#     - "10.0.0.0/8"
+#     - "192.168.0.0/16"
+#   whitelisted_domains:
+#     - "example.com"
+#     - "example.org"
+rspamd_custom_maps: {}
+
 ...

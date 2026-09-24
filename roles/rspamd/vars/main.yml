@@ -2,6 +2,9 @@
 
 rspamd_dependencies: []
 
+rspamd_packages:
+  - rspamd
+
 # https://rspamd.com/doc/configuration/logging.html#configuration-parameters
 rspamd_defaults_logging:
   ## type                    Defines logging type (file, console or syslog). For some types mandatory attributes may be required.
@@ -114,6 +117,9 @@ rspamd_defaults_redis: {}
   ## esld_mime_from_domain: MIME sender address domain, normalised to eSLD
 
 rspamd_defaults_local_config: {}
+
 rspamd_defaults_config_overrides: {}
+
+rspamd_defaults_custom_maps: {}
 
 ...

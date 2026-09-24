@@ -5,4 +5,16 @@
     name: rspamd
     state: restarted
 
+
+- name: validate rspamd config
+  ansible.builtin.shell:
+    rspamadm configtest
+  #bodsch.email.postfix_check:
+  #  verbose: true
+  #register: postfix_validate
+
+
+# rspamadm configtest
+# grep -i greylist /var/log/rspamd/rspamd.log
+# redis-cli --scan --pattern 'rg_*'
 ...

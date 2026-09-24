@@ -1,8 +1,34 @@
 ---
 
+- name: use external repository
+  when:
+    - not running_in_check_mode
+    - ansible_facts.os_family | lower == 'debian'
+  bodsch.core.apt_sources:
+    name: mariadb
+    filename: mariadb.sources
+    uris:
+      - http://rspamd.com/apt-stable
+    suites: "{{ ansible_facts.distribution_release }}"
+    components:
+      - main
+    signed_by: /usr/share/keyrings/rspamd.gpg
+    key:
+      method: download
+      url: https://rspamd.com/apt-stable/gpg.key
+      dest: "/usr/share/keyrings/rspamd.gpg"
+      dearmor: true
+      validate: true
+    update_cache: true
+
 - name: install rspamd
+  when:
+    - not running_in_check_mode
   ansible.builtin.package:
-    name: rspamd
+    name: "{{ rspamd_packages }}"
     state: present
+  tags:
+    - rspamd
+    - rspamd_install
 
 ...
