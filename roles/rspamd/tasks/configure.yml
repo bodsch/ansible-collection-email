@@ -1,0 +1,91 @@
+---
+
+- name: create rspamd main config
+  ansible.builtin.template:
+    src: etc/rspamd/rspamd.conf.j2
+    dest: /etc/rspamd/rspamd.conf
+    mode: 0644
+  notify:
+    - restart rspamd
+
+- name: create /etc/rspamd/local.d directory
+  ansible.builtin.file:
+    name: /etc/rspamd/local.d
+    state: directory
+    mode: 0750
+
+- name: create /etc/rspamd/override.d directory
+  ansible.builtin.file:
+    name: /etc/rspamd/override.d
+    state: directory
+    mode: 0750
+
+- name: create redis configs
+  ansible.builtin.template:
+    src: etc/rspamd/local.d/redis.conf.j2
+    dest: "/etc/rspamd/local.d/redis.conf"
+    mode: 0644
+  when:
+    - rspamd_redis | count > 0
+  notify:
+    - restart rspamd
+
+- name: create local configs
+  ansible.builtin.template:
+    src: etc/rspamd/config.conf.j2
+    dest: "/etc/rspamd/local.d/{{ config.key }}.conf"
+    mode: 0644
+  loop: "{{ rspamd_local_config | dict2items }}"
+  loop_control:
+    loop_var: config
+    label: "{{ config.key }}"
+  notify:
+    - restart rspamd
+
+- name: find old local configs to delete
+  ansible.builtin.find:
+    paths: /etc/rspamd/local.d
+    recurse: true
+    follow: true
+    hidden: true
+    exclude: "{{ rspamd_local_config.keys() | zip_longest([], fillvalue='.conf') | map('join') | list }}"
+  register: local_files
+
+- name: remove old local configs
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ local_files.files }}"
+  notify:
+    - restart rspamd
+
+- name: create config overrides
+  ansible.builtin.template:
+    src: etc/rspamd/config.conf.j2
+    dest: "/etc/rspamd/override.d/{{ config.key }}.conf"
+    mode: 0644
+  loop: "{{ rspamd_config_overrides | dict2items }}"
+  loop_control:
+    loop_var: config
+    label: "{{ config.key }}"
+  notify:
+    - restart rspamd
+
+- name: find old config overrides to delete
+  ansible.builtin.find:
+    paths: /etc/rspamd/override.d
+    recurse: true
+    follow: true
+    hidden: true
+    exclude: "{{ rspamd_config_overrides.keys() | zip_longest([], fillvalue='.conf') | map('join') | list }}"
+  register: override_files
+
+- name: remove old config overrides
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ override_files.files }}"
+  notify:
+    - restart rspamd
+
+...

@@ -1,0 +1,58 @@
+---
+
+- name: include OS specific configuration
+  ansible.builtin.include_vars: "{{ lookup('first_found', params) }}"
+  vars:
+    params:
+      paths:
+        - "vars"
+      files:
+        # eg. debian-10 / ubuntu-20 / centos-8 / oraclelinux-8
+        - "{{ ansible_distribution | lower }}-{{ ansible_distribution_major_version }}.yml"
+        # eg. archlinux-systemd / archlinux-openrc
+        - "{{ ansible_distribution | lower }}-{{ ansible_service_mgr | lower }}.yml"
+        # artixlinux-openrc
+        - "{{ ansible_distribution | lower | replace(' ', '') }}-{{ ansible_service_mgr | lower }}.yml"
+        # eg. debian / ubuntu / centos / oraclelinux
+        - "{{ ansible_distribution | lower }}.yml"
+        # eg. redhat / debian
+        - "{{ ansible_os_family | lower }}.yml"
+        # artixlinux
+        - "{{ ansible_os_family | lower | replace(' ', '') }}.yml"
+        - default.yml
+      skip: true
+
+- name: install dependencies
+  ansible.builtin.package:
+    name: "{{ rspamd_dependencies }}"
+    state: present
+  when:
+    - rspamd_dependencies | default([]) | count > 0
+
+- name: debian
+  when:
+    - ansible_os_family | lower == 'debian'
+  block:
+    - name: add rspamd repo GPG key
+      ansible.builtin.apt_key:
+        url: https://rspamd.com/apt-stable/gpg.key
+
+    # Use of the distribution packages is discouraged by the rspamd devs
+    - name: add official rspamd repository
+      ansible.builtin.apt_repository:
+        repo: deb http://rspamd.com/apt-stable/ {{ ansible_distribution_release }} main
+        filename: rspamd
+
+- name: update package cache
+  ansible.builtin.package:
+    update_cache: true
+
+- name: merge rspamd configuration between defaults and custom
+  ansible.builtin.set_fact:
+    rspamd_logging: "{{ rspamd_defaults_logging | combine(rspamd_logging, recursive=True) }}"
+    rspamd_workers: "{{ rspamd_defaults_workers | combine(rspamd_workers, recursive=True) }}"
+    rspamd_redis: "{{ rspamd_defaults_redis | combine(rspamd_redis, recursive=True) }}"
+    rspamd_local_config: "{{ rspamd_defaults_local_config | combine(rspamd_local_config, recursive=True) }}"
+    rspamd_config_overrides: "{{ rspamd_defaults_config_overrides | combine(rspamd_config_overrides, recursive=True) }}"
+
+...

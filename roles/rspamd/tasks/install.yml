@@ -1,0 +1,8 @@
+---
+
+- name: install rspamd
+  ansible.builtin.package:
+    name: rspamd
+    state: present
+
+...

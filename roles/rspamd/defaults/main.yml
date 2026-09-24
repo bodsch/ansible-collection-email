@@ -1,0 +1,27 @@
+---
+
+rspamd_logging: {}
+#   type: console
+#   systemd: true
+
+rspamd_workers: {}
+#   - type: rspamd_proxy
+#     options:
+#       bind_socket: localhost:11332
+#   - type: normal
+#     options:
+#       bind_socket: localhost:11333
+#   - type: controller
+#     options:
+#       bind_socket: localhost:11334
+#   - type: fuzzy
+#     options:
+#       bind_socket: localhost:11335
+#       count: -1
+
+rspamd_redis: {}
+
+rspamd_local_config: {}
+rspamd_config_overrides: {}
+
+...

@@ -1,0 +1,75 @@
+---
+
+role_name_check: 1
+
+dependency:
+  name: galaxy
+
+driver:
+  name: docker
+
+platforms:
+  - name: redis
+    image: "ghcr.io/bodsch/docker-ansible/ansible-debian:11"
+    command: ${MOLECULE_DOCKER_COMMAND:-""}
+    docker_host: "${DOCKER_HOST:-unix://run/docker.sock}"
+    privileged: true
+    pre_build_image: true
+    cgroupns_mode: host
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - /var/lib/containerd
+    tmpfs:
+      - /run
+      - /tmp
+    network_mode: default
+    docker_networks:
+      - name: net_rspamd
+        ipam_config:
+          - subnet: "10.15.0.0/24"
+            gateway: "10.15.0.1"
+    networks:
+      - name: net_rspamd
+        ipv4_address: "10.15.0.10"
+
+  - name: instance
+    image: "ghcr.io/bodsch/docker-ansible/ansible-${DISTRIBUTION:-debian:12}"
+    command: ${MOLECULE_DOCKER_COMMAND:-""}
+    docker_host: "${DOCKER_HOST:-unix://run/docker.sock}"
+    privileged: true
+    pre_build_image: true
+    cgroupns_mode: host
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - /var/lib/containerd
+    tmpfs:
+      - /run
+      - /tmp
+    networks:
+      - name: net_rspamd
+        ipv4_address: "10.15.0.11"
+
+provisioner:
+  name: ansible
+  ansible_args:
+    - --diff
+    # - -v
+  config_options:
+    defaults:
+      deprecation_warnings: True
+      stdout_callback: yaml
+      callbacks_enabled: profile_tasks
+
+scenario:
+  test_sequence:
+    - destroy
+    - dependency
+    - syntax
+    - create
+    - prepare
+    - converge
+    - verify
+    - destroy
+
+verifier:
+  name: testinfra
