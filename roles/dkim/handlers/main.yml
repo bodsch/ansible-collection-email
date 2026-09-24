@@ -1,0 +1,44 @@
+---
+
+- name: systemctl daemon-reload
+  ansible.builtin.systemd:
+    daemon_reload: true
+  when:
+    - ansible_facts.service_mgr == "systemd"
+
+# - name: restart dkim
+#   listen: restart dkim
+#   ansible.builtin.service:
+#     name: '{{ dkim_service }}'
+#     state: restarted
+#   notify:
+#     - check dkim pid file
+#   when:
+#     - not running_in_check_mode
+#     - not dkim_galera_cluster
+#
+# - name: restart galera cluster
+#   listen: restart dkim
+#   include_tasks: handlers/galera.yml
+#   when:
+#     - not running_in_check_mode
+#     - dkim_galera_cluster
+#     - _mysql_cnf_changed.changed | default(false) | bool
+#
+# - name: wait 2 seconds for clean startup
+#   ansible.builtin.pause:
+#     seconds: 2
+#
+# - name: check dkim pid file
+#   ansible.builtin.wait_for:
+#     path: "{{ dkim_config_mysqld.pid_file }}"
+#     state: present
+#     delay: 2
+#     timeout: 60
+#     msg: "Timeout to find {{ dkim_config_mysqld.pid_file }}"
+#   ignore_errors: false
+#   when:
+#     - not running_in_check_mode
+
+
+...

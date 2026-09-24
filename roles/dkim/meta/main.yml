@@ -1,0 +1,33 @@
+---
+
+galaxy_info:
+  role_name: dkim
+  namespace: bodsch
+
+  author: Bodo Schulz
+  description: ansible role to install and configure dkim an various Linux Systems.
+
+  license: Apache
+  min_ansible_version: "2.9"
+
+  platforms:
+    - name: ArchLinux
+    - name: Debian
+      versions:
+        # 12
+        - bookworm
+        # 13
+    - name: Ubuntu
+      versions:
+        # 22.04 LTS (Jammy Jellyfish)
+        - jammy
+        # 23.04
+        # 24.04
+
+  galaxy_tags:
+    - email
+    - dkim
+
+dependencies: []
+
+...

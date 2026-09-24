@@ -1,0 +1,35 @@
+
+
+{#
+# Logging
+Syslog                  yes
+SyslogSuccess          yes
+LogWhy                 yes
+
+# Basic settings
+Canonicalization       relaxed/simple
+Mode                   sv
+SubDomains             no
+
+# Security
+AutoRestart            yes
+AutoRestartRate        10/1M
+Background             yes
+DNSTimeout             5
+SignatureAlgorithm     rsa-sha256
+
+# Keys and domains
+KeyTable               refile:/etc/opendkim/key.table
+SigningTable           refile:/etc/opendkim/signing.table
+ExternalIgnoreList     refile:/etc/opendkim/trusted.hosts
+InternalHosts          refile:/etc/opendkim/trusted.hosts
+
+# Socket configuration
+Socket                 local:/var/spool/postfix/opendkim/opendkim.sock
+PidFile                /var/run/opendkim/opendkim.pid
+UMask                  002
+UserID                 opendkim:postfix
+
+# Header settings
+OversignHeaders        From
+#}
