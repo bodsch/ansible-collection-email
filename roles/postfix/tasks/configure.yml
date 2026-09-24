@@ -69,6 +69,7 @@
       ansible.builtin.file:
         state: absent
         path: "{{ postfix_virtual_directory }}"
+      backup: true
       when:
         - stat_postfix_virtual is defined
         - stat_postfix_virtual.stat is defined
@@ -204,6 +205,7 @@
         map:
           file: "{{ postfix_maps_directory }}/generic"
           vars: "{{ postfix_smtp.generic_maps | default([]) }}"
+    backup: true
   register: postfix_maps
   changed_when: false
   tags:
@@ -234,6 +236,7 @@
     force: false
     backends: "{{ postfix_virtual_backends }}"
     dest: "{{ postfix_virtual_directory }}"
+    backup: true
   notify:
     - restart postfix
   tags:

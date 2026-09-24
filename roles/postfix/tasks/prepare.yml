@@ -26,16 +26,25 @@
       ansible_facts.virtualization_role | default('host') == 'guest' and
       ansible_facts.virtualization_type | default('none') == 'docker' }}"
 
+- name: detect ansible check_mode
+  bodsch.core.check_mode:
+  register: _check_mode
+
+- name: define running_in_check_mode
+  ansible.builtin.set_fact:
+    running_in_check_mode: '{{ _check_mode.check_mode }}'
+
 # - name: update package cache
 #   ansible.builtin.package:
 #     update_cache: true
 
 - name: install dependencies
+  when:
+    - not running_in_check_mode
+    - postfix_dependencies | default([]) | count > 0
   ansible.builtin.package:
     name: "{{ postfix_dependencies }}"
     state: present
-  when:
-    - postfix_dependencies | default([]) | count > 0
 
 - name: gathering facts now
   ansible.builtin.setup:
@@ -46,17 +55,19 @@
     postfix_smtpd: "{{ postfix_defaults_smtpd | combine(postfix_smtpd, recursive=True) }}"
 
 - name: validate smtpd tls certificate files
-  bodsch.email.postfix_validate_certs:
-    config: "{{ postfix_smtpd.tls }}"
   when:
+    - not running_in_check_mode
     - postfix_smtpd.use_tls | bool
     - postfix_smtpd.tls is defined
+  bodsch.email.postfix_validate_certs:
+    config: "{{ postfix_smtpd.tls }}"
 
 - name: validate smtp tls certificate files
-  bodsch.email.postfix_validate_certs:
-    config: "{{ postfix_smtp.tls }}"
   when:
+    - not running_in_check_mode
     - postfix_smtp.use_tls | bool
     - postfix_smtp.tls is defined
+  bodsch.email.postfix_validate_certs:
+    config: "{{ postfix_smtp.tls }}"
 
 ...
