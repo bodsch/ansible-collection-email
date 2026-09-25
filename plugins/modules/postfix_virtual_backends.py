@@ -1,11 +1,9 @@
 #!/usr/bin/python3
-# -*- coding: utf-8 -*-
 
 # (c) 2023, Bodo Schulz <bodo@boone-schulz.de>
 
 # BSD 2-clause (see LICENSE or https://opensource.org/licenses/BSD-2-Clause)
 
-from __future__ import absolute_import, division, print_function
 
 import json
 import os
@@ -18,7 +16,7 @@ from ansible_collections.bodsch.core.plugins.module_utils.directory import (
 )
 from ansible_collections.bodsch.core.plugins.module_utils.module_results import results
 from ansible_collections.bodsch.core.plugins.module_utils.template.template import (
-    write_template,
+    TemplateHandler,
 )
 
 # ----------------------------------------------------------------------
@@ -70,7 +68,7 @@ query    =
 """
 
 
-class PostfixVirtualBackends(object):
+class PostfixVirtualBackends:
     """ """
 
     def __init__(self, module):
@@ -81,6 +79,7 @@ class PostfixVirtualBackends(object):
         self.backends = module.params.get("backends")
         self.force = module.params.get("force")
         self.cache_directory = "/var/cache/ansible/postfix"
+        self.backup = module.params.get("backup")
 
     def run(self):
         """ """
@@ -89,6 +88,7 @@ class PostfixVirtualBackends(object):
         _msg = "module init"
 
         self.checksum = Checksum(self.module)
+        self.template = TemplateHandler(self.module)
 
         result_state = []
 
@@ -221,7 +221,14 @@ class PostfixVirtualBackends(object):
         if not changed:
             return False, False, "The configuration file has not been changed."
 
-        write_template(file_name, TPL_BACKEND, data)
+        if self.backup:
+            _dir = os.path.dirname(file_name)
+            _file = os.path.basename(file_name)
+            _datetime = time.strftime("%Y%m%d-%H%M")
+            backup_file = os.path.join(_dir, f"{_file}-{_datetime}")
+            shutil.copy2(file_name, backup_file)
+
+        self.template.write_template(file_name, TPL_BACKEND, data)
 
         self.checksum.write_checksum(checksum_file=checksum_file, checksum=checksum)
 
@@ -242,6 +249,11 @@ def main():
             default=False,
         ),
         dest=dict(required=True, type="str"),
+        backup=dict(
+            required=False,
+            type="bool",
+            default=False
+        ),
     )
 
     module = AnsibleModule(

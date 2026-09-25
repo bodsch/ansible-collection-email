@@ -1,10 +1,8 @@
 #!/usr/bin/python3
-# -*- coding: utf-8 -*-
 
 # (c) 2020-2024, Bodo Schulz <bodo@boone-schulz.de>
 # Apache (see LICENSE or https://opensource.org/licenses/Apache-2.0)
 
-from __future__ import absolute_import, print_function
 
 # import grp
 # import pwd
@@ -39,7 +37,7 @@ RETURN = r"""
 # ----------------------------------------------------------------------
 
 
-class MailcowTLSCerts(object):
+class MailcowTLSCerts:
     """
     Main Class
     """

@@ -1,0 +1,10 @@
+
+
+Sep 25 03:01:25 instance postfix[8837]: /usr/sbin/postconf: warning: /etc/postfix/main.cf: support for parameter "postscreen_use_tls" will be removed; instead, specify "postscreen_tls_security_level"
+Sep 25 03:01:25 instance postfix[8837]: /usr/sbin/postconf: warning: /etc/postfix/main.cf: support for parameter "smtp_use_tls" will be removed; instead, specify "smtp_tls_security_level"
+Sep 25 03:01:25 instance postfix[8847]: /usr/sbin/postconf: warning: /etc/postfix/main.cf: support for parameter "postscreen_use_tls" will be removed; instead, specify "postscreen_tls_security_level"
+Sep 25 03:01:25 instance postfix[8847]: /usr/sbin/postconf: warning: /etc/postfix/main.cf: support for parameter "smtp_use_tls" will be removed; instead, specify "smtp_tls_security_level"
+Sep 25 03:01:25 instance postfix[8857]: /usr/sbin/postconf: warning: /etc/postfix/main.cf: support for parameter "postscreen_use_tls" will be removed; instead, specify "postscreen_tls_security_level"
+Sep 25 03:01:25 instance postfix[8857]: /usr/sbin/postconf: warning: /etc/postfix/main.cf: support for parameter "smtp_use_tls" will be removed; instead, specify "smtp_tls_security_level"
+Sep 25 03:01:25 instance postfix[8866]: /usr/sbin/postconf: warning: /etc/postfix/main.cf: support for parameter "smtp_use_tls" will be removed; instead, specify "smtp_tls_security_level"
+Sep 25 03:01:25 instance postfix[8866]: /usr/sbin/postconf: warning: /etc/postfix/main.cf: support for parameter "postscreen_use_tls" will be removed; instead, specify "postscreen_tls_security_level"

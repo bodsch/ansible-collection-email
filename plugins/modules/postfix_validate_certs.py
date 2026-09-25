@@ -1,15 +1,12 @@
 #!/usr/bin/python3
-# -*- coding: utf-8 -*-
 
 # (c) 2022-2023, Bodo Schulz <bodo@boone-schulz.de>
 
 
-from __future__ import absolute_import, division, print_function
 
 import os
 
 from ansible.module_utils.basic import AnsibleModule
-
 
 # ----------------------------------------------------------------------
 
@@ -44,7 +41,7 @@ RETURN = r"""
 # ----------------------------------------------------------------------
 
 
-class PostfixValidateCerts(object):
+class PostfixValidateCerts:
     """
     Main Class
     """

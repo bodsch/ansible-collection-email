@@ -26,13 +26,52 @@
     postfix_tls: "{{ postfix_defaults_tls | combine(postfix_tls, recursive=True) }}"
     #
     postfix_master: "{{ postfix_defaults_master | combine(postfix_master, recursive=True) }}"
+  no_log: true
+
+- name: handle virtual configs
+  when:
+    - not running_in_check_mode
+    - ansible_facts.distribution | lower in ["archlinux", "artix linux"]
+  block:
+
+    - name: detect virtual file
+      ansible.builtin.stat:
+        path: "{{ postfix_virtual_directory }}"
+        get_checksum: false
+      register: stat_postfix_virtual
+      ignore_errors: true
+      no_log: true
+
+    - name: remove virtual file
+      ansible.builtin.file:
+        state: absent
+        path: "{{ postfix_virtual_directory }}"
+      when:
+        - stat_postfix_virtual is defined
+        - stat_postfix_virtual.stat is defined
+        - stat_postfix_virtual.stat.isdir is defined
+        - not stat_postfix_virtual.stat.isdir
+
+- name: create postfix  directories
+  when:
+    - not running_in_check_mode
+  bodsch.core.directories:
+    mode: "0750"
+    paths:
+      - path: "{{ postfix_maps_directory }}"
+      - path: "{{ postfix_virtual_directory }}"
+      - path: "{{ postfix_dynamicmaps_directory }}"
 
 - name: detected install postfix version
+  when:
+    - not running_in_check_mode
   bodsch.email.postfix_postconf:
     config_name: mail_version
   register: _postfix_version
 
 - name: define postfix_version
+  when:
+    - not running_in_check_mode
   ansible.builtin.set_fact:
     postfix_version: "{{ _postfix_version.postconf_value }}"
 
@@ -41,48 +80,17 @@
 #     msg: "{{ postfix_version }}"
 
 - name: define postfix_compatibility_level
-  ansible.builtin.set_fact:
-    postfix_compatibility_level: "{{ _postfix_version.postconf_value[0:1] }}"
   when:
+    - not running_in_check_mode
     - postfix_compatibility_level is defined
     - postfix_compatibility_level | string | length > 0
     - postfix_compatibility_level == "auto"
-
-- name: create maps.d directory
-  ansible.builtin.file:
-    state: directory
-    name: "{{ postfix_maps_directory }}"
-    mode: "0750"
-
-- name: virtual file
-  when:
-    - ansible_facts.distribution | lower in ["archlinux", "artix linux"]
-  block:
-    - name: detect virtual file
-      ansible.builtin.stat:
-        path: "{{ postfix_virtual_directory }}"
-        get_checksum: false
-      register: stat_postfix_virtual
-      ignore_errors: true
-
-    - name: remove virtual file
-      ansible.builtin.file:
-        state: absent
-        path: "{{ postfix_virtual_directory }}"
-      backup: true
-      when:
-        - stat_postfix_virtual is defined
-        - stat_postfix_virtual.stat is defined
-        - stat_postfix_virtual.stat.isdir is defined
-        - not stat_postfix_virtual.stat.isdir
-
-- name: create virtual directory
-  ansible.builtin.file:
-    state: directory
-    name: "{{ postfix_virtual_directory }}"
-    mode: "0750"
+  ansible.builtin.set_fact:
+    postfix_compatibility_level: "{{ _postfix_version.postconf_value[0:1] }}"
 
 - name: configure mailname
+  when:
+    - not running_in_check_mode
   ansible.builtin.template:
     src: etc/postfix/mailname.j2
     dest: "{{ postfix_mailname_file }}"
@@ -99,6 +107,7 @@
 
 - name: postfix sasl and relay
   when:
+    - not running_in_check_mode
     - postfix_users is defined
     - postfix_users.sasl_auth is defined or
       postfix_users.relay is defined
@@ -118,7 +127,7 @@
         group: root
         mode: "0660"
         backup: true
-      # no_log: true
+      no_log: true
       notify:
         - postmap sasl_passwd
         - restart postfix
@@ -144,6 +153,10 @@
         - postfix-relay
 
 - name: configure aliases
+  when:
+    - not running_in_check_mode
+    - postfix_aliases is defined
+    - postfix_aliases | count > 0
   ansible.builtin.template:
     src: etc/postfix/aliases.j2
     dest: "{{ postfix_aliases_file }}"
@@ -154,9 +167,6 @@
   notify:
     - new aliases
     - restart postfix
-  when:
-    - postfix_aliases is defined
-    - postfix_aliases | count > 0
   tags:
     - configuration
     - postfix
@@ -178,6 +188,8 @@
 #     - postfix-aliases
 
 - name: create postfix maps
+  when:
+    - not running_in_check_mode
   bodsch.email.postfix_maps:
     maps:
       - name: virtual
@@ -217,6 +229,8 @@
     - reload service
 
 - name: configure header checks
+  when:
+    - not running_in_check_mode
   ansible.builtin.template:
     src: etc/postfix/header_checks.j2
     dest: "{{ postfix_maps_directory }}/header_checks"
@@ -232,6 +246,8 @@
     - postfix-header-checks-table
 
 - name: create virtual backend configurations
+  when:
+    - not running_in_check_mode
   bodsch.email.postfix_virtual_backends:
     force: false
     backends: "{{ postfix_virtual_backends }}"
@@ -245,6 +261,8 @@
     - postfix-virtual-backends
 
 - name: update main configuration file
+  when:
+    - not running_in_check_mode
   ansible.builtin.template:
     src: etc/postfix/main.cf.j2
     dest: "{{ postfix_config_directory }}/main.cf"
@@ -261,6 +279,9 @@
     - postfix-configuration
 
 - name: update master configuration file
+  when:
+    - not running_in_check_mode
+    - postfix_handle_mastercf
   ansible.builtin.template:
     src: etc/postfix/master.cf.j2
     dest: "{{ postfix_config_directory }}/master.cf"
@@ -271,14 +292,14 @@
   notify:
     - validate config
     - restart postfix
-  when:
-    - postfix_handle_mastercf
   tags:
     - configuration
     - postfix
     - postfix-configuration
 
 - name: flush handlers at this point to avoid double restart
+  when:
+    - not running_in_check_mode
   ansible.builtin.meta: flush_handlers
 
 ...
