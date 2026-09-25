@@ -221,9 +221,17 @@ class PostfixMaps(object):
 
     def map_data(self, data):
         """
-        input: [{'virtual': 'webmaster@yourdomain.com', 'alias': 'personal_email@gmail.com'}, {'virtual': 'billandbob@yourdomain.com', 'alias': 'bill@gmail.com, bob@gmail.com'}, {'virtual': 'ann-katrin@yourdomain.com', 'aliases': ['ann@gmail.com', 'bob@gmail.com', 'katrin@gmail.com']}]
+        input: [
+            {'virtual': 'webmaster@yourdomain.com', 'alias': 'personal_email@gmail.com'},
+            {'virtual': 'billandbob@yourdomain.com', 'alias': 'bill@gmail.com, bob@gmail.com'},
+            {'virtual': 'ann-katrin@yourdomain.com', 'aliases': ['ann@gmail.com', 'bob@gmail.com', 'katrin@gmail.com']}
+        ]
 
-        output: {{'webmaster@yourdomain.com': 'personal_email@gmail.com'}, {'billandbob@yourdomain.com': 'bill@gmail.com, bob@gmail.com'}, {'ann-katrin@yourdomain.com': 'ann@gmail.com, bob@gmail.com, katrin@gmail.com'}}
+        output: {
+            {'webmaster@yourdomain.com': 'personal_email@gmail.com'},
+            {'billandbob@yourdomain.com': 'bill@gmail.com, bob@gmail.com'},
+            {'ann-katrin@yourdomain.com': 'ann@gmail.com, bob@gmail.com, katrin@gmail.com'}
+        }
         """
         key = None
         values = None

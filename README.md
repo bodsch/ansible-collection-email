@@ -9,11 +9,12 @@ Documentation for the collection.
 | [bodsch.email.postfix](./roles/postfix/README.md)          | [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/bodsch/ansible-collection-email/postfix.yml?branch=main)][postfix]        | This role will fully configure and install *postfix*. |
 | [bodsch.email.dovecot](./roles/dovecot/README.md)          | [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/bodsch/ansible-collection-email/dovecot.yml?branch=main)][dovecot]        | This role will fully configure and install *dovecot*. |
 | [bodsch.email.mailcow](./roles/mailcow/README.md)          | [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/bodsch/ansible-collection-email/mailcow.yml?branch=main)][mailcow]        | This role will fully configure and install *mailcow*. |
-
+| [bodsch.email.rspamd](./roles/rspamd/README.md)            | [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/bodsch/ansible-collection-email/rspamd.yml?branch=main)][rspamd]          | This role will fully configure and install *rspamd*. |
 
 [postfix]: https://github.com/bodsch/ansible-collection-email/actions/workflows/postfix.yml
 [dovecot]: https://github.com/bodsch/ansible-collection-email/actions/workflows/dovecot.yml
 [mailcow]: https://github.com/bodsch/ansible-collection-email/actions/workflows/mailcow.yml
+[rspamd]: https://github.com/bodsch/ansible-collection-email/actions/workflows/rspamd.yml
 
 ## Modules
 

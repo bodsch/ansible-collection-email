@@ -57,13 +57,13 @@
   ansible.builtin.file:
     state: directory
     path: "{{ dovecot_logging_directory }}"
-    mode: 0755
+    mode: "0755"
 
 - name: create configuration directory
   ansible.builtin.file:
     state: directory
     path: "{{ item }}"
-    mode: 0755
+    mode: "0755"
   loop:
     - /etc/dovecot
     - /etc/dovecot/conf.d
@@ -77,7 +77,7 @@
     src: etc/dovecot/dovecot.conf.j2
     dest: /etc/dovecot/dovecot.conf
     backup: true
-    mode: 0644
+    mode: "0644"
   notify:
     - restart dovecot
 
@@ -86,7 +86,7 @@
     src: etc/dovecot/conf.d/{{ item }}.j2
     dest: /etc/dovecot/conf.d/{{ item }}
     backup: true
-    mode: 0644
+    mode: "0644"
   loop:
     - 10-auth.conf
     - 10-director.conf
@@ -117,7 +117,7 @@
     src: etc/dovecot/auth.d/{{ item }}.j2
     dest: /etc/dovecot/auth.d/{{ item }}
     backup: true
-    mode: 0644
+    mode: "0644"
   loop:
     - auth-checkpassword.conf.ext
     - auth-deny.conf.ext
@@ -139,7 +139,7 @@
     src: etc/dovecot/{{ item }}.j2
     dest: /etc/dovecot/{{ item }}
     backup: true
-    mode: 0644
+    mode: "0644"
   loop:
     - dovecot-dict-auth.conf.ext
     - dovecot-dict-sql.conf.ext

@@ -93,7 +93,6 @@ rspamd_local_config:
       regexp: true
       score: 2050
 
-
 # Plain-text map files referenced above (e.g. dkim_signing.sign_networks) and by
 # multimap/rbl-style modules. Each key is rendered verbatim, one line per list entry,
 # to /etc/rspamd/custom/<key>.map.

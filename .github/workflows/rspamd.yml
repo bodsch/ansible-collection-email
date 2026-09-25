@@ -1,6 +1,6 @@
 ---
 
-name: dovecot
+name: rspamd
 
 on:
   workflow_dispatch:
@@ -23,8 +23,8 @@ on:
     paths:
       - "!Makefile"
       - "!README.md"
-      - 'roles/dovecot/**'
-      - '.github/workflows/dovecot.yml'
+      - 'roles/rspamd/**'
+      - '.github/workflows/rspamd.yml'
 
   pull_request:
     branches:
@@ -35,8 +35,8 @@ on:
     paths:
       - "!Makefile"
       - "!README.md"
-      - 'roles/dovecot/**'
-      - '.github/workflows/dovecot.yml'
+      - 'roles/rspamd/**'
+      - '.github/workflows/rspamd.yml'
 
 env:
   COLLECTION_NAMESPACE: bodsch
@@ -61,7 +61,7 @@ jobs:
         scenario:
           - default
         collection_role:
-          - dovecot
+          - rspamd
 
     steps:
       - name: check out the codebase.
@@ -106,6 +106,7 @@ jobs:
       matrix:
         image:
           - ubuntu:22.04
+          - ubuntu:24.04
         ansible-version:
           - '13.0'
         python_version:
@@ -114,7 +115,7 @@ jobs:
         scenario:
           - default
         collection_role:
-          - dovecot
+          - rspamd
 
     steps:
       - name: check out the codebase.
@@ -166,11 +167,8 @@ jobs:
           - "3.12"
         scenario:
           - configured
-          - with-database
-          # - mailcow-compatible
-          # - proxy_sql_minimal
         collection_role:
-          - dovecot
+          - rspamd
 
     steps:
       - name: check out the codebase.
