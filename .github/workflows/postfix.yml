@@ -54,7 +54,7 @@ jobs:
         image:
           - debian:13
         ansible-version:
-          - '13.0'
+          - '12.3'
         python_version:
           - "3.11"
           - "3.12"
@@ -108,7 +108,7 @@ jobs:
           - ubuntu:22.04
           - ubuntu:24.04
         ansible-version:
-          - '13.0'
+          - '12.3'
         python_version:
           - "3.11"
           - "3.12"
@@ -161,7 +161,7 @@ jobs:
         image:
           - debian:13
         ansible-version:
-          - '13.0'
+          - '12.3'
         python_version:
           - "3.11"
           - "3.12"

@@ -55,7 +55,7 @@ jobs:
         image:
           - archlinux:latest
         ansible-version:
-          - '13.0'
+          - '12.3'
         python_version:
           - "3.12"
         scenario:

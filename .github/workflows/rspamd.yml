@@ -161,7 +161,7 @@ jobs:
         image:
           - debian:13
         ansible-version:
-          - '13.0'
+          - '12.3'
         python_version:
           - "3.11"
           - "3.12"
