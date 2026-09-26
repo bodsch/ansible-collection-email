@@ -1,0 +1,62 @@
+
+{#- Inserts the value correctly formatted and quoted for UCL -#}
+{%- macro insert_value(value) -%}
+    {%- if value | type_debug == "bool" -%}
+        {#- bool -#}
+        {{ value | bool | lower }}
+    {%- elif value | type_debug == "int" or
+             value | type_debug == "float" -%}
+        {#- numeric -#}
+        {{ value }}
+    {%- elif value | type_debug == "unicode" or
+             value | type_debug == "AnsibleUnsafeText" or
+             value | type_debug == "str" or
+             value | type_debug == "AnsibleUnicode" -%}
+        {%- if value | regex_search('^([0-9])+(.[0-9]+)?(s|m|h|d|min)$') -%}
+            {#- time -#}
+            {{ value }}
+        {%- else -%}
+            {#- string -#}
+            {{ value | to_json }}
+        {%- endif -%}
+    {%- else -%}
+        {{ "Your rspamd_config contains an invalid value"/0 }}
+    {%- endif -%}
+{%- endmacro -%}
+
+{#- Checks whether a list contains another list or dict -#}
+{% macro is_complex(var) %}
+{%- for item in var -%}
+    {%- if item | type_debug == "dict" or item | type_debug == "dict" -%}
+        True
+    {%- endif -%}
+{%- endfor -%}
+{% endmacro %}
+
+{#- Formats a variable for inserting it into UCL -#}
+{%- macro insert_dict(key, value) -%}
+    {%- if value | type_debug == "list" -%}
+        {#- list: If one of the items is complex, repeatedly define them, otherwise use an array -#}
+        {%- if is_complex(value) | length > 0 -%}{#- Implementing this by setting a variable is not possible because Jinja fails unexpectedly when using 'is defined' in this macro -#}
+{%-           for item in value %}
+{{              insert_dict(key, item) }}
+{%            endfor -%}
+        {%- else -%}
+            {{ key }} = [
+            {%- for item in value -%}
+                {{ insert_value(item) }}{{ ", " if not loop.last else "" }}
+            {%- endfor -%}
+            ]
+        {%- endif -%}
+    {%- elif value | type_debug == "dict" -%}
+        {#- dict -#}
+        {{ key }} {
+{%        for k, v in value.items() %}
+{{          insert_dict(k, v) | indent(4, True) }}
+{%        endfor -%}
+        }
+    {%- else -%}
+        {#- simple type like string, number, bool -#}
+        {{ key }} = {{ insert_value(value) }};
+    {%- endif -%}
+{%- endmacro -%}

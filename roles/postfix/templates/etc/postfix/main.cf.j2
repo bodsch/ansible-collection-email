@@ -14,13 +14,12 @@ mynetworks                                =
     {{ postfix_mynetworks | join("\n") | indent(4) }}
 mynetworks_style                          = subnet
 
-biff                                      = {{ postfix_biff | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+biff                                      = {{ postfix_biff | default(false) | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
 
 debug_peer_level                          = {{ postfix_debug_peer_level }}
-readme_directory                          = {{ postfix_readme_directory | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
-
+readme_directory                          = {{ postfix_readme_directory | default(false) | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
 # appending .domain is the MUA's job.
-append_dot_mydomain                       = {{ postfix_append_dot_mydomain | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+append_dot_mydomain                       = {{ postfix_append_dot_mydomain | default(false) | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
 
 {% if postfix_delay_warning_time is defined and
       postfix_delay_warning_time | length > 0 %}
@@ -55,7 +54,9 @@ compatibility_level                       = {{ postfix_compatibility_level }}
 {%- include('main.cf.d/virtual.j2') -%}
 
 # Disable the SMTP VRFY command. This stops some techniques used to harvest email addresses.
-disable_vrfy_command                      = {{ postfix_disable_vrfy_command | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+disable_vrfy_command                      = {{ postfix_disable_vrfy_command | default(false) | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+
+# ---------------------------------------------------------------------------------
 
 {% for raw_option in postfix_raw_options | default([]) %}
 {{ raw_option }}

@@ -1,0 +1,9 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+# {{ ansible_managed }}
+{% from "etc/rspamd/macros.j2" import insert_dict %}
+
+{% for key, value in rspamd_redis.items() %}
+{{ insert_dict(key, value) }}
+
+{% endfor %}
+

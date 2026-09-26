@@ -1,25 +1,27 @@
+{% set _postfix_proxy = postfix_proxy | bodsch.core.remove_empty_values() %}
+# ---------------------------------------------------------
 
-{% if postfix_proxy.interfaces is defined and
-      postfix_proxy.interfaces | string | length > 0 %}
-proxy_interfaces                          = {{ postfix_proxy.interfaces }}
+{% if _postfix_proxy.interfaces is defined and
+      _postfix_proxy.interfaces | string | length > 0 %}
+proxy_interfaces                          = {{ _postfix_proxy.interfaces }}
 {% endif %}
-{% if postfix_proxy.read_maps is defined and
-      postfix_proxy.read_maps | count > 0 %}
+{% if _postfix_proxy.read_maps is defined and
+      _postfix_proxy.read_maps | count > 0 %}
 proxy_read_maps                           =
-    {{ postfix_proxy.read_maps | join("\n") | indent(4) }}
+    {{ _postfix_proxy.read_maps | join("\n") | indent(4) }}
 {% endif  %}
-{% if postfix_proxy.write_maps is defined and
-      postfix_proxy.write_maps | count > 0 %}
+{% if _postfix_proxy.write_maps is defined and
+      _postfix_proxy.write_maps | count > 0 %}
 proxy_write_maps                           =
-    {{ postfix_proxy.write_maps | join("\n") | indent(4) }}
+    {{ _postfix_proxy.write_maps | join("\n") | indent(4) }}
 {% endif  %}
-{% if postfix_proxy.map_service_name is defined and
-      postfix_proxy.map_service_name | string | length > 0 %}
-proxymap_service_name                     = {{ postfix_proxy.map_service_name }}
+{% if _postfix_proxy.map_service_name is defined and
+      _postfix_proxy.map_service_name | string | length > 0 %}
+proxymap_service_name                     = {{ _postfix_proxy.map_service_name }}
 {% endif %}
-{% if postfix_proxy.write_service_name is defined and
-      postfix_proxy.write_service_name | string | length > 0 %}
-proxywrite_service_name                   = {{ postfix_proxy.write_service_name }}
+{% if _postfix_proxy.write_service_name is defined and
+      _postfix_proxy.write_service_name | string | length > 0 %}
+proxywrite_service_name                   = {{ _postfix_proxy.write_service_name }}
 {% endif %}
 {#
 # proxy_read_maps = proxy:mysql:/opt/postfix/conf/sql/mysql_sasl_passwd_maps_transport_maps.cf,

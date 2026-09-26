@@ -1,16 +1,18 @@
+{% set _postfix_transport = postfix_transport | bodsch.core.remove_empty_values() %}
+# ---------------------------------------------------------
 
-{% if postfix_transport.maps is defined  and
-      postfix_transport.maps | count > 0 %}
-  {% if postfix_transport.maps | bodsch.core.type == "list" %}
+{% if _postfix_transport.maps is defined  and
+      _postfix_transport.maps | count > 0 %}
+  {% if _postfix_transport.maps | bodsch.core.type == "list" %}
 transport_maps                            =
-    {{ postfix_transport.maps | join("\n") | indent(4) }}
+    {{ _postfix_transport.maps | join("\n") | indent(4) }}
   {% else %}
-transport_maps                            = {{ postfix_transport.maps }}
+transport_maps                            = {{ _postfix_transport.maps }}
   {% endif %}
 {% endif %}
-{% if postfix_transport.retry_time is defined  and
-      postfix_transport.retry_time | string | length > 0 %}
-transport_retry_time                      = {{ postfix_transport.retry_time }}
+{% if _postfix_transport.retry_time is defined  and
+      _postfix_transport.retry_time | string | length > 0 %}
+transport_retry_time                      = {{ _postfix_transport.retry_time }}
 {% endif %}
 {#
 transport_maps =

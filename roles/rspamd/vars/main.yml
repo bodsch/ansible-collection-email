@@ -1,0 +1,125 @@
+---
+
+rspamd_dependencies: []
+
+rspamd_packages:
+  - rspamd
+
+# https://rspamd.com/doc/configuration/logging.html#configuration-parameters
+rspamd_defaults_logging:
+  ## type                    Defines logging type (file, console or syslog). For some types mandatory attributes may be required.
+  type: console
+  ## systemd                 If true timestamps aren’t prepended to log messages. Default: false.
+  systemd: true
+  ## filename                Path to log file for file logging (required for file type)
+  ## facility                Logging facility for syslog type (required if this type is used)
+  ## level                   Defines logging level (error, warning, info or debug).
+  level: info
+  ## log_buffered            Flag that controls whether logging is buffered.
+  ## log_buf_size            For file and console logging defines buffer size that will be used for logging output.
+  ## log_urls                Flag that defines whether all URLs in message should be logged. Useful for testing. Default: false.
+  ## log_re_cache            Output regular expressions statistics after each message. Default: true.
+  ## debug_ip                List that contains IP addresses for which debugging should be turned on.
+  ## color                   Turn on coloring for log messages. Default: false.
+  ## debug_modules           A list of modules that are enabled for debugging.
+  ## log_usec                Log microseconds (e.g. 11:43:16.68071). Default: false.
+  ## log_severity (2.8+)     Log severity explicitly (e.g. [info] or [error]). Default: false
+
+# https://rspamd.com/doc/workers/
+rspamd_defaults_workers:
+  ## normal: this worker is designed to scan mail messages
+  normal:
+    options:
+      ## bind_socket - a string that defines bind address of a worker. If the port number is omitted, port 11333 is assumed.
+      ## count - number of worker instances to run (some workers ignore that option, e.g. hs_helper)
+      ## enabled (1.6.2+) - a Boolean (true or false), enable or disable a worker (true by default)
+      bind_socket: localhost:11333
+      ## mime: turn to false if you want to scan non-mime messages (e.g. forum comments or SMS), default: true
+      ## allow_learn: turn to true if you want to learn messages using this worker (usually you should use controller worker), default: false
+      ## timeout: input/output timeout, default: 1min
+      ## task_timeout: maximum time to process a single task, default: 8s
+      ## max_tasks: maximum count of tasks processes simultaneously, default: 0 - no limit
+      ## keypair: encryption keypair
+
+  ## rspamd_proxy: handles requests forwarding and milter protocol
+  rspamd_proxy:
+    options:
+      ## bind_socket - a string that defines bind address of a worker. If the port number is omitted, port 11333 is assumed.
+      ## count - number of worker instances to run (some workers ignore that option, e.g. hs_helper)
+      ## enabled (1.6.2+) - a Boolean (true or false), enable or disable a worker (true by default)
+      bind_socket: localhost:11332
+
+  ## controller: this worker performs configuration actions, such as learning, adding fuzzy hashes and serving web interface requests
+  controller:
+    options:
+      ## bind_socket - a string that defines bind address of a worker. If the port number is omitted, port 11333 is assumed.
+      ## count - number of worker instances to run (some workers ignore that option, e.g. hs_helper)
+      ## enabled (1.6.2+) - a Boolean (true or false), enable or disable a worker (true by default)
+      bind_socket: localhost:11334
+      ## password: password for read-only commands
+      ## enable_password: password for write commands
+      ## secure_ip: list or map with IP addresses that are treated as secure so all commands are allowed from these IPs without passwords 
+      ##            (if a reverse proxy sets an X-Forwarded-For header, both the proxy and actual client IP must be contained in secure_ip)
+      ## static_dir: directory where interface static files are placed (usually ${WWWDIR})
+      ## stats_path: path where controller save persistent stats about rspamd (such as scanned messages count)
+      ## bind_socket : a string that defines bind address of a worker-controller (web interface). 
+      ##               If the port number is omitted, port 11334 is assumed (see also the common workers options)
+
+  ## fuzzy_storage: stores fuzzy hashes
+  fuzzy:
+    options:
+      ## bind_socket - a string that defines bind address of a worker. If the port number is omitted, port 11333 is assumed.
+      ## count - number of worker instances to run (some workers ignore that option, e.g. hs_helper)
+      ## enabled (1.6.2+) - a Boolean (true or false), enable or disable a worker (true by default)
+      bind_socket: localhost:11335
+      count: -1
+      ## hashfile - path to the sqlite storage (where are also few outdated aliases for this command exist: hash_file, file, database)
+      ## backend - set it to redis if you want to use a redis server
+      ## sync - time to perform database sync in seconds, default value: 60
+      ## expire - time value for hashes expiration in seconds, default value: 2 days
+      ## keypair - encryption keypair (can be repeated for different keys), can be obtained via rspamadm keypair -u command
+      ## keypair_cache_size - Size of keypairs cache, default value: 512
+      ## encrypted_only - allow encrypted requests only (and forbid all unknown keys or plaintext requests)
+      ## master_timeout - master protocol IO timeout
+      ## sync_keypair - encryption key for master/slave updates
+      ## masters - string, allow master/slave updates from the following IP addresses
+      ## master_key - allow master/slave updates merely using the specified key
+      ## slave - list of slave hosts.
+      ## mirror - list of slave hosts, same as slave
+      ## allow_update - string, array of strings or a map of IP addresses that are allowed to perform changes to fuzzy storage 
+      ##                (you should also set read_only = no in your fuzzy_check plugin
+
+  ## lua: runs custom Lua scripts
+  lua: {}
+
+# https://rspamd.com/doc/configuration/redis.html
+rspamd_defaults_redis: {}
+  ## servers: upstreams list for both read and write requests
+  ## read_servers: upstreams list for read only servers (usually replication slaves)
+  ## write_servers: upstreams list for write only servers (usually replication master)
+  ## timeout: timeout in seconds to get reply from Redis (e.g. 0.5s or 1min)
+  ## db: number of database to use (by default, Rspamd will use the default Redis database with number 0)
+  ## password: password to connect to Redis (no password by default)
+  ## prefix: use the specified prefix for keys in Redis (if supported by module)
+  ## expand_keys (1.7.0+): if set to true ‘expand’ key names used in queries (discussed further below)
+  ##
+  ## ip: sending IP of a message
+  ## principal_recipient: the address of the principal recipient of a message (Deliver-To request header, first SMTP recipient or MIME recipient according to availability)
+  ## principal_recipient_domain: the domain name of the principal recipient
+  ## esld_principal_recipient_domain: the domain name of the principal recipient, normalised to eSLD
+  ## smtp_from: SMTP sender address
+  ## smtp_from_domain: SMTP sender address domain
+  ## esld_smtp_from_domain: SMTP sender address domain, normalised to eSLD
+  ## smtp_from_domain_or_helo: SMTP sender address domain or HELO if address is empty/absent
+  ## esld_smtp_from_domain_or_helo: SMTP sender address domain or HELO if address is empty/absent, normalised to eSLD
+  ## mime_from: MIME sender address
+  ## mime_from_domain: MIME sender address domain
+  ## esld_mime_from_domain: MIME sender address domain, normalised to eSLD
+
+rspamd_defaults_local_config: {}
+
+rspamd_defaults_config_overrides: {}
+
+rspamd_defaults_custom_maps: {}
+
+...

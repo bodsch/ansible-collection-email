@@ -1,0 +1,7 @@
+---
+
+- name: bodsch.redis
+  src: bodsch.redis
+  version: 2.1.0
+
+...

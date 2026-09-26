@@ -1,7 +1,5 @@
 # python 3 headers, required if submitting to Ansible
-from __future__ import absolute_import, division, print_function
 
-__metaclass__ = type
 
 import netaddr
 from ansible.plugins.test.core import version_compare
@@ -10,7 +8,7 @@ from ansible.utils.display import Display
 display = Display()
 
 
-class FilterModule(object):
+class FilterModule:
     """ """
 
     def filters(self):
@@ -57,7 +55,8 @@ class FilterModule(object):
             # https://github.com/mailcow/mailcow-dockerized/releases/tag/2025-01a
             # https://mailcow.email/posts/2025/release-2025-01/
             # With 2025-01 SOLR is saying arrivederci to mailcow.
-            # It will be replaced with Flatcurve instead, which is not using a seperate container like SOLR and is directly integrated into the Dovecot Core.
+            # It will be replaced with Flatcurve instead, which is not using a seperate container
+            #   like SOLR and is directly integrated into the Dovecot Core.
             compare = version_compare(str(git_version), "2025-01", ">=")
             if compare:
                 import re
