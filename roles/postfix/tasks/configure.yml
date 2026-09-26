@@ -112,7 +112,9 @@
     - postfix_users.sasl_auth is defined or
       postfix_users.relay is defined
     - postfix_smtp.sasl.auth is defined
-    - postfix_smtp.sasl.auth.enable | default('false') | bool
+    - postfix_smtp.sasl.auth.enable is defined
+    - postfix_smtp.sasl.auth.enable | string | length > 0
+    - postfix_smtp.sasl.auth.enable | default(false) | bool
   tags:
     - postfix
     - postfix-configuration

@@ -1,121 +1,125 @@
+{% set _postfix_relay = postfix_relay | bodsch.core.remove_empty_values() %}
+# ---------------------------------------------------------
 
-{% if postfix_relay.clientcerts and
-      postfix_relay.clientcerts | string | length > 0 %}
-relay_clientcerts                         = {{ postfix_relay.clientcerts }}
+{% if _postfix_relay.clientcerts is defined and
+      _postfix_relay.clientcerts | string | length > 0 %}
+relay_clientcerts                         = {{ _postfix_relay.clientcerts }}
 {% endif %}
-{% if postfix_relay.delivery_slot_cost and
-      postfix_relay.delivery_slot_cost | string | length > 0 %}
-relay_delivery_slot_cost                  = {{ postfix_relay.delivery_slot_cost }}
+{% if _postfix_relay.delivery_slot_cost is defined and
+      _postfix_relay.delivery_slot_cost | string | length > 0 %}
+relay_delivery_slot_cost                  = {{ _postfix_relay.delivery_slot_cost }}
 {% endif %}
-{% if postfix_relay.delivery_slot_discount and
-      postfix_relay.delivery_slot_discount | string | length > 0 %}
-relay_delivery_slot_discount              = {{ postfix_relay.delivery_slot_discount }}
+{% if _postfix_relay.delivery_slot_discount is defined and
+      _postfix_relay.delivery_slot_discount | string | length > 0 %}
+relay_delivery_slot_discount              = {{ _postfix_relay.delivery_slot_discount }}
 {% endif %}
-{% if postfix_relay.delivery_slot_loan and
-      postfix_relay.delivery_slot_loan | string | length > 0 %}
-relay_delivery_slot_loan                  = {{ postfix_relay.delivery_slot_loan }}
+{% if _postfix_relay.delivery_slot_loan is defined and
+      _postfix_relay.delivery_slot_loan | string | length > 0 %}
+relay_delivery_slot_loan                  = {{ _postfix_relay.delivery_slot_loan }}
 {% endif %}
-{% if postfix_relay.destination_concurrency_failed_cohort_limit and
-      postfix_relay.destination_concurrency_failed_cohort_limit | string | length > 0 %}
-relay_destination_concurrency_failed_cohort_limit = {{ postfix_relay.destination_concurrency_failed_cohort_limit }}
+{% if _postfix_relay.destination_concurrency_failed_cohort_limit is defined and
+      _postfix_relay.destination_concurrency_failed_cohort_limit | string | length > 0 %}
+relay_destination_concurrency_failed_cohort_limit = {{ _postfix_relay.destination_concurrency_failed_cohort_limit }}
 {% endif %}
-{% if postfix_relay.destination_concurrency_limit and
-      postfix_relay.destination_concurrency_limit | string | length > 0 %}
-relay_destination_concurrency_limit       = {{ postfix_relay.destination_concurrency_limit }}
+{% if _postfix_relay.destination_concurrency_limit is defined and
+      _postfix_relay.destination_concurrency_limit | string | length > 0 %}
+relay_destination_concurrency_limit       = {{ _postfix_relay.destination_concurrency_limit }}
 {% endif %}
-{% if postfix_relay.destination_concurrency_negative_feedback and
-      postfix_relay.destination_concurrency_negative_feedback | string | length > 0 %}
-relay_destination_concurrency_negative_feedback = {{ postfix_relay.destination_concurrency_negative_feedback }}
+{% if _postfix_relay.destination_concurrency_negative_feedback is defined and
+      _postfix_relay.destination_concurrency_negative_feedback | string | length > 0 %}
+relay_destination_concurrency_negative_feedback = {{ _postfix_relay.destination_concurrency_negative_feedback }}
 {% endif %}
-{% if postfix_relay.destination_concurrency_positive_feedback and
-      postfix_relay.destination_concurrency_positive_feedback | string | length > 0 %}
-relay_destination_concurrency_positive_feedback = {{ postfix_relay.destination_concurrency_positive_feedback }}
+{% if _postfix_relay.destination_concurrency_positive_feedback is defined and
+      _postfix_relay.destination_concurrency_positive_feedback | string | length > 0 %}
+relay_destination_concurrency_positive_feedback = {{ _postfix_relay.destination_concurrency_positive_feedback }}
 {% endif %}
-{% if postfix_relay.destination_rate_delay and
-      postfix_relay.destination_rate_delay | string | length > 0 %}
-relay_destination_rate_delay              = {{ postfix_relay.destination_rate_delay }}
+{% if _postfix_relay.destination_rate_delay is defined and
+      _postfix_relay.destination_rate_delay | string | length > 0 %}
+relay_destination_rate_delay              = {{ _postfix_relay.destination_rate_delay }}
 {% endif %}
-{% if postfix_relay.destination_recipient_limit and
-      postfix_relay.destination_recipient_limit | string | length > 0 %}
-relay_destination_recipient_limit         = {{ postfix_relay.destination_recipient_limit }}
+{% if _postfix_relay.destination_recipient_limit is defined and
+      _postfix_relay.destination_recipient_limit | string | length > 0 %}
+relay_destination_recipient_limit         = {{ _postfix_relay.destination_recipient_limit }}
 {% endif %}
-{% if postfix_relay.domains is defined and
-      postfix_relay.domains | length > 0 %}
-  {% if postfix_relay.domains | bodsch.core.type == "list" %}
+{% if _postfix_relay.domains is defined and
+      _postfix_relay.domains | length > 0 %}
+  {% if _postfix_relay.domains | bodsch.core.type == "list" %}
 relay_domains                             =
-    {{ postfix_relay.domains | join("\n") | indent(4)  }}
+    {{ _postfix_relay.domains | join("\n") | indent(4)  }}
   {% else %}
-relay_domains                             = {{ postfix_relay.domains }}
+relay_domains                             = {{ _postfix_relay.domains }}
   {% endif %}
 {% endif %}
 {# obsolete
-{% if postfix_relay.domains and
-      postfix_relay.domains | string | length > 0 %}
-relay_domains                             = {{ postfix_relay.domains }}
+{% if _postfix_relay.domains and
+      _postfix_relay.domains | string | length > 0 %}
+relay_domains                             = {{ _postfix_relay.domains }}
 {% endif %}
 #}
-{% if postfix_relay.domains_reject_code and
-      postfix_relay.domains_reject_code | string | length > 0 %}
-relay_domains_reject_code                 = {{ postfix_relay.domains_reject_code }}
+{% if _postfix_relay.domains_reject_code is defined and
+      _postfix_relay.domains_reject_code | string | length > 0 %}
+relay_domains_reject_code                 = {{ _postfix_relay.domains_reject_code }}
 {% endif %}
-{% if postfix_relay.extra_recipient_limit and
-      postfix_relay.extra_recipient_limit | string | length > 0 %}
-relay_extra_recipient_limit               = {{ postfix_relay.extra_recipient_limit }}
+{% if _postfix_relay.extra_recipient_limit is defined and
+      _postfix_relay.extra_recipient_limit | string | length > 0 %}
+relay_extra_recipient_limit               = {{ _postfix_relay.extra_recipient_limit }}
 {% endif %}
-{% if postfix_relay.initial_destination_concurrency and
-      postfix_relay.initial_destination_concurrency | string | length > 0 %}
-relay_initial_destination_concurrency     = {{ postfix_relay.initial_destination_concurrency }}
+{% if _postfix_relay.initial_destination_concurrency is defined and
+      _postfix_relay.initial_destination_concurrency | string | length > 0 %}
+relay_initial_destination_concurrency     = {{ _postfix_relay.initial_destination_concurrency }}
 {% endif %}
-{% if postfix_relay.minimum_delivery_slots and
-      postfix_relay.minimum_delivery_slots | string | length > 0 %}
-relay_minimum_delivery_slots              = {{ postfix_relay.minimum_delivery_slots }}
+{% if _postfix_relay.minimum_delivery_slots is defined and
+      _postfix_relay.minimum_delivery_slots | string | length > 0 %}
+relay_minimum_delivery_slots              = {{ _postfix_relay.minimum_delivery_slots }}
 {% endif %}
-{% if postfix_relay.recipient_limit and
-      postfix_relay.recipient_limit | string | length > 0 %}
-relay_recipient_limit                     = {{ postfix_relay.recipient_limit }}
+{% if _postfix_relay.recipient_limit is defined and
+      _postfix_relay.recipient_limit | string | length > 0 %}
+relay_recipient_limit                     = {{ _postfix_relay.recipient_limit }}
 {% endif %}
 
-{% if postfix_relay.recipient_maps is defined and
-      postfix_relay.recipient_maps | length > 0 %}
-  {% if postfix_relay.recipient_maps | bodsch.core.type == "list" %}
+{% if _postfix_relay.recipient_maps is defined and
+      _postfix_relay.recipient_maps | length > 0 %}
+  {% if _postfix_relay.recipient_maps | bodsch.core.type == "list" %}
 relay_recipient_maps                      =
-    {{ postfix_relay.recipient_maps | join("\n") | indent(4)  }}
+    {{ _postfix_relay.recipient_maps | join("\n") | indent(4)  }}
   {% else %}
-relay_recipient_maps                      = {{ postfix_relay.recipient_maps }}
+relay_recipient_maps                      = {{ _postfix_relay.recipient_maps }}
   {% endif %}
 {% endif %}
 {# obsolete
-{% if postfix_relay.recipient_maps_file and
-      postfix_relay.recipient_maps_file | string | length > 0 %}
-relay_recipient_maps                      = {{ postfix_relay.recipient_maps_file }}
+{% if _postfix_relay.recipient_maps_file and
+      _postfix_relay.recipient_maps_file | string | length > 0 %}
+relay_recipient_maps                      = {{ _postfix_relay.recipient_maps_file }}
 {% endif %}
 #}
-{% if postfix_relay.recipient_refill_delay and
-      postfix_relay.recipient_refill_delay | string | length > 0 %}
-relay_recipient_refill_delay              = {{ postfix_relay.recipient_refill_delay }}
+{% if _postfix_relay.recipient_refill_delay is defined and
+      _postfix_relay.recipient_refill_delay | string | length > 0 %}
+relay_recipient_refill_delay              = {{ _postfix_relay.recipient_refill_delay }}
 {% endif %}
-{% if postfix_relay.recipient_refill_limit and
-      postfix_relay.recipient_refill_limit | string | length > 0 %}
-relay_recipient_refill_limit              = {{ postfix_relay.recipient_refill_limit }}
+{% if _postfix_relay.recipient_refill_limit is defined and
+      _postfix_relay.recipient_refill_limit | string | length > 0 %}
+relay_recipient_refill_limit              = {{ _postfix_relay.recipient_refill_limit }}
 {% endif %}
-{% if postfix_relay.transport and
-      postfix_relay.transport | string | length > 0 %}
-relay_transport                           = {{ postfix_relay.transport }}
+{% if _postfix_relay.transport is defined and
+      _postfix_relay.transport | string | length > 0 %}
+relay_transport                           = {{ _postfix_relay.transport }}
 {% endif %}
-{% if postfix_relay.transport_rate_delay and
-      postfix_relay.transport_rate_delay | string | length > 0 %}
-relay_transport_rate_delay                = {{ postfix_relay.transport_rate_delay }}
+{% if _postfix_relay.transport_rate_delay is defined and
+      _postfix_relay.transport_rate_delay | string | length > 0 %}
+relay_transport_rate_delay                = {{ _postfix_relay.transport_rate_delay }}
 {% endif %}
-{% if postfix_relay.host is defined and
-      postfix_relay.host | length > 0 %}
+{% if _postfix_relay.host is defined and
+      _postfix_relay.host | length > 0 %}
   {# TODO
     # https://www.postfix.org/postconf.5.html#relayhost
       Multiple destinations are supported in Postfix 3.5 and later.
   #}
-  {% if postfix_relay.mxlookup %}
-relayhost                                 = {{ postfix_relay.host }}:{{ postfix_relay.port }}
+  {% if _postfix_relay.mxlookup is defined and
+        _postfix_relay.mxlookup | string | length > 0 and
+        _postfix_relay.mxlookup | bool %}
+relayhost                                 = {{ _postfix_relay.host }}:{{ _postfix_relay.port }}
   {% else %}
-relayhost                                 = [{{ postfix_relay.host }}]:{{ postfix_relay.port }}
+relayhost                                 = [{{ _postfix_relay.host }}]:{{ _postfix_relay.port }}
   {% endif %}
 {% else %}
 relayhost                                 =

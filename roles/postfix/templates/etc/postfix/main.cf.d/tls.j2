@@ -1,140 +1,142 @@
+{% set _postfix_tls = postfix_tls | bodsch.core.remove_empty_values() %}
+# ---------------------------------------------------------
 
-{% if postfix_tls.append_default_CA is defined and
-      postfix_tls.append_default_CA | string | length > 0 %}
-tls_append_default_CA                     = {{ postfix_tls.append_default_CA | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% if _postfix_tls.append_default_CA is defined and
+      _postfix_tls.append_default_CA | string | length > 0 %}
+tls_append_default_CA                     = {{ _postfix_tls.append_default_CA | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
 {% endif %}
-{% if postfix_tls.daemon_random_bytes is defined and
-      postfix_tls.daemon_random_bytes | string | length > 0 %}
-tls_daemon_random_bytes                   = {{ postfix_tls.daemon_random_bytes }}
+{% if _postfix_tls.daemon_random_bytes is defined and
+      _postfix_tls.daemon_random_bytes | string | length > 0 %}
+tls_daemon_random_bytes                   = {{ _postfix_tls.daemon_random_bytes }}
 {% endif %}
-{% if postfix_tls.dane_digests is defined and
-      postfix_tls.dane_digests | count > 0 %}
-tls_dane_digests                          = {{ postfix_tls.dane_digests | join(" ") }}
+{% if _postfix_tls.dane_digests is defined and
+      _postfix_tls.dane_digests | count > 0 %}
+tls_dane_digests                          = {{ _postfix_tls.dane_digests | join(" ") }}
 {% endif %}
-{% if postfix_tls.disable_workarounds is defined and
-      postfix_tls.disable_workarounds | count > 0 %}
+{% if _postfix_tls.disable_workarounds is defined and
+      _postfix_tls.disable_workarounds | count > 0 %}
   {% set valid_workarounds = [
         "CRYPTOPRO_TLSEXT_BUG","DONT_INSERT_EMPTY_FRAGMENTS","LEGACY_SERVER_CONNECT",
         "MICROSOFT_BIG_SSLV3_BUFFER","MICROSOFT_SESS_ID_BUG","MSIE_SSLV2_RSA_PADDING",
         "NETSCAPE_CHALLENGE_BUG","NETSCAPE_REUSE_CIPHER_CHANGE_BUG","SSLEAY_080_CLIENT_DH_BUG",
         "SSLREF2_REUSE_CERT_TYPE_BUG","TLS_BLOCK_PADDING_BUG","TLS_D5_BUG","TLS_ROLLBACK_BUG",
         "TLSEXT_PADDING"] %}
-  {% set workarounds = postfix_tls.disable_workarounds | bodsch.email.valid_list_data(valid_workarounds) %}
+  {% set workarounds = _postfix_tls.disable_workarounds | bodsch.email.valid_list_data(valid_workarounds) %}
 tls_disable_workarounds                   =
     {{ workarounds | join("\n") | indent(4) }}
 {% endif %}
-{% if postfix_tls.eecdh_auto_curves is defined and
-      postfix_tls.eecdh_auto_curves | count > 0 %}
-  {% if postfix_tls.eecdh_auto_curves | bodsch.core.type == "list" %}
-tls_eecdh_auto_curves                     = {{ postfix_tls.eecdh_auto_curves | join(" ") }}
+{% if _postfix_tls.eecdh_auto_curves is defined and
+      _postfix_tls.eecdh_auto_curves | count > 0 %}
+  {% if _postfix_tls.eecdh_auto_curves | bodsch.core.type == "list" %}
+tls_eecdh_auto_curves                     = {{ _postfix_tls.eecdh_auto_curves | join(" ") }}
   {% else %}
-tls_eecdh_auto_curves                     = {{ postfix_tls.eecdh_auto_curves }}
+tls_eecdh_auto_curves                     = {{ _postfix_tls.eecdh_auto_curves }}
   {% endif %}
 {% endif %}
-{% if postfix_tls.eecdh_strong_curve is defined and
-      postfix_tls.eecdh_strong_curve | string | length > 0 %}
-tls_eecdh_strong_curve                    = {{ postfix_tls.eecdh_strong_curve }}
+{% if _postfix_tls.eecdh_strong_curve is defined and
+      _postfix_tls.eecdh_strong_curve | string | length > 0 %}
+tls_eecdh_strong_curve                    = {{ _postfix_tls.eecdh_strong_curve }}
 {% endif %}
-{% if postfix_tls.eecdh_ultra_curve is defined and
-      postfix_tls.eecdh_ultra_curve | string | length > 0 %}
-tls_eecdh_ultra_curve                     = {{ postfix_tls.eecdh_ultra_curve }}
+{% if _postfix_tls.eecdh_ultra_curve is defined and
+      _postfix_tls.eecdh_ultra_curve | string | length > 0 %}
+tls_eecdh_ultra_curve                     = {{ _postfix_tls.eecdh_ultra_curve }}
 {% endif %}
-{% if postfix_tls.export_cipherlist is defined and
-      postfix_tls.export_cipherlist | count > 0 %}
-  {% if postfix_tls.export_cipherlist | bodsch.core.type == "list" %}
-tls_export_cipherlist                     = {{ postfix_tls.export_cipherlist | join(":") }}
+{% if _postfix_tls.export_cipherlist is defined and
+      _postfix_tls.export_cipherlist | count > 0 %}
+  {% if _postfix_tls.export_cipherlist | bodsch.core.type == "list" %}
+tls_export_cipherlist                     = {{ _postfix_tls.export_cipherlist | join(":") }}
   {% else %}
-tls_export_cipherlist                     = {{ postfix_tls.export_cipherlist }}
+tls_export_cipherlist                     = {{ _postfix_tls.export_cipherlist }}
   {% endif %}
 {% endif %}
-{% if postfix_tls.fast_shutdown_enable is defined and
-      postfix_tls.fast_shutdown_enable | string | length > 0 %}
-tls_fast_shutdown_enable                  = {{ postfix_tls.fast_shutdown_enable | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% if _postfix_tls.fast_shutdown_enable is defined and
+      _postfix_tls.fast_shutdown_enable | string | length > 0 %}
+tls_fast_shutdown_enable                  = {{ _postfix_tls.fast_shutdown_enable | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
 {% endif %}
-{% if postfix_tls.high_cipherlist is defined and
-      postfix_tls.high_cipherlist | count > 0 %}
-  {% if postfix_tls.export_cipherlist | bodsch.core.type == "list" %}
-tls_high_cipherlist                       = {{ postfix_tls.high_cipherlist | join(":") }}
+{% if _postfix_tls.high_cipherlist is defined and
+      _postfix_tls.high_cipherlist | count > 0 %}
+  {% if _postfix_tls.export_cipherlist | bodsch.core.type == "list" %}
+tls_high_cipherlist                       = {{ _postfix_tls.high_cipherlist | join(":") }}
   {% else %}
-tls_high_cipherlist                       = {{ postfix_tls.high_cipherlist }}
+tls_high_cipherlist                       = {{ _postfix_tls.high_cipherlist }}
   {% endif %}
 {% endif %}
-{% if postfix_tls.legacy_public_key_fingerprints is defined and
-      postfix_tls.legacy_public_key_fingerprints | string | length > 0 %}
-tls_legacy_public_key_fingerprints        = {{ postfix_tls.legacy_public_key_fingerprints | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% if _postfix_tls.legacy_public_key_fingerprints is defined and
+      _postfix_tls.legacy_public_key_fingerprints | string | length > 0 %}
+tls_legacy_public_key_fingerprints        = {{ _postfix_tls.legacy_public_key_fingerprints | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
 {% endif %}
-{% if postfix_tls.low_cipherlist is defined and
-      postfix_tls.low_cipherlist | count > 0 %}
-  {% if postfix_tls.low_cipherlist | bodsch.core.type == "list" %}
-tls_low_cipherlist                        = {{ postfix_tls.low_cipherlist | join(":") }}
+{% if _postfix_tls.low_cipherlist is defined and
+      _postfix_tls.low_cipherlist | count > 0 %}
+  {% if _postfix_tls.low_cipherlist | bodsch.core.type == "list" %}
+tls_low_cipherlist                        = {{ _postfix_tls.low_cipherlist | join(":") }}
   {% else %}
-tls_low_cipherlist                        = {{ postfix_tls.low_cipherlist }}
+tls_low_cipherlist                        = {{ _postfix_tls.low_cipherlist }}
   {% endif %}
 {% endif %}
-{% if postfix_tls.medium_cipherlist is defined and
-      postfix_tls.medium_cipherlist | count > 0 %}
-  {% if postfix_tls.medium_cipherlist | bodsch.core.type == "list" %}
-tls_medium_cipherlist                     = {{ postfix_tls.medium_cipherlist | join(":") }}
+{% if _postfix_tls.medium_cipherlist is defined and
+      _postfix_tls.medium_cipherlist | count > 0 %}
+  {% if _postfix_tls.medium_cipherlist | bodsch.core.type == "list" %}
+tls_medium_cipherlist                     = {{ _postfix_tls.medium_cipherlist | join(":") }}
   {% else %}
-tls_medium_cipherlist                     = {{ postfix_tls.medium_cipherlist }}
+tls_medium_cipherlist                     = {{ _postfix_tls.medium_cipherlist }}
   {% endif %}
 {% endif %}
-{% if postfix_tls.null_cipherlist is defined and
-      postfix_tls.null_cipherlist | count > 0 %}
-  {% if postfix_tls.null_cipherlist | bodsch.core.type == "list" %}
-tls_null_cipherlist                       = {{ postfix_tls.null_cipherlist | join(":") }}
+{% if _postfix_tls.null_cipherlist is defined and
+      _postfix_tls.null_cipherlist | count > 0 %}
+  {% if _postfix_tls.null_cipherlist | bodsch.core.type == "list" %}
+tls_null_cipherlist                       = {{ _postfix_tls.null_cipherlist | join(":") }}
   {% else %}
-tls_null_cipherlist                       = {{ postfix_tls.null_cipherlist }}
+tls_null_cipherlist                       = {{ _postfix_tls.null_cipherlist }}
   {% endif %}
 {% endif %}
-{% if postfix_tls.preempt_cipherlist is defined and
-      postfix_tls.preempt_cipherlist | string | length > 0 %}
-tls_preempt_cipherlist                    = {{ postfix_tls.preempt_cipherlist | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% if _postfix_tls.preempt_cipherlist is defined and
+      _postfix_tls.preempt_cipherlist | string | length > 0 %}
+tls_preempt_cipherlist                    = {{ _postfix_tls.preempt_cipherlist | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
 {% endif %}
-{% if postfix_tls.random_bytes is defined and
-      postfix_tls.random_bytes | string | length > 0 %}
-tls_random_bytes                          = {{ postfix_tls.random_bytes }}
+{% if _postfix_tls.random_bytes is defined and
+      _postfix_tls.random_bytes | string | length > 0 %}
+tls_random_bytes                          = {{ _postfix_tls.random_bytes }}
 {% endif %}
-{% if postfix_tls.random_exchange_name is defined and
-      postfix_tls.random_exchange_name | string | length > 0 %}
-tls_random_exchange_name                  = {{ postfix_tls.random_exchange_name }}
+{% if _postfix_tls.random_exchange_name is defined and
+      _postfix_tls.random_exchange_name | string | length > 0 %}
+tls_random_exchange_name                  = {{ _postfix_tls.random_exchange_name }}
 {% endif %}
-{% if postfix_tls.random_prng_update_period is defined and
-      postfix_tls.random_prng_update_period | string | length > 0 %}
-tls_random_prng_update_period             = {{ postfix_tls.random_prng_update_period }}
+{% if _postfix_tls.random_prng_update_period is defined and
+      _postfix_tls.random_prng_update_period | string | length > 0 %}
+tls_random_prng_update_period             = {{ _postfix_tls.random_prng_update_period }}
 {% endif %}
-{% if postfix_tls.random_reseed_period is defined and
-      postfix_tls.random_reseed_period | string | length > 0 %}
-tls_random_reseed_period                  = {{ postfix_tls.random_reseed_period }}
+{% if _postfix_tls.random_reseed_period is defined and
+      _postfix_tls.random_reseed_period | string | length > 0 %}
+tls_random_reseed_period                  = {{ _postfix_tls.random_reseed_period }}
 {% endif %}
-{% if postfix_tls.random_source is defined and
-      postfix_tls.random_source | string | length > 0 %}
-tls_random_source                         = {{ postfix_tls.random_source }}
+{% if _postfix_tls.random_source is defined and
+      _postfix_tls.random_source | string | length > 0 %}
+tls_random_source                         = {{ _postfix_tls.random_source }}
 {% endif %}
-{% if postfix_tls.server_sni_maps is defined and
-      postfix_tls.server_sni_maps | string | length > 0 %}
-tls_server_sni_maps                       = {{ postfix_tls.server_sni_maps }}
+{% if _postfix_tls.server_sni_maps is defined and
+      _postfix_tls.server_sni_maps | string | length > 0 %}
+tls_server_sni_maps                       = {{ _postfix_tls.server_sni_maps }}
 {% endif %}
-{% if postfix_tls.session_ticket_cipher is defined and
-      postfix_tls.session_ticket_cipher | string | length > 0 %}
-tls_session_ticket_cipher                 = {{ postfix_tls.session_ticket_cipher }}
+{% if _postfix_tls.session_ticket_cipher is defined and
+      _postfix_tls.session_ticket_cipher | string | length > 0 %}
+tls_session_ticket_cipher                 = {{ _postfix_tls.session_ticket_cipher }}
 {% endif %}
-{% if postfix_tls.ssl_options is defined and
-      postfix_tls.ssl_options | count > 0 %}
+{% if _postfix_tls.ssl_options is defined and
+      _postfix_tls.ssl_options | count > 0 %}
   {% set valid_ssl_options = [
         "ENABLE_MIDDLEBOX_COMPAT","LEGACY_SERVER_CONNECT","NO_TICKET","NO_COMPRESSION",
         "NO_RENEGOTIATION","NO_SESSION_RESUMPTION_ON_RENEGOTIATION","PRIORITIZE_CHACHA"] %}
-  {% set ssl_options = postfix_tls.ssl_options | bodsch.email.valid_list_data(valid_ssl_options) %}
+  {% set ssl_options = _postfix_tls.ssl_options | bodsch.email.valid_list_data(valid_ssl_options) %}
 tls_ssl_options                           =
     {{ ssl_options | join("\n") | indent(4) }}
 {% endif %}
-{% if postfix_tls.wildcard_matches_multiple_labels is defined and
-      postfix_tls.wildcard_matches_multiple_labels | string | length > 0 %}
-tls_wildcard_matches_multiple_labels      = {{ postfix_tls.wildcard_matches_multiple_labels | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% if _postfix_tls.wildcard_matches_multiple_labels is defined and
+      _postfix_tls.wildcard_matches_multiple_labels | string | length > 0 %}
+tls_wildcard_matches_multiple_labels      = {{ _postfix_tls.wildcard_matches_multiple_labels | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
 {% endif %}
-{% if postfix_tls.tlsmgr_service_name is defined and
-      postfix_tls.tlsmgr_service_name | string | length > 0 %}
-tlsmgr_service_name                       = {{ postfix_tls.tlsmgr_service_name }}
+{% if _postfix_tls.tlsmgr_service_name is defined and
+      _postfix_tls.tlsmgr_service_name | string | length > 0 %}
+tlsmgr_service_name                       = {{ _postfix_tls.tlsmgr_service_name }}
 {% endif %}
 {#
 tls_append_default_CA = no
