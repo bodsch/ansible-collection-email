@@ -133,4 +133,25 @@
       would quietly change what the namespace is.
     quiet: true
 
+# sieve_script_type is not validated by dovecot either - "nonsense" is
+# accepted and only fails when a mail is delivered.
+- name: validate sieve script types
+  when:
+    - not running_in_check_mode
+    - dovecot_validate_drivers | bool
+    - dovecot_sieve.scripts | default({}) | count > 0
+  ansible.builtin.assert:
+    that:
+      - dovecot_sieve.scripts | dict2items | map(attribute='value') |
+        selectattr('sieve_script_type', 'defined') |
+        rejectattr('sieve_script_type', 'in', dovecot_valid_sieve_script_types) |
+        list | count == 0
+    fail_msg: |
+      Unknown sieve_script_type: {{ dovecot_sieve.scripts | dict2items | map(attribute='value') | selectattr('sieve_script_type', 'defined') | rejectattr('sieve_script_type', 'in', dovecot_valid_sieve_script_types) | map(attribute='sieve_script_type') | unique | join(', ') }}
+      Known types: {{ dovecot_valid_sieve_script_types | join(', ') }}
+
+      Dovecot accepts any value here while parsing the config; a typo would
+      only show up when a mail is delivered.
+    quiet: true
+
 ...

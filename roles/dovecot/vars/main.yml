@@ -542,7 +542,36 @@ dovecot_defaults_sieve_extprograms:
   services: []
 
 dovecot_defaults_sieve:
+  ## 2.3 style: rendered into the plugin { } block
   plugins: []
+
+  ## dovecot >= 2.4 only: every sieve script location is a named filter now.
+  ## Replaces sieve, sieve_before*, sieve_after*, sieve_default, sieve_global*
+  ## and sieve_dir from the 2.3 plugin block.
+  ##
+  ## The order of the entries is kept, which is what the numbered 2.3 settings
+  ## expressed (sieve_before, sieve_before2, sieve_before3, ...).
+  scripts: {}
+    # personal:
+    #   sieve_script_type: personal
+    #   sieve_script_driver: file
+    #   sieve_script_path: "~/.dovecot.sieve"
+    # before1:
+    #   sieve_script_type: before
+    #   sieve_script_path: /etc/dovecot/sieve/before.sieve
+    # after1:
+    #   sieve_script_type: after
+    #   sieve_script_path: /etc/dovecot/sieve/after.sieve
+
+## Dovecot accepts any value here and only fails at runtime, so the role
+## checks it (see tasks/validate.yml).
+dovecot_valid_sieve_script_types:
+  - personal
+  - default
+  - before
+  - after
+  - global
+  - discard
 
 # dovecot >= 2.4 only: statistics are gathered from events, no plugin needed.
 dovecot_defaults_metrics:

@@ -39,3 +39,23 @@
     {% endfor %}
   {% endfor %}
 {% endif %}
+
+{#
+  Every sieve script location is a named filter in 2.4. The 2.3 settings it
+  replaces (sieve, sieve_before*, sieve_after*, sieve_default, sieve_global*,
+  sieve_dir) are written as UNMAPPED comments by the block above.
+#}
+{% if dovecot_sieve.scripts is defined and
+      dovecot_sieve.scripts | count > 0 %}
+  {% for _name, _settings in dovecot_sieve.scripts.items() %}
+sieve_script {{ _name }} {
+    {% for _key, _value in _settings.items() %}
+      {% if _value | bodsch.core.type == "bool" %}
+  {{ "%-27s" | format(_key) }} = {{ _value | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+      {% elif _value | string | length > 0 %}
+  {{ "%-27s" | format(_key) }} = {{ _value }}
+      {% endif %}
+    {% endfor %}
+}
+  {% endfor %}
+{% endif %}
