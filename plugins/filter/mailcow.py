@@ -23,6 +23,9 @@ class FilterModule:
     """
 
     def filters(self):
+        """
+        The filters this plugin provides, keyed by the name templates use.
+        """
         return {
             "mailcow_ports": self.mailcow_ports,
             "mailcow_compose_active": self.mailcow_compose_active,

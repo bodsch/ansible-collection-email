@@ -16,21 +16,35 @@ module: dovecot_version
 author: Bodo 'bodsch' Schulz <bodo@boone-schulz.de>
 version_added: 1.2.0
 
-short_description: TBD
+short_description: Report the installed dovecot version.
 description:
-    - TBD
-
-options:
-  config_name:
-    description: TBD
-    required: true
-    type: str
+    - Runs C(dovecot --version) and splits the result into its parts.
+    - >-
+      The dovecot role picks its template directory by the short version, so
+      this value decides which configuration format is written.
+    - The module takes no parameters.
 """
 
 EXAMPLES = r"""
+- name: detect installed dovecot version
+  bodsch.email.dovecot_version:
+  register: _dovecot_version
+
+- name: define dovecot_version
+  ansible.builtin.set_fact:
+    dovecot_version: "{{ _dovecot_version.versions.full_version }}"
+    dovecot_short_version: "{{ _dovecot_version.versions.short_version }}"
 """
 
 RETURN = r"""
+versions:
+    description: The installed version, split into its parts.
+    returned: always
+    type: dict
+    sample:
+        full_version: "2.4.1"
+        major_version: "2"
+        short_version: "2.4"
 """
 
 # ----------------------------------------------------------------------

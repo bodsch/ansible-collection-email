@@ -22,16 +22,62 @@ module: mailcow_tls_certificates
 author: Bodo 'bodsch' Schulz <bodo@boone-schulz.de>
 version_added: 1.0.0
 
-short_description: TBD
+short_description: Copy TLS certificates into the mailcow asset directory.
 description:
-    - TBD
+    - >-
+      Copies the certificate files into C(data/assets/ssl), where mailcow serves
+      them as C(cert.pem), C(key.pem) and C(dhparams.pem).
+    - >-
+      A file is only written when its content differs, so an unchanged
+      certificate does not restart mailcow. Every configured file is checked,
+      so a single renewed file is enough to report a change and fire the
+      handlers.
+    - The copies are written with mode C(0440).
+    - This module does not support check mode.
 
+options:
+  source:
+    description:
+      - The source files.
+      - C(ssl_cert), C(ssl_key) and C(ssl_dh) are required - those are the files mailcow serves.
+      - >-
+        C(ssl_ca) is optional; a CA is normally part of the chain in cert.pem.
+        When given it is copied as C(ca.pem).
+    required: true
+    type: dict
+  destination:
+    description: The mailcow asset directory to copy into.
+    required: true
+    type: path
 """
 
 EXAMPLES = r"""
+- name: copy tls certificates
+  become: true
+  bodsch.email.mailcow_tls_certificates:
+    source:
+      ssl_cert: /etc/letsencrypt/live/example.com/fullchain.pem
+      ssl_key: /etc/letsencrypt/live/example.com/privkey.pem
+      ssl_dh: /etc/ssl/dhparams.pem
+    destination: /opt/mailcow-dockerized/data/assets/ssl/
+  notify:
+    - restart mailcow
 """
 
 RETURN = r"""
+changed:
+    description: Whether at least one file was copied.
+    returned: always
+    type: bool
+failed:
+    description: Whether a source file was missing or a copy failed.
+    returned: always
+    type: bool
+msg:
+    description: What happened.
+    returned: always
+    type: str
+    sample: The certificate files are up to date.
 """
 
 # ----------------------------------------------------------------------
@@ -79,21 +125,14 @@ class MailcowTLSCerts:
         """
         Verify the sources, create the destination and copy the files.
 
-        Note: the three copy_file() calls each overwrite `changed`, so only
-        the result of the LAST one survives - a renewed cert.pem alone is
-        reported as unchanged. ssl_ca is required by verify_source_files()
-        but never copied. And the early return passes the verification flag
-        straight into `failed`, so a failed verification is reported as
-        failed=False.
+        Every configured file is copied; changed and failed are accumulated
+        over all of them, so a single renewed file still reports changed and
+        the handlers fire.
         """
-        failed = False
-        changed = False
-        msg = "module init."
+        verified, msg = self.verify_source_files()
 
-        verify_sources, msg = self.verify_source_files()
-
-        if not verify_sources:
-            return dict(changed=False, failed=verify_sources, msg=msg)
+        if not verified:
+            return dict(changed=False, failed=True, msg=msg)
 
         if len(self.destination) == 0:
             return dict(
@@ -104,54 +143,74 @@ class MailcowTLSCerts:
 
         result = self.create_destination_directory()
 
-        if not result.get("failed", False):
-            """
-            cert file
-            """
-            changed, failed = self.copy_file(source=self.ssl_cert, dest="cert.pem")
-            changed, failed = self.copy_file(source=self.ssl_key, dest="key.pem")
-            changed, failed = self.copy_file(source=self.ssl_dh, dest="dhparams.pem")
+        if result.get("failed", False):
+            return result
 
-            # changed, failed = self.copy_files()
-            if changed:
-                msg = "The certificate files have been copied successfully."
-            else:
-                msg = "The certificate files are up to date."
+        changed = False
+        failed = False
+
+        for source, dest in self.destination_names().items():
+            file_changed, file_failed = self.copy_file(source=source, dest=dest)
+            # accumulate: one renewed file is enough to fire the handlers
+            changed = changed or file_changed
+            failed = failed or file_failed
+
+        if failed:
+            msg = "At least one certificate file could not be copied."
+        elif changed:
+            msg = "The certificate files have been copied successfully."
+        else:
+            msg = "The certificate files are up to date."
 
         return dict(failed=failed, changed=changed, msg=msg)
 
+    def destination_names(self):
+        """
+        Map each configured source file to the name mailcow reads it under.
+
+        mailcow serves cert.pem, key.pem and dhparams.pem from
+        data/assets/ssl. A CA is normally part of the certificate chain in
+        cert.pem; when one is configured separately it is copied as ca.pem
+        so nothing is silently dropped.
+        """
+        names = {
+            self.ssl_cert: "cert.pem",
+            self.ssl_key: "key.pem",
+            self.ssl_dh: "dhparams.pem",
+            self.ssl_ca: "ca.pem",
+        }
+
+        return {source: dest for source, dest in names.items() if source}
+
     def verify_source_files(self):
         """
-        Check that the configured source files were given and exist.
+        Check that the required source files were given and exist.
 
-        Returns (ok, msg). Note that the "were they all given" check only
-        runs when fewer than three of the four files are set, so exactly
-        three configured files pass without the fourth being reported.
+        cert, key and dh are required - those are the three files mailcow
+        serves. A CA is optional, it is normally part of the chain in
+        cert.pem.
+
+        Returns (ok, msg).
         """
-        missing = []
+        required = {
+            "cert": self.ssl_cert,
+            "key": self.ssl_key,
+            "dh": self.ssl_dh,
+        }
 
-        if len(self.ssl_files) < 3:
-            if not self.ssl_cert:
-                missing.append("cert")
-            if not self.ssl_key:
-                missing.append("key")
-            if not self.ssl_ca:
-                missing.append("ca")
-            if not self.ssl_dh:
-                missing.append("dh")
+        missing = [name for name, value in required.items() if not value]
 
-        if len(missing) > 0:
+        if missing:
             return (
                 False,
-                f"The source files were not specified completely! The following files are missing: {', '.join(missing)}",
+                "The source files were not specified completely! "
+                f"The following files are missing: {', '.join(missing)}",
             )
 
-        for f in self.ssl_files:
-            if not os.path.exists(f):
-                missing.append(f)
+        absent = [path for path in self.ssl_files if not os.path.exists(path)]
 
-        if len(missing) > 0:
-            return False, f"The source file(s) does not exist: {', '.join(missing)}"
+        if absent:
+            return False, f"The source file(s) does not exist: {', '.join(absent)}"
 
         return True, ""
 
@@ -182,66 +241,43 @@ class MailcowTLSCerts:
 
             return dict(failed=True, changed=False, msg=msg)
 
-    def copy_files(self):
-        """
-        Copy every source file, keeping its own base name.
-
-        Unused: run() calls copy_file() per file instead, because mailcow
-        expects fixed names (cert.pem, key.pem, dhparams.pem).
-        """
-        changed = False
-        failed = False
-
-        for f in self.ssl_files:
-            differ = True
-            s = f
-            d = os.path.join(self.destination, os.path.basename(f))
-
-            if os.path.isfile(d):
-                differ = self.verify(s, d)
-
-            self.module.log(msg=f" - {s} -> {d}, differ: {differ}")
-
-            if differ:
-                shutil.copyfile(s, d)
-                os.chmod(d, 0o0440)
-                changed = True
-
-        # for root, dirs, files in os.walk(self.destination):
-        #     # shutil.chown(root, self.owner, self.group)
-        #     for item in dirs:
-        #         shutil.chown(os.path.join(root, item), self.owner, self.group)
-        #     for item in files:
-        #         shutil.chown(os.path.join(root, item), self.owner, self.group)
-
-        return changed, failed
-
     def copy_file(self, source, dest=None):
         """
         Copy one source file to a fixed name in the destination directory.
 
         The file is only written when its content differs, so an unchanged
-        certificate does not restart mailcow. The copy is set to mode 0440.
+        certificate does not restart mailcow.
+
+        The copy is written next to the target and moved into place, because
+        the destination is left read only (0440) and could otherwise not be
+        replaced by a renewed certificate.
 
         Returns (changed, failed).
         """
-        changed = False
-        failed = False
+        target = os.path.join(self.destination, dest)
 
         differ = True
-        d = os.path.join(self.destination, dest)
+        if os.path.isfile(target):
+            differ = self.verify(source, target)
 
-        if os.path.isfile(d):
-            differ = self.verify(source, d)
+        self.module.log(msg=f" - {source} -> {target}, differ: {differ}")
 
-        self.module.log(msg=f" - {source} -> {d}, differ: {differ}")
+        if not differ:
+            return False, False
 
-        if differ:
-            shutil.copyfile(source, d)
-            os.chmod(d, 0o0440)
-            changed = True
+        temporary = f"{target}.ansible_tmp"
 
-        return changed, failed
+        try:
+            shutil.copyfile(source, temporary)
+            os.chmod(temporary, 0o0440)
+            os.replace(temporary, target)
+        except OSError as error:
+            if os.path.exists(temporary):
+                os.unlink(temporary)
+            self.module.log(msg=f"   copy failed: {error}")
+            return False, True
+
+        return True, False
 
     def verify(self, source_file, destination_file):
         """

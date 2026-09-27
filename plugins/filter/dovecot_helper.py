@@ -12,6 +12,9 @@ class FilterModule:
     """
 
     def filters(self):
+        """
+        The filters this plugin provides, keyed by the name templates use.
+        """
         return {
             "config_value": self.config_value,
             "database_connection": self.database_connection,

@@ -16,26 +16,61 @@ module: postfix_validate_certs
 author: Bodo 'bodsch' Schulz <bodo@boone-schulz.de>
 version_added: 1.0.0
 
-short_description: TBD
+short_description: Check that the configured postfix TLS certificate files exist.
 description:
-    - TBD
+    - Checks the RSA, DSA and ECDSA key pairs plus the CA file of a TLS configuration.
+    - >-
+      Only the entries that are actually configured are looked at, and all of
+      them are checked before returning, so one run reports every missing file
+      instead of stopping at the first.
+    - >-
+      A value that starts with C($) is a postfix variable rather than a path
+      and counts as fine - only postfix itself can resolve it.
 
 options:
-  verbose:
-    description: TBD
-    required: false
-    type: bool
-
   config:
-    description: TBD
+    description:
+      - The TLS configuration to check.
+      - >-
+        Recognised keys are C(cert_file), C(key_file), C(dcert_file),
+        C(dkey_file), C(eccert_file), C(eckey_file) and C(ca_file).
     required: true
     type: dict
+  verbose:
+    description: More logging on the target.
+    required: false
+    type: bool
+    default: false
 """
 
 EXAMPLES = r"""
+- name: validate the postfix certificates
+  bodsch.email.postfix_validate_certs:
+    config:
+      cert_file: /etc/ssl/certs/postfix.pem
+      key_file: /etc/ssl/private/postfix.key
+      ca_file: /etc/ssl/certs/ca.pem
+  register: postfix_certs
+
+- name: report every missing file at once
+  ansible.builtin.fail:
+    msg: "{{ postfix_certs.result_failed }}"
+  when: postfix_certs.failed
 """
 
 RETURN = r"""
+failed:
+    description: Whether at least one configured file is missing.
+    returned: always
+    type: bool
+result_failed:
+    description: The files that are missing, keyed by their role.
+    returned: on failure
+    type: dict
+    sample:
+        cert:
+            failed: true
+            msg: "file /etc/ssl/certs/postfix.pem does not exists."
 """
 
 # ----------------------------------------------------------------------
@@ -173,8 +208,10 @@ def main():
         argument_spec=dict(
             verbose=dict(
                 required=False,
+                type="bool",
+                default=False,
             ),
-            config=dict(type=dict, required=True),
+            config=dict(required=True, type="dict"),
         ),
         supports_check_mode=True,
     )

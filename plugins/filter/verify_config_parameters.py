@@ -12,6 +12,9 @@ class FilterModule:
     """
 
     def filters(self):
+        """
+        The filters this plugin provides, keyed by the name templates use.
+        """
         return {
             "validate_attachment_hash": self.validate_attachment_hash,
         }

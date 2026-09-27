@@ -14,6 +14,9 @@ class FilterModule:
     """
 
     def filters(self):
+        """
+        The filters this plugin provides, keyed by the name templates use.
+        """
         return {
             "file_names": self.file_names,
         }

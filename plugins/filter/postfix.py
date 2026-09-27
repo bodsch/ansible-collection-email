@@ -13,6 +13,9 @@ class FilterModule:
     """
 
     def filters(self):
+        """
+        The filters this plugin provides, keyed by the name templates use.
+        """
         return {
             "postfix_map_data": self.postfix_map_data,
             "valid_list_data": self.valid_list_data,
