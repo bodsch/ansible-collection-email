@@ -318,3 +318,34 @@
 {{- names | join(' ') -}}
 {%- endif -%}
 {% endmacro %}
+
+{#
+  Render the listener blocks of a service for dovecot >= 2.4.
+
+      inet_listener sieve {
+        port                      = 4190
+      }
+
+  Settings that 2.4 no longer knows are dropped here, in one place, because
+  the role has a single 2.4 template tree that has to satisfy every 2.4.x:
+
+    address     -> listen
+    reuse_port  -> gone in 2.4.4 (still valid in 2.3 and 2.4.1)
+#}
+{% set listener_renames = {'address': 'listen'} %}
+{% set listener_dropped = ['reuse_port'] %}
+
+{% macro listeners(entries, indent='  ') %}
+{%- for entry in entries %}
+{%- set name = entry.keys() | first %}
+{%- set values = entry.values() | first %}
+{%- set kind = values.type | default('inet') %}
+{{ indent }}{{ kind }}_listener {{ name }} {
+{% for key, value in values.items() if key != 'type' and key not in listener_dropped %}
+{% if value | string | length > 0 and value | bodsch.email.config_value %}
+{{ indent }}  {{ "%-25s" | format(listener_renames.get(key, key)) }} = {{ value | bodsch.email.config_value }}
+{% endif %}
+{% endfor %}
+{{ indent }}}
+{% endfor -%}
+{% endmacro %}

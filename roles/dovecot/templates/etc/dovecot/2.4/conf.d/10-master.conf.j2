@@ -1,4 +1,5 @@
 #jinja2: trim_blocks: True, lstrip_blocks: True
+{% import 'jinja_macros.j2' as mcr with context %}
 # {{ ansible_managed }}
 
 {#
@@ -13,9 +14,6 @@
 {% set _service_renames = {
   'service_count': 'service_restart_request_count',
   'idle_kill': 'service_idle_kill_interval',
-} %}
-{% set _listener_renames = {
-  'address': 'listen',
 } %}
 {% if dovecot_master.default_process_limit is defined and
       dovecot_master.default_process_limit | string | length > 0 %}
@@ -49,22 +47,7 @@ default_internal_user        = {{ dovecot_master.default_internal_user }}
 service {{ key }} {
       {% for k, v in values.items() %}
         {% if k == "listeners" and v | bodsch.core.type == "list" %}
-          {% for x in v %}
-            {% set _key = x.keys() | first %}
-            {% set _values = x.values() | first %}
-            {% if _values.type is defined %}
-              {% set _type = _values.type %}
-            {% else %}
-              {% set _type = "inet" %}
-            {% endif %}
-  {{ _type }}_listener {{ _key }} {
-              {% for kk, vv in _values.items() if kk != 'type' %}
-                {% if vv | string | length > 0 and vv | bodsch.email.config_value %}
-    {{ "%-25s" | format(_listener_renames.get(kk, kk)) }} = {{ vv | bodsch.email.config_value }}
-                {% endif %}
-              {% endfor %}
-  }
-          {% endfor %}
+{{ mcr.listeners(v) }}
         {% else %}
           {% if v | string | length > 0 and v | bodsch.email.config_value %}
   {{ "%-27s" | format(_service_renames.get(k, k)) }} = {{ v | bodsch.email.config_value | replace('$default_', '$SET:default_') }}

@@ -14,6 +14,14 @@ dovecot_valid_mail_drivers:
   - virtual
   - fail
 
+# A namespace without a name renders as "namespace  { }". Dovecot 2.3 still
+# accepts that, 2.4 refuses to start with "namespace { } is missing section
+# name". Note that 'virtual' is a mail_driver, not a namespace type.
+dovecot_valid_namespace_types:
+  - private
+  - public
+  - shared
+
 dovecot_valid_quota_drivers:
   - count
   - maildir

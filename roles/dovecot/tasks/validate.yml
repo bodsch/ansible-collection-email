@@ -76,4 +76,61 @@
     success_msg: "quota driver(s) ok: {{ _dovecot_quota_drivers | join(', ') }}"
     quiet: true
 
+# A namespace has to carry a name. Without one the template renders
+# "namespace  { }", which dovecot 2.3 still accepts but 2.4 refuses with
+# "namespace { } is missing section name".
+#
+# The type is checked as well, because the template silently drops a value it
+# does not know - a typo would quietly turn a public namespace into a private
+# one.
+- name: collect namespaces
+  when:
+    - not running_in_check_mode
+    - dovecot_validate_drivers | bool
+  # dovecot_mailboxes.namespaces is keyed BY the namespace name, so a name is
+  # always present there. dovecot_mail.namespaces carries it as a field, and
+  # that is where it can go missing.
+  ansible.builtin.set_fact:
+    _dovecot_namespaces: "{{ dovecot_mail.namespaces | default([]) }}"
+
+- name: validate namespace names
+  when:
+    - not running_in_check_mode
+    - dovecot_validate_drivers | bool
+    - _dovecot_namespaces | count > 0
+  ansible.builtin.assert:
+    that:
+      - _dovecot_namespaces | selectattr('name', 'defined') |
+        selectattr('name', 'ne', '') | list | count == _dovecot_namespaces | count
+    fail_msg: |
+      Every entry in dovecot_mail.namespaces needs a name.
+
+      A namespace without one renders as "namespace  { }". Dovecot 2.3 still
+      accepts that, dovecot 2.4 refuses to start with
+      "namespace { } is missing section name".
+
+      Configured namespaces: {{ _dovecot_namespaces }}
+    success_msg: "namespace name(s) ok: {{ _dovecot_namespaces | map(attribute='name', default='<unnamed>') | join(', ') }}"
+    quiet: true
+
+- name: validate namespace types
+  when:
+    - not running_in_check_mode
+    - dovecot_validate_drivers | bool
+    - _dovecot_namespaces | count > 0
+  ansible.builtin.assert:
+    that:
+      - _dovecot_namespaces | selectattr('type', 'defined') |
+        rejectattr('type', 'in', dovecot_valid_namespace_types) | list | count == 0
+    fail_msg: |
+      Unknown dovecot namespace type: {{ _dovecot_namespaces | selectattr('type', 'defined') | rejectattr('type', 'in', dovecot_valid_namespace_types) | map(attribute='type') | unique | join(', ') }}
+      Known types: {{ dovecot_valid_namespace_types | join(', ') }}
+
+      Note that "virtual" is a mail_driver, not a namespace type - a virtual
+      namespace is type "private" with location "virtual:<path>".
+
+      The template drops a type it does not know without a word, so a typo
+      would quietly change what the namespace is.
+    quiet: true
+
 ...
