@@ -6,6 +6,11 @@
 # "doveconf -n" command gives a clean output of the changed settings. Use it
 # instead of copy&pasting files when posting to the Dovecot mailing list.
 
+{% if dovecot_version is version_compare('2.4', '>=') %}
+dovecot_config_version = {{ dovecot_version }}
+dovecot_storage_version = {{ dovecot_version }}
+{% endif %}
+
 # Enable installed protocols
 !include_try /usr/share/dovecot/protocols.d/*.protocol
 

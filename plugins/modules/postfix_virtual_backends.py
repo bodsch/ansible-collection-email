@@ -8,6 +8,7 @@
 import json
 import os
 import shutil
+import time
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.bodsch.core.plugins.module_utils.checksum import Checksum
@@ -74,6 +75,7 @@ class PostfixVirtualBackends:
     def __init__(self, module):
         """ """
         self.module = module
+        self.module.log("PostfixVirtualBackends::__init__()")
 
         self.dest = module.params.get("dest")
         self.backends = module.params.get("backends")
@@ -83,6 +85,8 @@ class PostfixVirtualBackends:
 
     def run(self):
         """ """
+        self.module.log("PostfixVirtualBackends::run()")
+
         _changed = False
         _failed = True
         _msg = "module init"
@@ -113,6 +117,9 @@ class PostfixVirtualBackends:
 
         for backend_type, backend_def in self.backends.items():
             res = {}
+
+            self.module.log(f"  - dest: {self.dest},  backend_type: {backend_type}, backend_def: {backend_def}")
+
             create_directory(os.path.join(self.dest, backend_type))
 
             for backend_data in backend_def:
@@ -160,6 +167,8 @@ class PostfixVirtualBackends:
 
     def _validate_backend(self, backend_data):
         """ """
+        self.module.log("PostfixVirtualBackends::_validate_backend(backend_data)")
+
         valid = False
         msg = "alles ist um seife"
 
@@ -202,6 +211,8 @@ class PostfixVirtualBackends:
 
     def _write_template(self, file_name, data):
         """ """
+        self.module.log(f"PostfixVirtualBackends::_write_template(file_name: {file_name}, data)")
+
         if isinstance(data, dict):
             """
             sort data
@@ -221,7 +232,7 @@ class PostfixVirtualBackends:
         if not changed:
             return False, False, "The configuration file has not been changed."
 
-        if self.backup:
+        if self.backup and os.path.exists(file_name):
             _dir = os.path.dirname(file_name)
             _file = os.path.basename(file_name)
             _datetime = time.strftime("%Y%m%d-%H%M")

@@ -2,6 +2,7 @@
 
 - name: user and group handling
   when:
+    - not running_in_check_mode
     - dovecot_virtual_user.name != "root"
   block:
     - name: create dovecot virtual user group
@@ -23,9 +24,13 @@
         home: "{{ dovecot_virtual_user.home }}"
 
 - name: gathering facts now
+  when:
+    - not running_in_check_mode
   ansible.builtin.setup:
 
 - name: merge dovecot configuration between defaults and custom
+  when:
+    - not running_in_check_mode
   ansible.builtin.set_fact:
     dovecot_config: "{{ dovecot_defaults_config | combine(dovecot_config, recursive=True) }}"
     dovecot_auth: "{{ dovecot_defaults_auth | combine(dovecot_auth, recursive=True) }}"
@@ -52,27 +57,46 @@
     dovecot_dict_sql: "{{ dovecot_defaults_dict_sql | combine(dovecot_dict_sql, recursive=True) }}"
     dovecot_ldap: "{{ dovecot_defaults_ldap | combine(dovecot_ldap, recursive=True) }}"
     dovecot_sql: "{{ dovecot_defaults_sql | combine(dovecot_sql, recursive=True) }}"
+  no_log: true
 
-- name: create logging directory
-  ansible.builtin.file:
-    state: directory
-    path: "{{ dovecot_logging_directory }}"
+- name: create dovecot directories
+  when:
+    - not running_in_check_mode
+  bodsch.core.directories:
+    base_path: /etc/dovecot
     mode: "0755"
+    paths:
+      - path: "{{ dovecot_logging_directory }}"
+      - path: conf.d
+      - path: auth.d
+      - path: sql.d
 
-- name: create configuration directory
-  ansible.builtin.file:
-    state: directory
-    path: "{{ item }}"
-    mode: "0755"
-  loop:
-    - /etc/dovecot
-    - /etc/dovecot/conf.d
-    - /etc/dovecot/auth.d
-    - /etc/dovecot/sql.d
-  loop_control:
-    label: "{{ item }}"
+# - name: create logging directory
+#   when:
+#     - not running_in_check_mode
+#   ansible.builtin.file:
+#     state: directory
+#     path: "{{ dovecot_logging_directory }}"
+#     mode: "0755"
+#
+# - name: create configuration directory
+#   when:
+#     - not running_in_check_mode
+#   ansible.builtin.file:
+#     state: directory
+#     path: "{{ item }}"
+#     mode: "0755"
+#   loop:
+#     - /etc/dovecot
+#     - /etc/dovecot/conf.d
+#     - /etc/dovecot/auth.d
+#     - /etc/dovecot/sql.d
+#   loop_control:
+#     label: "{{ item }}"
 
 - name: create dovecot.conf
+  when:
+    - not running_in_check_mode
   ansible.builtin.template:
     src: etc/dovecot/dovecot.conf.j2
     dest: /etc/dovecot/dovecot.conf
@@ -82,6 +106,8 @@
     - restart dovecot
 
 - name: create splitted configurations
+  when:
+    - not running_in_check_mode
   ansible.builtin.template:
     src: etc/dovecot/conf.d/{{ item }}.j2
     dest: /etc/dovecot/conf.d/{{ item }}
@@ -93,6 +119,7 @@
     - 10-logging.conf
     - 10-mail.conf
     - 10-master.conf
+    - 10-metrics.conf
     - 10-ssl.conf
     - 10-tcpwrapper.conf
     - 15-lda.conf
@@ -102,6 +129,7 @@
     - 20-managesieve.conf
     - 20-pop3.conf
     - 20-submission.conf
+    - 30-dict-server.conf
     - 90-acl.conf
     - 90-plugin.conf
     - 90-quota.conf
@@ -113,6 +141,8 @@
     - restart dovecot
 
 - name: create auth configurations
+  when:
+    - not running_in_check_mode
   ansible.builtin.template:
     src: etc/dovecot/auth.d/{{ item }}.j2
     dest: /etc/dovecot/auth.d/{{ item }}
@@ -135,6 +165,8 @@
     - restart dovecot
 
 - name: create conf.ext configuration files
+  when:
+    - not running_in_check_mode
   ansible.builtin.template:
     src: etc/dovecot/{{ item }}.j2
     dest: /etc/dovecot/{{ item }}

@@ -1,11 +1,25 @@
 ---
 
 - name: install package
+  when:
+    - not running_in_check_mode
   ansible.builtin.package:
     name: "{{ dovecot_packages }}"
     state: present
   tags:
     - dovecot
     - dovecot_install
+
+- name: detected installed dovecot version
+  when:
+    - not running_in_check_mode
+  bodsch.email.dovecot_version:
+  register: _dovecot_version
+
+- name: define dovecot_version
+  when:
+    - not running_in_check_mode
+  ansible.builtin.set_fact:
+    dovecot_version: "{{ _dovecot_version.version }}"
 
 ...

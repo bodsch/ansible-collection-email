@@ -52,7 +52,7 @@
         - stat_postfix_virtual.stat.isdir is defined
         - not stat_postfix_virtual.stat.isdir
 
-- name: create postfix  directories
+- name: create postfix directories
   when:
     - not running_in_check_mode
   bodsch.core.directories:
