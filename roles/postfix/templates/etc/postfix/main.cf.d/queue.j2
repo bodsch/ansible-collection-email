@@ -1,21 +1,23 @@
+{% set _postfix_queue = postfix_queue | bodsch.core.remove_empty_values() %}
+# ---------------------------------------------------------
 
-{% if postfix_queue.directory is defined and
-      postfix_queue.directory | string | length > 0 %}
-queue_directory                           = {{ postfix_queue.directory }}
+{% if _postfix_proxy.directory is defined and
+      _postfix_proxy.directory | string | length > 0 %}
+queue_directory                           = {{ _postfix_proxy.directory }}
 {% endif %}
-{% if postfix_queue.file_attribute_count_limit is defined and
-      postfix_queue.file_attribute_count_limit | string | length > 0 %}
-queue_file_attribute_count_limit          = {{ postfix_queue.file_attribute_count_limit }}
+{% if _postfix_proxy.file_attribute_count_limit is defined and
+      _postfix_proxy.file_attribute_count_limit | string | length > 0 %}
+queue_file_attribute_count_limit          = {{ _postfix_proxy.file_attribute_count_limit }}
 {% endif %}
-{% if postfix_queue.minfree is defined and
-      postfix_queue.minfree | string | length > 0 %}
-queue_minfree                             = {{ postfix_queue.minfree }}
+{% if _postfix_proxy.minfree is defined and
+      _postfix_proxy.minfree | string | length > 0 %}
+queue_minfree                             = {{ _postfix_proxy.minfree }}
 {% endif %}
-{% if postfix_queue.run_delay is defined and
-      postfix_queue.run_delay | string | length > 0 %}
+{% if _postfix_proxy.run_delay is defined and
+      _postfix_proxy.run_delay | string | length > 0 %}
 queue_run_delay                           = {{ postfix_queue_run_delay }}
 {% endif %}
-{% if postfix_queue.service_name is defined and
-      postfix_queue.service_name | string | length > 0 %}
-queue_service_name                        = {{ postfix_queue.service_name }}
+{% if _postfix_proxy.service_name is defined and
+      _postfix_proxy.service_name | string | length > 0 %}
+queue_service_name                        = {{ _postfix_proxy.service_name }}
 {% endif %}

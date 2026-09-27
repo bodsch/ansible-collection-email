@@ -1,0 +1,6 @@
+---
+
+rspamd_dependencies:
+  - gpg
+
+...

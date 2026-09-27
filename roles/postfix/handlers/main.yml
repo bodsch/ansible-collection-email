@@ -3,6 +3,7 @@
 - name: new aliases
   bodsch.email.postfix_newaliases:
   when:
+    - not running_in_check_mode
     - not postfix_default.database_type == 'regexp'
 
 - name: new virtual aliases
@@ -10,6 +11,7 @@
     map_type: "{{ postfix_default.database_type | default('lmdb') }}"
     filename: "{{ postfix_maps_directory }}/virtual"
   when:
+    - not running_in_check_mode
     - not postfix_default.database_type == 'regexp'
 
 - name: postmap sasl_passwd
@@ -17,6 +19,7 @@
     map_type: "{{ postfix_default.database_type | default('lmdb') }}"
     filename: "{{ postfix_maps_directory }}/sasl_passwd"
   when:
+    - not running_in_check_mode
     - not postfix_default.database_type == 'regexp'
 
 - name: postmap sender_relay
@@ -24,6 +27,7 @@
     map_type: "{{ postfix_default.database_type | default('lmdb') }}"
     filename: "{{ postfix_maps_directory }}/sender_relay"
   when:
+    - not running_in_check_mode
     - not postfix_default.database_type == 'regexp'
 
 - name: postmap sender_canonical_maps
@@ -31,6 +35,7 @@
     map_type: "{{ postfix_sender.canonical_maps_database_type }}"
     filename: "{{ postfix_maps_directory }}/sender_canonical_maps"
   when:
+    - not running_in_check_mode
     - not postfix_sender.canonical_maps_database_type == 'regexp'
 
 - name: postmap recipient_canonical_maps
@@ -38,6 +43,7 @@
     map_type: "{{ postfix_recipient.canonical_maps_database_type }}"
     filename: "{{ postfix_maps_directory }}/recipient_canonical_maps"
   when:
+    - not running_in_check_mode
     - not postfix_recipient.canonical_maps_database_type == 'regexp'
 
 - name: postmap transport_maps
@@ -45,6 +51,7 @@
     map_type: "{{ postfix_transport.maps_database_type }}"
     filename: "{{ postfix_maps_directory }}/transport_maps"
   when:
+    - not running_in_check_mode
     - not postfix_transport.maps_database_type == 'regexp'
 
 - name: postmap sender_dependent_relayhost_maps
@@ -52,6 +59,7 @@
     map_type: "{{ postfix_default.database_type | default('lmdb') }}"
     filename: "{{ postfix_maps_directory }}/sender_dependent_relayhost_maps"
   when:
+    - not running_in_check_mode
     - not postfix_default.database_type == 'regexp'
 
 - name: postmap generic
@@ -59,22 +67,28 @@
     map_type: "{{ postfix_smtp.generic_maps_database_type }}"
     filename: "{{ postfix_maps_directory }}/generic"
   when:
+    - not running_in_check_mode
     - not postfix_smtp.generic_maps_database_type == 'regexp'
 
 - name: postfix maps result
   ansible.builtin.debug:
     msg: "{{ postfix_maps.result }}"
   when:
+    - not running_in_check_mode
     - postfix_maps.changed or postfix_maps.failed
 
 - name: remove pid
+  when:
+    - not running_in_check_mode
+    - is_docker_guest
   ansible.builtin.file:
     path: "~postfix/pid/master.pid"
     state: absent
   listen: restart postfix
-  when: is_docker_guest
 
 - name: validate config
+  when:
+    - not running_in_check_mode
   bodsch.email.postfix_check:
     verbose: true
   register: postfix_validate
@@ -85,6 +99,7 @@
     state: restarted
   listen: restart postfix
   when:
+    - not running_in_check_mode
     - service_default_state | default('started') == 'started'
 
 - name: reload service
@@ -93,6 +108,7 @@
     state: reloaded
   listen: reload postfix
   when:
+    - not running_in_check_mode
     - service_default_state | default('started') == 'started'
 
 ...

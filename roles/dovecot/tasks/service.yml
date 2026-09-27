@@ -3,8 +3,8 @@
 - name: start and enable service
   ansible.builtin.service:
     name: dovecot
-    state: "{{ dovecot_service_state | default('started') }}"
-    enabled: "{{ dovecot_service_enabled | default(true) | bool }}"
+    state: "{{ dovecot_service.state | default('started') }}"
+    enabled: "{{ dovecot_service.enabled | default(true) | bool }}"
   tags:
     - configuration
     - dovecot

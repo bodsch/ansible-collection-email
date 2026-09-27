@@ -1,21 +1,23 @@
+{% set _postfix_message = postfix_message | bodsch.core.remove_empty_values() %}
+# ---------------------------------------------------------
 
-{% if postfix_message.drop_headers is defined and
-      postfix_message.drop_headers | length > 0 %}
-message_drop_headers                      = {{ postfix_message.drop_headers | join(", ") }}
+{% if _postfix_message.drop_headers is defined and
+      _postfix_message.drop_headers | length > 0 %}
+message_drop_headers                      = {{ _postfix_message.drop_headers | join(", ") }}
 {% endif %}
-{% if postfix_message.reject_characters is defined and
-      postfix_message.reject_characters | length > 0 %}
-message_reject_characters                 = {{ postfix_message.reject_characters | join(", ") }}
+{% if _postfix_message.reject_characters is defined and
+      _postfix_message.reject_characters | length > 0 %}
+message_reject_characters                 = {{ _postfix_message.reject_characters | join(", ") }}
 {% endif %}
-{% if postfix_message.size_limit is defined and
-      postfix_message.size_limit | string | length > 0 %}
+{% if _postfix_message.size_limit is defined and
+      _postfix_message.size_limit | string | length > 0 %}
   {#
     default: 10240000
     The maximal size in bytes of a message, including envelope information
   #}
-message_size_limit                        = {{ postfix_message.size_limit }}
+message_size_limit                        = {{ _postfix_message.size_limit }}
 {% endif %}
-{% if postfix_message.strip_characters is defined and
-      postfix_message.strip_characters | length > 0 %}
-message_strip_characters                  = {{ postfix_message.strip_characters | join(", ") }}
+{% if _postfix_message.strip_characters is defined and
+      _postfix_message.strip_characters | length > 0 %}
+message_strip_characters                  = {{ _postfix_message.strip_characters | join(", ") }}
 {% endif %}

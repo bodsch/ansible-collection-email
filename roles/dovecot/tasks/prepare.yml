@@ -28,11 +28,20 @@
       ansible_facts.virtualization_role | default('host') == 'guest' and
       ansible_facts.virtualization_type | default('none') == 'docker' }}"
 
+- name: detect ansible check_mode
+  bodsch.core.check_mode:
+  register: _check_mode
+
+- name: define running_in_check_mode
+  ansible.builtin.set_fact:
+    running_in_check_mode: '{{ _check_mode.check_mode }}'
+
 - name: install dependencies
+  when:
+    - not running_in_check_mode
+    - dovecot_dependencies | default([]) | count > 0
   ansible.builtin.package:
     name: "{{ dovecot_dependencies }}"
     state: present
-  when:
-    - dovecot_dependencies | default([]) | count > 0
 
 ...

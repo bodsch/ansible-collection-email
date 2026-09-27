@@ -1,25 +1,27 @@
+{% set _postfix_header = postfix_header | bodsch.core.remove_empty_values() %}
+# ---------------------------------------------------------
 
-{% if postfix_header.address_token_limit is defined and
-      postfix_header.address_token_limit | string | length > 0 %}
-header_address_token_limit                = {{ postfix_header.address_token_limit }}
+{% if _postfix_header.address_token_limit is defined and
+      _postfix_header.address_token_limit | string | length > 0 %}
+header_address_token_limit                = {{ _postfix_header.address_token_limit }}
 {% endif %}
-{% if postfix_header.checks_file is defined  and
-      postfix_header.checks_file | count > 0 %}
-  {% if postfix_header.checks_file | bodsch.core.type == "list" %}
+{% if _postfix_header.checks_file is defined  and
+      _postfix_header.checks_file | count > 0 %}
+  {% if _postfix_header.checks_file | bodsch.core.type == "list" %}
 header_checks                             =
-    {{ postfix_header.checks_file | join("\n") | indent(4) }}
+    {{ _postfix_header.checks_file | join("\n") | indent(4) }}
   {% else %}
-header_checks                             = {{ postfix_header.checks_file }}
+header_checks                             = {{ _postfix_header.checks_file }}
   {% endif %}
 {% endif %}
-{% if postfix_header.from_format is defined and
-      postfix_header.from_format | string | length > 0 and
-      postfix_header.from_format in ["standard","obsolete"] %}
-header_from_format                        = {{ postfix_header.from_format }}
+{% if _postfix_header.from_format is defined and
+      _postfix_header.from_format | string | length > 0 and
+      _postfix_header.from_format in ["standard","obsolete"] %}
+header_from_format                        = {{ _postfix_header.from_format }}
 {% endif %}
-{% if postfix_header.size_limit is defined and
-      postfix_header.size_limit | string | length > 0 %}
-header_size_limit                         = {{ postfix_header.size_limit }}
+{% if _postfix_header.size_limit is defined and
+      _postfix_header.size_limit | string | length > 0 %}
+header_size_limit                         = {{ _postfix_header.size_limit }}
 {% endif %}
 {#
 header_address_token_limit = 10240

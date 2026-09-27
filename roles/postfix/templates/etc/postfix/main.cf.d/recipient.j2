@@ -1,22 +1,24 @@
+{% set _postfix_recipient = postfix_recipient | bodsch.core.remove_empty_values() %}
+# ---------------------------------------------------------
 
-{% if postfix_recipient.bcc_maps is defined and
-      postfix_recipient.bcc_maps | string | length > 0 %}
-recipient_bcc_maps                        = {{ postfix_recipient.bcc_maps }}
+{% if _postfix_recipient.bcc_maps is defined and
+      _postfix_recipient.bcc_maps | string | length > 0 %}
+recipient_bcc_maps                        = {{ _postfix_recipient.bcc_maps }}
 {% endif %}
-{% if postfix_recipient.canonical_classes is defined and
-      postfix_recipient.canonical_classes | string | length > 0 %}
-recipient_canonical_classes               = {{ postfix_recipient.canonical_classes }}
+{% if _postfix_recipient.canonical_classes is defined and
+      _postfix_recipient.canonical_classes | string | length > 0 %}
+recipient_canonical_classes               = {{ _postfix_recipient.canonical_classes }}
 {% endif %}
-{% if postfix_recipient.canonical_maps_files is defined and
-      postfix_recipient.canonical_maps_files | length > 0 %}
-  {% if postfix_recipient.canonical_maps_files is string %}
-recipient_canonical_maps                  = {{ postfix_recipient.canonical_maps_files }}
+{% if _postfix_recipient.canonical_maps_files is defined and
+      _postfix_recipient.canonical_maps_files | length > 0 %}
+  {% if _postfix_recipient.canonical_maps_files is string %}
+recipient_canonical_maps                  = {{ _postfix_recipient.canonical_maps_files }}
   {% else %}
 recipient_canonical_maps                  =
-    {{ postfix_recipient.canonical_maps_files | join("\n") | indent(4) }}
+    {{ _postfix_recipient.canonical_maps_files | join("\n") | indent(4) }}
   {% endif %}
 {% endif %}
-{% if postfix_recipient.delimiter is defined and
-      postfix_recipient.delimiter | string | length > 0 %}
-recipient_delimiter                       = {{ postfix_recipient.delimiter }}
+{% if _postfix_recipient.delimiter is defined and
+      _postfix_recipient.delimiter | string | length > 0 %}
+recipient_delimiter                       = {{ _postfix_recipient.delimiter }}
 {% endif %}

@@ -1,6 +1,8 @@
 ---
 
 - name: install package
+  when:
+    - not running_in_check_mode
   ansible.builtin.package:
     name: "{{ postfix_packages }}"
     state: present

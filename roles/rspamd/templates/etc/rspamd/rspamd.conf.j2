@@ -1,0 +1,66 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{% from "./macros.j2" import insert_dict %}
+# {{ ansible_managed }}
+
+.include "$CONFDIR/common.conf"
+
+options {
+  pidfile = "$RUNDIR/rspamd.pid";
+  .include "$CONFDIR/options.inc"
+  .include(try=true; priority=1,duplicate=merge) "$LOCAL_CONFDIR/local.d/options.inc"
+  .include(try=true; priority=10) "$LOCAL_CONFDIR/override.d/options.inc"
+}
+
+.include(try=true; duplicate=merge) "$CONFDIR/cgp.inc"
+.include(try=true; priority=1,duplicate=merge) "$LOCAL_CONFDIR/local.d/cgp.inc"
+.include(try=true; priority=10) "$LOCAL_CONFDIR/override.d/cgp.inc"
+
+lang_detection {
+  .include "$CONFDIR/lang_detection.inc"
+  .include(try=true; priority=1,duplicate=merge) "$LOCAL_CONFDIR/local.d/lang_detection.inc"
+  .include(try=true; priority=10) "$LOCAL_CONFDIR/override.d/lang_detection.inc"
+}
+
+
+{#
+  - https://rspamd.com/doc/configuration/logging.html#configuration-parameters
+#}
+logging {
+{% if rspamd_logging is defined and
+      rspamd_logging | count > 0 %}
+  {% set _valid_keys = [
+    'type', 'filename', 'facility', 'level', 'log_buffered',
+    'log_buf_size', 'log_urls', 'log_re_cache', 'debug_ip', 'color',
+    'systemd', 'debug_modules', 'log_usec', 'log_severity'] %}
+  {% for key, value in rspamd_logging.items() %}
+    {% if key in _valid_keys %}
+  {{ insert_dict(key, value) }}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+  .include "$CONFDIR/logging.inc"
+  .include(try=true; priority=1,duplicate=merge) "$LOCAL_CONFDIR/local.d/logging.inc"
+  .include(try=true; priority=10) "$LOCAL_CONFDIR/override.d/logging.inc"
+}
+
+{% if rspamd_workers is defined and
+      rspamd_workers | count > 0 %}
+  {% set _valid_workers = ['normal', 'controller', 'fuzzy', 'rspamd_proxy', 'lua'] %}
+  {% for worker, opt in rspamd_workers.items() %}
+    {% if opt | count > 0 and worker in _valid_workers %}
+worker "{{ worker }}" {
+      {% for key, value in (opt.options | default({})).items() %}
+  {{ insert_dict(key, value) }}
+      {% endfor %}
+      {% set worker_include_name = "worker-" ~ worker %}
+      {% if worker == "rspamd_proxy" %}
+        {% set worker_include_name = "worker-proxy" %}
+      {% endif %}
+  .include "$CONFDIR/{{ worker_include_name }}.inc"
+  .include(try=true; priority=1,duplicate=merge) "$LOCAL_CONFDIR/local.d/{{ worker_include_name }}.inc"
+  .include(try=true; priority=10) "$LOCAL_CONFDIR/override.d/{{ worker_include_name }}.inc"
+}
+
+    {% endif %}
+  {% endfor %}
+{% endif %}

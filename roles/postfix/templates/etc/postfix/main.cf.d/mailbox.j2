@@ -1,51 +1,53 @@
+{% set _postfix_mailbox = postfix_mailbox | bodsch.core.remove_empty_values() %}
+# ---------------------------------------------------------
 
-{% if postfix_mailbox.command is defined and
-      postfix_mailbox.command | length > 0 %}
-  {% if postfix_mailbox.command is string %}
-mailbox_command                           = {{ postfix_mailbox.command }}
+{% if _postfix_mailbox.command is defined and
+      _postfix_mailbox.command | length > 0 %}
+  {% if _postfix_mailbox.command is string %}
+mailbox_command                           = {{ _postfix_mailbox.command }}
   {% else %}
 mailbox_command                           =
-    {{ postfix_mailbox.command | join("\n") | indent(4) }}
+    {{ _postfix_mailbox.command | join("\n") | indent(4) }}
   {% endif %}
 {% endif %}
-{% if postfix_mailbox.command_maps is defined and
-      postfix_mailbox.command_maps | length > 0 %}
-  {% if postfix_mailbox.command_maps is string %}
-mailbox_command_maps                      = {{ postfix_mailbox.command_maps }}
+{% if _postfix_mailbox.command_maps is defined and
+      _postfix_mailbox.command_maps | length > 0 %}
+  {% if _postfix_mailbox.command_maps is string %}
+mailbox_command_maps                      = {{ _postfix_mailbox.command_maps }}
   {% else %}
 mailbox_command_maps                      =
-    {{ postfix_mailbox.command_maps | join("\n") | indent(4) }}
+    {{ _postfix_mailbox.command_maps | join("\n") | indent(4) }}
   {% endif %}
 {% endif %}
-{% if postfix_mailbox.delivery_lock is defined and
-      postfix_mailbox.delivery_lock | length > 0 %}
+{% if _postfix_mailbox.delivery_lock is defined and
+      _postfix_mailbox.delivery_lock | length > 0 %}
   {# For a list of available file locking methods, use the "postconf -l" command. #}
-mailbox_delivery_lock                     = {{ postfix_mailbox.delivery_lock | join(", ") }}
+mailbox_delivery_lock                     = {{ _postfix_mailbox.delivery_lock | join(", ") }}
 {% endif %}
-{% if postfix_mailbox.size_limit is defined and
-      postfix_mailbox.size_limit | string | length > 0 %}
+{% if _postfix_mailbox.size_limit is defined and
+      _postfix_mailbox.size_limit | string | length > 0 %}
   {#
     default: 51200000
     The maximal size of any local(8) individual mailbox or maildir file, or zero (no limit)
     This limit must not be smaller than the message size limit.
   #}
-mailbox_size_limit                        = {{ postfix_mailbox.size_limit }}
+mailbox_size_limit                        = {{ _postfix_mailbox.size_limit }}
 {% endif %}
-{% if postfix_mailbox.transport is defined and
-      postfix_mailbox.transport | length > 0 %}
-  {% if postfix_mailbox.transport is string %}
-transport_command                         = {{ postfix_mailbox.transport }}
+{% if _postfix_mailbox.transport is defined and
+      _postfix_mailbox.transport | length > 0 %}
+  {% if _postfix_mailbox.transport is string %}
+transport_command                         = {{ _postfix_mailbox.transport }}
   {% else %}
 transport_command                         =
-    {{ postfix_mailbox.transport | join("\n") | indent(4) }}
+    {{ _postfix_mailbox.transport | join("\n") | indent(4) }}
   {% endif %}
 {% endif %}
-{% if postfix_mailbox.transport_maps is defined and
-      postfix_mailbox.transport_maps | length > 0 %}
-  {% if postfix_mailbox.transport_maps is string %}
-mailbox_transport_maps                    = {{ postfix_mailbox.transport_maps }}
+{% if _postfix_mailbox.transport_maps is defined and
+      _postfix_mailbox.transport_maps | length > 0 %}
+  {% if _postfix_mailbox.transport_maps is string %}
+mailbox_transport_maps                    = {{ _postfix_mailbox.transport_maps }}
   {% else %}
 mailbox_transport_maps                    =
-    {{ postfix_mailbox.transport_maps | join("\n") | indent(4) }}
+    {{ _postfix_mailbox.transport_maps | join("\n") | indent(4) }}
   {% endif %}
 {% endif %}

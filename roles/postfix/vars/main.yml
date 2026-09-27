@@ -8,6 +8,7 @@ postfix_packages: []
 postfix_config_directory: /etc/postfix
 postfix_maps_directory: "{{ postfix_config_directory }}/maps.d"
 postfix_virtual_directory: "{{ postfix_config_directory }}/virtual"
+postfix_dynamicmaps_directory: "{{ postfix_config_directory }}/dynamicmaps.cf.d"
 
 postfix_cf: "{{ postfix_config_directory }}/main.cf"
 postfix_mailname_file: /etc/mailname
@@ -297,13 +298,13 @@ postfix_defaults_relay:
   destination_concurrency_positive_feedback: ""     # $default_destination_concurrency_positive_feedback
   destination_rate_delay: ""                        # $default_destination_rate_delay
   destination_recipient_limit: ""                   # $default_destination_recipient_limit
-  domains: ""                                       # ${{$compatibility_level} < {2} ? {$mydestination} : {}}
+  domains: []                                       # ${{$compatibility_level} < {2} ? {$mydestination} : {}}
   domains_reject_code: ""                           # 554
   extra_recipient_limit: ""                         # $default_extra_recipient_limit
   initial_destination_concurrency: ""               # $initial_destination_concurrency
   minimum_delivery_slots: ""                        # $default_minimum_delivery_slots
   recipient_limit: ""                               # $default_recipient_limit
-  recipient_maps: ""                                #
+  recipient_maps: []                                #
   recipient_refill_delay: ""                        # $default_recipient_refill_delay
   recipient_refill_limit: ""                        # $default_recipient_refill_limit
   transport: ""                                     # relay
@@ -313,8 +314,6 @@ postfix_defaults_relay:
   mxlookup: false
   host: ''                                          # mail.test.com
   port: 587                                         # 587
-  domains: []
-  recipient_maps: []
   # domains_file: ''
   # recipient_maps_file: ''
 

@@ -1,0 +1,7 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+# {{ ansible_managed }}
+{% from "./macros.j2" import insert_dict %}
+
+{% for key, value in config.value.items() %}
+{{ insert_dict(key, value) }}
+{% endfor %}

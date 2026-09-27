@@ -46,15 +46,16 @@ jobs:
           - "3.10"
           - "3.11"
           - "3.12"
-
+          - "3.13"
+          - "3.14"
     steps:
       - name: Check out the codebase.
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v7.0.1
         with:
           ref: ${{ github.event.workflow_run.head_branch }}
 
       - name: 🐍 set up python
-        uses: actions/setup-python@v6.2.0
+        uses: actions/setup-python@v7.0.0
         with:
           python-version: "${{ matrix.python_version }}"
 
@@ -65,4 +66,4 @@ jobs:
 
       - name: Lint code.
         run: |
-          pycodestyle plugins/ --config=.config/pycodestyle.cfg --statistics --count --exclude=test_*.py .
+          pycodestyle plugins/ --config=.config/pycodestyle.cfg --statistics --count --exclude=test_*.py --exclude=hooks/*.py

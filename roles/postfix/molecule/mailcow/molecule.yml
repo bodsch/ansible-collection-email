@@ -63,7 +63,7 @@ provisioner:
       callback_result_format: yaml
       gathering: smart
       fact_caching: jsonfile
-      fact_caching_timeout: 8640
+      fact_caching_timeout: 3200
       fact_caching_connection: ansible_facts
 
 scenario:

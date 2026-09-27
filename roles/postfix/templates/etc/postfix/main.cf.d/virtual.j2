@@ -1,167 +1,169 @@
+{% set _postfix_virtual = postfix_virtual | bodsch.core.remove_empty_values() %}
+# ---------------------------------------------------------
 
-{% if postfix_virtual.alias_address_length_limit is defined and
-      postfix_virtual.alias_address_length_limit | string | length > 0 %}
-virtual_alias_address_length_limit        = {{ postfix_virtual.alias_address_length_limit }}
+{% if _postfix_virtual.alias_address_length_limit is defined and
+      _postfix_virtual.alias_address_length_limit | string | length > 0 %}
+virtual_alias_address_length_limit        = {{ _postfix_virtual.alias_address_length_limit }}
 {% endif %}
-{% if postfix_virtual.alias_domains is defined and
-      postfix_virtual.alias_domains | count > 0 %}
-  {% if postfix_virtual.alias_domains | bodsch.core.type == "list" %}
+{% if _postfix_virtual.alias_domains is defined and
+      _postfix_virtual.alias_domains | count > 0 %}
+  {% if _postfix_virtual.alias_domains | bodsch.core.type == "list" %}
 virtual_alias_domains                     =
-    {{ postfix_virtual.alias_domains | join("\n") | indent(4) }}
+    {{ _postfix_virtual.alias_domains | join("\n") | indent(4) }}
   {% else %}
-virtual_alias_domains                     = {{ postfix_virtual.alias_domains }}
+virtual_alias_domains                     = {{ _postfix_virtual.alias_domains }}
   {% endif %}
 {% endif %}
-{% if postfix_virtual.alias_expansion_limit is defined and
-      postfix_virtual.alias_expansion_limit | string | length > 0 %}
-virtual_alias_expansion_limit             = {{ postfix_virtual.alias_expansion_limit }}
+{% if _postfix_virtual.alias_expansion_limit is defined and
+      _postfix_virtual.alias_expansion_limit | string | length > 0 %}
+virtual_alias_expansion_limit             = {{ _postfix_virtual.alias_expansion_limit }}
 {% endif %}
-{% if postfix_virtual.alias_maps is defined and
-      postfix_virtual.alias_maps | count > 0 %}
-  {% if postfix_virtual.alias_maps | bodsch.core.type == "list" %}
+{% if _postfix_virtual.alias_maps is defined and
+      _postfix_virtual.alias_maps | count > 0 %}
+  {% if _postfix_virtual.alias_maps | bodsch.core.type == "list" %}
 virtual_alias_maps                        =
-    {{ postfix_virtual.alias_maps | join("\n") | indent(4) }}
+    {{ _postfix_virtual.alias_maps | join("\n") | indent(4) }}
   {% else %}
-virtual_alias_maps                        = {{ postfix_virtual.alias_maps }}
+virtual_alias_maps                        = {{ _postfix_virtual.alias_maps }}
   {% endif %}
 {% endif %}
-{% if postfix_virtual.alias_recursion_limit is defined and
-      postfix_virtual.alias_recursion_limit | string | length > 0 %}
-virtual_alias_recursion_limit             = {{ postfix_virtual.alias_recursion_limit }}
+{% if _postfix_virtual.alias_recursion_limit is defined and
+      _postfix_virtual.alias_recursion_limit | string | length > 0 %}
+virtual_alias_recursion_limit             = {{ _postfix_virtual.alias_recursion_limit }}
 {% endif %}
-{% if postfix_virtual.delivery_slot_cost is defined and
-      postfix_virtual.delivery_slot_cost | string | length > 0 %}
-virtual_delivery_slot_cost                = {{ postfix_virtual.delivery_slot_cost }}
+{% if _postfix_virtual.delivery_slot_cost is defined and
+      _postfix_virtual.delivery_slot_cost | string | length > 0 %}
+virtual_delivery_slot_cost                = {{ _postfix_virtual.delivery_slot_cost }}
 {% endif %}
-{% if postfix_virtual.delivery_slot_discount is defined and
-      postfix_virtual.delivery_slot_discount | string | length > 0 %}
-virtual_delivery_slot_discount            = {{ postfix_virtual.delivery_slot_discount }}
+{% if _postfix_virtual.delivery_slot_discount is defined and
+      _postfix_virtual.delivery_slot_discount | string | length > 0 %}
+virtual_delivery_slot_discount            = {{ _postfix_virtual.delivery_slot_discount }}
 {% endif %}
-{% if postfix_virtual.delivery_slot_loan is defined and
-      postfix_virtual.delivery_slot_loan | string | length > 0 %}
-virtual_delivery_slot_loan                = {{ postfix_virtual.delivery_slot_loan }}
+{% if _postfix_virtual.delivery_slot_loan is defined and
+      _postfix_virtual.delivery_slot_loan | string | length > 0 %}
+virtual_delivery_slot_loan                = {{ _postfix_virtual.delivery_slot_loan }}
 {% endif %}
-{% if postfix_virtual.delivery_status_filter is defined and
-      postfix_virtual.delivery_status_filter | string | length > 0 %}
-virtual_delivery_status_filter            = {{ postfix_virtual.delivery_status_filter }}
+{% if _postfix_virtual.delivery_status_filter is defined and
+      _postfix_virtual.delivery_status_filter | string | length > 0 %}
+virtual_delivery_status_filter            = {{ _postfix_virtual.delivery_status_filter }}
 {% endif %}
-{% if postfix_virtual.destination_concurrency_failed_cohort_limit is defined and
-      postfix_virtual.destination_concurrency_failed_cohort_limit | string | length > 0 %}
-virtual_destination_concurrency_failed_cohort_limit = {{ postfix_virtual.destination_concurrency_failed_cohort_limit }}
+{% if _postfix_virtual.destination_concurrency_failed_cohort_limit is defined and
+      _postfix_virtual.destination_concurrency_failed_cohort_limit | string | length > 0 %}
+virtual_destination_concurrency_failed_cohort_limit = {{ _postfix_virtual.destination_concurrency_failed_cohort_limit }}
 {% endif %}
-{% if postfix_virtual.destination_concurrency_limit is defined and
-      postfix_virtual.destination_concurrency_limit | string | length > 0 %}
-virtual_destination_concurrency_limit     = {{ postfix_virtual.destination_concurrency_limit }}
+{% if _postfix_virtual.destination_concurrency_limit is defined and
+      _postfix_virtual.destination_concurrency_limit | string | length > 0 %}
+virtual_destination_concurrency_limit     = {{ _postfix_virtual.destination_concurrency_limit }}
 {% endif %}
-{% if postfix_virtual.destination_concurrency_negative_feedback is defined and
-      postfix_virtual.destination_concurrency_negative_feedback | string | length > 0 %}
-virtual_destination_concurrency_negative_feedback = {{ postfix_virtual.destination_concurrency_negative_feedback }}
+{% if _postfix_virtual.destination_concurrency_negative_feedback is defined and
+      _postfix_virtual.destination_concurrency_negative_feedback | string | length > 0 %}
+virtual_destination_concurrency_negative_feedback = {{ _postfix_virtual.destination_concurrency_negative_feedback }}
 {% endif %}
-{% if postfix_virtual.destination_concurrency_positive_feedback is defined and
-      postfix_virtual.destination_concurrency_positive_feedback | string | length > 0 %}
-virtual_destination_concurrency_positive_feedback = {{ postfix_virtual.destination_concurrency_positive_feedback }}
+{% if _postfix_virtual.destination_concurrency_positive_feedback is defined and
+      _postfix_virtual.destination_concurrency_positive_feedback | string | length > 0 %}
+virtual_destination_concurrency_positive_feedback = {{ _postfix_virtual.destination_concurrency_positive_feedback }}
 {% endif %}
-{% if postfix_virtual.destination_rate_delay is defined and
-      postfix_virtual.destination_rate_delay | string | length > 0 %}
-virtual_destination_rate_delay            = {{ postfix_virtual.destination_rate_delay }}
+{% if _postfix_virtual.destination_rate_delay is defined and
+      _postfix_virtual.destination_rate_delay | string | length > 0 %}
+virtual_destination_rate_delay            = {{ _postfix_virtual.destination_rate_delay }}
 {% endif %}
-{% if postfix_virtual.destination_recipient_limit is defined and
-      postfix_virtual.destination_recipient_limit | string | length > 0 %}
-virtual_destination_recipient_limit       = {{ postfix_virtual.destination_recipient_limit }}
+{% if _postfix_virtual.destination_recipient_limit is defined and
+      _postfix_virtual.destination_recipient_limit | string | length > 0 %}
+virtual_destination_recipient_limit       = {{ _postfix_virtual.destination_recipient_limit }}
 {% endif %}
-{% if postfix_virtual.extra_recipient_limit is defined and
-      postfix_virtual.extra_recipient_limit | string | length > 0 %}
-virtual_extra_recipient_limit             = {{ postfix_virtual.extra_recipient_limit }}
+{% if _postfix_virtual.extra_recipient_limit is defined and
+      _postfix_virtual.extra_recipient_limit | string | length > 0 %}
+virtual_extra_recipient_limit             = {{ _postfix_virtual.extra_recipient_limit }}
 {% endif %}
-{% if postfix_virtual.gid_maps is defined and
-      postfix_virtual.gid_maps | count > 0 %}
-  {% if postfix_virtual.gid_maps | bodsch.core.type == "list" %}
+{% if _postfix_virtual.gid_maps is defined and
+      _postfix_virtual.gid_maps | count > 0 %}
+  {% if _postfix_virtual.gid_maps | bodsch.core.type == "list" %}
 virtual_gid_maps                          =
-    {{ postfix_virtual.gid_maps | join("\n") | indent(4) }}
+    {{ _postfix_virtual.gid_maps | join("\n") | indent(4) }}
   {% else %}
-virtual_gid_maps                          = {{ postfix_virtual.gid_maps }}
+virtual_gid_maps                          = {{ _postfix_virtual.gid_maps }}
   {% endif %}
 {% endif %}
-{% if postfix_virtual.initial_destination_concurrency is defined and
-      postfix_virtual.initial_destination_concurrency | string | length > 0 %}
-virtual_initial_destination_concurrency   = {{ postfix_virtual.initial_destination_concurrency }}
+{% if _postfix_virtual.initial_destination_concurrency is defined and
+      _postfix_virtual.initial_destination_concurrency | string | length > 0 %}
+virtual_initial_destination_concurrency   = {{ _postfix_virtual.initial_destination_concurrency }}
 {% endif %}
-{% if postfix_virtual.mailbox_base is defined and
-      postfix_virtual.mailbox_base | string | length > 0 %}
-virtual_mailbox_base                      = {{ postfix_virtual.mailbox_base }}
+{% if _postfix_virtual.mailbox_base is defined and
+      _postfix_virtual.mailbox_base | string | length > 0 %}
+virtual_mailbox_base                      = {{ _postfix_virtual.mailbox_base }}
 {% endif %}
 
-{% if postfix_virtual.mailbox_domains is defined and
-      postfix_virtual.mailbox_domains | count > 0 %}
-  {% if postfix_virtual.mailbox_domains | bodsch.core.type == "list" %}
+{% if _postfix_virtual.mailbox_domains is defined and
+      _postfix_virtual.mailbox_domains | count > 0 %}
+  {% if _postfix_virtual.mailbox_domains | bodsch.core.type == "list" %}
 virtual_mailbox_domains                   =
-    {{ postfix_virtual.mailbox_domains | join("\n") | indent(4) }}
+    {{ _postfix_virtual.mailbox_domains | join("\n") | indent(4) }}
   {% else %}
-virtual_mailbox_domains                   = {{ postfix_virtual.mailbox_domains }}
+virtual_mailbox_domains                   = {{ _postfix_virtual.mailbox_domains }}
   {% endif %}
 {% endif %}
 {# obsole
-{% if postfix_virtual.mailbox_domains is defined and
-      postfix_virtual.mailbox_domains | string | length > 0 %}
-virtual_mailbox_domains                   = {{ postfix_virtual.mailbox_domains }}
+{% if _postfix_virtual.mailbox_domains is defined and
+      _postfix_virtual.mailbox_domains | string | length > 0 %}
+virtual_mailbox_domains                   = {{ _postfix_virtual.mailbox_domains }}
 {% endif %}
 #}
-{% if postfix_virtual.mailbox_limit is defined and
-      postfix_virtual.mailbox_limit | string | length > 0 %}
-virtual_mailbox_limit                     = {{ postfix_virtual.mailbox_limit }}
+{% if _postfix_virtual.mailbox_limit is defined and
+      _postfix_virtual.mailbox_limit | string | length > 0 %}
+virtual_mailbox_limit                     = {{ _postfix_virtual.mailbox_limit }}
 {% endif %}
-{% if postfix_virtual.mailbox_lock is defined and
-      postfix_virtual.mailbox_lock | count > 0 %}
-  {% if postfix_virtual.mailbox_lock | bodsch.core.type == "list" %}
+{% if _postfix_virtual.mailbox_lock is defined and
+      _postfix_virtual.mailbox_lock | count > 0 %}
+  {% if _postfix_virtual.mailbox_lock | bodsch.core.type == "list" %}
 virtual_mailbox_lock                      =
-    {{ postfix_virtual.mailbox_lock | join("\n") | indent(4) }}
+    {{ _postfix_virtual.mailbox_lock | join("\n") | indent(4) }}
   {% else %}
-virtual_mailbox_lock                      = {{ postfix_virtual.mailbox_lock }}
+virtual_mailbox_lock                      = {{ _postfix_virtual.mailbox_lock }}
   {% endif %}
 {% endif %}
-{% if postfix_virtual.mailbox_maps is defined and
-      postfix_virtual.mailbox_maps | count > 0 %}
-  {% if postfix_virtual.mailbox_maps | bodsch.core.type == "list" %}
+{% if _postfix_virtual.mailbox_maps is defined and
+      _postfix_virtual.mailbox_maps | count > 0 %}
+  {% if _postfix_virtual.mailbox_maps | bodsch.core.type == "list" %}
 virtual_mailbox_maps                      =
-    {{ postfix_virtual.mailbox_maps | join("\n") | indent(4) }}
+    {{ _postfix_virtual.mailbox_maps | join("\n") | indent(4) }}
   {% else %}
-virtual_mailbox_maps                      = {{ postfix_virtual.mailbox_maps }}
+virtual_mailbox_maps                      = {{ _postfix_virtual.mailbox_maps }}
   {% endif %}
 {% endif %}
-{% if postfix_virtual.minimum_delivery_slots is defined and
-      postfix_virtual.minimum_delivery_slots | string | length > 0 %}
-virtual_minimum_delivery_slots            = {{ postfix_virtual.minimum_delivery_slots }}
+{% if _postfix_virtual.minimum_delivery_slots is defined and
+      _postfix_virtual.minimum_delivery_slots | string | length > 0 %}
+virtual_minimum_delivery_slots            = {{ _postfix_virtual.minimum_delivery_slots }}
 {% endif %}
-{% if postfix_virtual.minimum_uid is defined and
-      postfix_virtual.minimum_uid | string | length > 0 %}
-virtual_minimum_uid                       = {{ postfix_virtual.minimum_uid }}
+{% if _postfix_virtual.minimum_uid is defined and
+      _postfix_virtual.minimum_uid | string | length > 0 %}
+virtual_minimum_uid                       = {{ _postfix_virtual.minimum_uid }}
 {% endif %}
-{% if postfix_virtual.recipient_limit is defined and
-      postfix_virtual.recipient_limit | string | length > 0 %}
-virtual_recipient_limit                   = {{ postfix_virtual.recipient_limit }}
+{% if _postfix_virtual.recipient_limit is defined and
+      _postfix_virtual.recipient_limit | string | length > 0 %}
+virtual_recipient_limit                   = {{ _postfix_virtual.recipient_limit }}
 {% endif %}
-{% if postfix_virtual.recipient_refill_delay is defined and
-      postfix_virtual.recipient_refill_delay | string | length > 0 %}
-virtual_recipient_refill_delay            = {{ postfix_virtual.recipient_refill_delay }}
+{% if _postfix_virtual.recipient_refill_delay is defined and
+      _postfix_virtual.recipient_refill_delay | string | length > 0 %}
+virtual_recipient_refill_delay            = {{ _postfix_virtual.recipient_refill_delay }}
 {% endif %}
-{% if postfix_virtual.recipient_refill_limit is defined and
-      postfix_virtual.recipient_refill_limit | string | length > 0 %}
-virtual_recipient_refill_limit            = {{ postfix_virtual.recipient_refill_limit }}
+{% if _postfix_virtual.recipient_refill_limit is defined and
+      _postfix_virtual.recipient_refill_limit | string | length > 0 %}
+virtual_recipient_refill_limit            = {{ _postfix_virtual.recipient_refill_limit }}
 {% endif %}
-{% if postfix_virtual.transport is defined and
-      postfix_virtual.transport | string | length > 0 %}
-virtual_transport                         = {{ postfix_virtual.transport }}
+{% if _postfix_virtual.transport is defined and
+      _postfix_virtual.transport | string | length > 0 %}
+virtual_transport                         = {{ _postfix_virtual.transport }}
 {% endif %}
-{% if postfix_virtual.transport_rate_delay is defined and
-      postfix_virtual.transport_rate_delay | string | length > 0 %}
-virtual_transport_rate_delay              = {{ postfix_virtual.transport_rate_delay }}
+{% if _postfix_virtual.transport_rate_delay is defined and
+      _postfix_virtual.transport_rate_delay | string | length > 0 %}
+virtual_transport_rate_delay              = {{ _postfix_virtual.transport_rate_delay }}
 {% endif %}
-{% if postfix_virtual.uid_maps is defined and
-      postfix_virtual.uid_maps | count > 0 %}
-  {% if postfix_virtual.uid_maps | bodsch.core.type == "list" %}
+{% if _postfix_virtual.uid_maps is defined and
+      _postfix_virtual.uid_maps | count > 0 %}
+  {% if _postfix_virtual.uid_maps | bodsch.core.type == "list" %}
 virtual_uid_maps                          =
-    {{ postfix_virtual.uid_maps | join("\n") | indent(4) }}
+    {{ _postfix_virtual.uid_maps | join("\n") | indent(4) }}
   {% else %}
-virtual_uid_maps                          = {{ postfix_virtual.uid_maps }}
+virtual_uid_maps                          = {{ _postfix_virtual.uid_maps }}
   {% endif %}
 {% endif %}

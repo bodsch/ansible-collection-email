@@ -167,4 +167,72 @@ mailcow_compose_networks: []
 mailcow_compose_services: []
 mailcow_compose_volumes: []
 
+mailcow_custom_configuration:
+  # TODO
+  unbound:
+    file: unbound.conf
+    append: |
+      forward-zone:
+        name: "."
+        forward-addr: 172.17.0.1
+
+  phpfpm: {}
+
+  postfix: {}
+
+  dovecot:
+    file: extra.conf
+    append: |
+      service stats {
+        inet_listener http {
+          port = 9900
+          # bound to all interfaces inside the container; reachable only on
+          # mailcow-network, so Prometheus can scrape it by service name.
+        }
+      }
+
+      # --- Metrics to aggregate ----------------------------------------------------
+      # Dovecot logs no statistics by default; each metric must be declared explicitly.
+      # These cover auth, IMAP/SMTP command outcomes and delivery latency — the
+      # mail-specific signals cAdvisor cannot give you. Extend as needed.
+
+      metric auth_success {
+        filter = event=auth_request_finished AND success=yes
+      }
+
+      metric auth_failures {
+        filter = event=auth_request_finished AND NOT success=yes
+      }
+
+      metric imap_command {
+        filter   = event=imap_command_finished
+        group_by = cmd_name tagged_reply_state
+      }
+
+      metric smtp_command {
+        filter   = event=smtp_server_command_finished
+        group_by = cmd_name status_code duration:exponential:1:5:10
+      }
+
+      metric mail_delivery {
+        filter   = event=mail_delivery_finished
+        group_by = duration:exponential:1:5:10
+      }
+
+  rspamd:
+    file: worker-controller.inc
+    append: |
+      secure_ip = "172.22.1.0/24";     # your mailcow subnet
+
+
+
+  nginx: {}
+
+  mysql: {}
+
+  clamav: {}
+
+  acme: {}
+
+
 ...

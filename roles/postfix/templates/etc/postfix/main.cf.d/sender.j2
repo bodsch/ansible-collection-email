@@ -1,47 +1,49 @@
+{% set _postfix_sender = postfix_sender | bodsch.core.remove_empty_values() %}
+# ---------------------------------------------------------
 
-{% if postfix_sender.bcc_maps is defined and
-      postfix_sender.bcc_maps | length > 0 %}
-  {% if postfix_sender.bcc_maps | bodsch.core.type == "list" %}
+{% if _postfix_sender.bcc_maps is defined and
+      _postfix_sender.bcc_maps | length > 0 %}
+  {% if _postfix_sender.bcc_maps | bodsch.core.type == "list" %}
 sender_bcc_maps                           =
-    {{ postfix_sender.bcc_maps | join("\n") | indent(4) }}
+    {{ _postfix_sender.bcc_maps | join("\n") | indent(4) }}
   {% else %}
-sender_bcc_maps                           = {{ postfix_sender.bcc_maps }}
+sender_bcc_maps                           = {{ _postfix_sender.bcc_maps }}
   {% endif %}
 {% endif %}
-{% if postfix_sender.canonical_classes is defined and
-      postfix_sender.canonical_classes | length > 0 %}
-  {% if postfix_sender.canonical_classes | bodsch.core.type == "list" %}
+{% if _postfix_sender.canonical_classes is defined and
+      _postfix_sender.canonical_classes | length > 0 %}
+  {% if _postfix_sender.canonical_classes | bodsch.core.type == "list" %}
 sender_canonical_classes                  =
-    {{ postfix_sender.canonical_classes | join("\n") | indent(4) }}
+    {{ _postfix_sender.canonical_classes | join("\n") | indent(4) }}
   {% else %}
-sender_canonical_classes                  = {{ postfix_sender.canonical_classes }}
+sender_canonical_classes                  = {{ _postfix_sender.canonical_classes }}
   {% endif %}
 {% endif %}
-{% if postfix_sender.canonical_maps_file is defined and
-      postfix_sender.canonical_maps_file | length > 0 %}
-  {% if postfix_sender.canonical_maps_file | bodsch.core.type == "list" %}
+{% if _postfix_sender.canonical_maps_file is defined and
+      _postfix_sender.canonical_maps_file | length > 0 %}
+  {% if _postfix_sender.canonical_maps_file | bodsch.core.type == "list" %}
 sender_canonical_maps                     =
-    {{ postfix_sender.canonical_maps_file | join("\n") | indent(4)  }}
+    {{ _postfix_sender.canonical_maps_file | join("\n") | indent(4)  }}
   {% else %}
-sender_canonical_maps                     = {{ postfix_sender.canonical_maps_file }}
+sender_canonical_maps                     = {{ _postfix_sender.canonical_maps_file }}
   {% endif %}
 {% endif %}
-{% if postfix_sender.dependent_default_transport_maps is defined and
-      postfix_sender.dependent_default_transport_maps | length > 0 %}
-  {% if postfix_sender.dependent_default_transport_maps | bodsch.core.type == "list" %}
+{% if _postfix_sender.dependent_default_transport_maps is defined and
+      _postfix_sender.dependent_default_transport_maps | length > 0 %}
+  {% if _postfix_sender.dependent_default_transport_maps | bodsch.core.type == "list" %}
 sender_dependent_default_transport_maps   =
-    {{ postfix_sender.dependent_default_transport_maps | join("\n") | indent(4)  }}
+    {{ _postfix_sender.dependent_default_transport_maps | join("\n") | indent(4)  }}
   {% else %}
-sender_dependent_default_transport_maps   = {{ postfix_sender.dependent_default_transport_maps }}
+sender_dependent_default_transport_maps   = {{ _postfix_sender.dependent_default_transport_maps }}
   {% endif %}
 {% endif %}
-{% if postfix_sender.dependent_relayhost_maps_file is defined and
-      postfix_sender.dependent_relayhost_maps_file | length > 0 %}
-  {% if postfix_sender.dependent_relayhost_maps_file | bodsch.core.type == "list" %}
+{% if _postfix_sender.dependent_relayhost_maps_file is defined and
+      _postfix_sender.dependent_relayhost_maps_file | length > 0 %}
+  {% if _postfix_sender.dependent_relayhost_maps_file | bodsch.core.type == "list" %}
 sender_dependent_relayhost_maps           =
-    {{ postfix_sender.dependent_relayhost_maps_file | join("\n") | indent(4)  }}
+    {{ _postfix_sender.dependent_relayhost_maps_file | join("\n") | indent(4)  }}
   {% else %}
-sender_dependent_relayhost_maps           = {{ postfix_sender.dependent_relayhost_maps_file }}
+sender_dependent_relayhost_maps           = {{ _postfix_sender.dependent_relayhost_maps_file }}
   {% endif %}
 {% endif %}
 {#

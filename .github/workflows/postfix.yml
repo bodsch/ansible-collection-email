@@ -52,12 +52,12 @@ jobs:
       fail-fast: false
       matrix:
         image:
-          - debian:12
+          - debian:13
         ansible-version:
-          - '8.5'
+          - '12.3'
         python_version:
-          - "3.10"
           - "3.11"
+          - "3.12"
         scenario:
           - default
         collection_role:
@@ -65,10 +65,10 @@ jobs:
 
     steps:
       - name: check out the codebase.
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v7.0.1
 
       - name: 🐍 set up python
-        uses: actions/setup-python@v6.2.0
+        uses: actions/setup-python@v7.0.0
         with:
           python-version: "${{ matrix.python_version }}"
 
@@ -106,11 +106,12 @@ jobs:
       matrix:
         image:
           - ubuntu:22.04
+          - ubuntu:24.04
         ansible-version:
-          - '8.5'
+          - '12.3'
         python_version:
-          - "3.10"
           - "3.11"
+          - "3.12"
         scenario:
           - default
         collection_role:
@@ -118,10 +119,10 @@ jobs:
 
     steps:
       - name: check out the codebase.
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v7.0.1
 
       - name: 🐍 set up python
-        uses: actions/setup-python@v6.2.0
+        uses: actions/setup-python@v7.0.0
         with:
           python-version: "${{ matrix.python_version }}"
 
@@ -158,11 +159,12 @@ jobs:
       fail-fast: false
       matrix:
         image:
-          - debian:12
+          - debian:13
         ansible-version:
-          - '8.5'
+          - '12.3'
         python_version:
           - "3.11"
+          - "3.12"
         scenario:
           - configured
           - enabled-tls
@@ -175,12 +177,12 @@ jobs:
 
     steps:
       - name: check out the codebase.
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v7.0.1
         with:
           ref: ${{ github.event.workflow_run.head_branch }}
 
       - name: 🐍 set up python
-        uses: actions/setup-python@v6.2.0
+        uses: actions/setup-python@v7.0.0
         with:
           python-version: "${{ matrix.python_version }}"
 

@@ -2,8 +2,9 @@
 
 dovecot_logging_directory: /var/log/dovecot
 
-dovecot_service_state: started
-dovecot_service_enabled: true
+dovecot_service:
+  state: started
+  enabled: true
 
 dovecot_config:
   listen:
