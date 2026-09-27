@@ -102,7 +102,9 @@ class PostfixPostmap:
         return result
 
     def _exec(self, cmd):
-        """ """
+        """
+        Run postmap and return (rc, stdout, stderr).
+        """
         rc, out, err = self.module.run_command(cmd, check_rc=True)
 
         return rc, out, err
@@ -114,7 +116,9 @@ class PostfixPostmap:
 
 
 def main():
-    """ """
+    """
+    Build the postfix lookup table for a map file with postmap.
+    """
     module = AnsibleModule(
         argument_spec=dict(
             map_type=dict(

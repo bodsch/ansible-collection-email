@@ -1,0 +1,35 @@
+---
+
+DOCUMENTATION:
+  name: mailcow_ports
+  author: Bodo Schulz (@bodsch)
+  version_added: 1.0.0
+  short_description: Build a docker port binding out of an address and a port.
+  description:
+    - Renders the C(*_PORT) values of C(mailcow.conf).
+    - Without an address only the port is returned, which makes docker bind on all interfaces.
+    - >-
+      The address has to be a literal IP address, because docker cannot bind to a host name.
+      An address that is not one fails the run rather than quietly binding somewhere else.
+  positional: _input
+  options:
+    _input:
+      description: A mapping with C(port) and optionally C(address).
+      required: true
+      type: dict
+
+EXAMPLES: |
+  # IMAP_PORT=10.0.0.1:143
+  IMAP_PORT={{ mailcow_bindings.get("imap", {"address": "10.0.0.1", "port": "143"})
+               | bodsch.email.mailcow_ports() }}
+
+  # SMTP_PORT=25   (binds on all interfaces)
+  SMTP_PORT={{ mailcow_bindings.get("smtp", {"address": "", "port": "25"})
+               | bodsch.email.mailcow_ports() }}
+
+RETURN:
+  _value:
+    description:
+      - C(<address>:<port>) when an address is given.
+      - C(<port>) otherwise.
+    type: str

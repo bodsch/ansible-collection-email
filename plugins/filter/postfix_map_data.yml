@@ -1,22 +1,37 @@
+---
 
 DOCUMENTATION:
   name: postfix_map_data
   author: Bodo Schulz (@bodsch)
   version_added: 1.0.0
-  short_description: creates valid data fpr postfix maps files
+  short_description: Split one postfix lookup table entry into key and value.
   description:
-    - creates valid data fpr postfix maps files
+    - >-
+      The mapping is read BY POSITION, not by name - the value of the first key becomes the
+      lookup key, the value of the second key becomes its value.
+    - >-
+      That is deliberate, because every postfix map type uses its own names
+      (C(virtual)/C(alias), C(pattern)/C(result), ...).
+    - A list value is joined with C(", ").
+    - >-
+      A third key and beyond is ignored and reported as a warning, because a postfix lookup
+      table only has two columns.
   positional: _input
   options:
     _input:
-      description: list fof dict
+      description:
+        - One lookup table entry with exactly two keys.
+        - The key names are irrelevant, only their order counts.
       required: true
-      type: list
-  notes:
+      type: dict
 
 EXAMPLES: |
-  _first, _last = item | bodsch.email.postfix_map_data
+  # webmaster@yourdomain.com   personal_email@gmail.com
+  {% set _first, _last = item | bodsch.email.postfix_map_data %}
+  {{ "{:<40}".format(_first) }} {{ _last }}
 
 RETURN:
   _value:
-    description: TBD
+    description: A tuple of the lookup key and its value.
+    type: list
+    elements: str

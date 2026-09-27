@@ -145,7 +145,15 @@ class PostfixMaps:
         return result
 
     def _validate_map(self, map_data):
-        """ """
+        """
+        Check one map definition before anything is written.
+
+        A map needs a name and, when a map section is given, a supported
+        type and a file. Missing pieces are collected so the message names
+        every problem of that entry at once, not just the first.
+
+        Returns (valid, msg).
+        """
         self.module.log("PostfixMaps::_validate_map(map_data)")
 
         valid = False
@@ -198,7 +206,15 @@ class PostfixMaps:
     # - checksum vergleich
     # - move
     def _write_template(self, file_name, data):
-        """ """
+        """
+        Write one map file and say whether it changed.
+
+        The content is compared against a checksum kept in the cache
+        directory, so an unchanged run reports changed=False and no handler
+        fires.
+
+        Returns (changed, failed, msg).
+        """
         self.module.log(f"PostfixMaps::_write_template(file_name: {file_name}, data)")
 
         if isinstance(data, dict):
@@ -272,7 +288,9 @@ class PostfixMaps:
         return result
 
     def _exec(self, cmd):
-        """ """
+        """
+        Run a command and return (rc, stdout, stderr).
+        """
         rc, out, err = self.module.run_command(cmd, check_rc=True)
 
         if rc != 0:
@@ -292,7 +310,9 @@ class PostfixMaps:
 
 
 def main():
-    """ """
+    """
+    Write the postfix lookup table files and optionally run postmap on them.
+    """
     args = dict(
         maps=dict(
             required=True,

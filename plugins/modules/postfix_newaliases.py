@@ -81,7 +81,9 @@ class PostfixNewaliases:
         return result
 
     def _exec(self, cmd):
-        """ """
+        """
+        Run newaliases and return (rc, stdout, stderr).
+        """
         rc, out, err = self.module.run_command(cmd, check_rc=True)
 
         return rc, out, err
@@ -93,7 +95,9 @@ class PostfixNewaliases:
 
 
 def main():
-
+    """
+    Rebuild the postfix alias database with newaliases.
+    """
     module = AnsibleModule(
         argument_spec=dict(
             alias_database=dict(

@@ -54,6 +54,15 @@ class DovecotVersion:
 
     def run(self):
         """
+        Read the dovecot version and split it into its parts.
+
+            2.4.1 (7d8c0e5759)
+              full_version  = "2.4.1"
+              major_version = "2"
+              short_version = "2.4"
+
+        The dovecot role picks its template directory by short_version, so
+        that value decides which configuration format is written.
         """
         dovecot_version = None
         result = dict(
@@ -109,7 +118,9 @@ class DovecotVersion:
         return result
 
     def _exec(self, cmd):
-        """ """
+        """
+        Run "dovecot --version" and return (rc, stdout, stderr).
+        """
         rc, out, err = self.module.run_command(cmd, check_rc=True)
 
         return rc, out, err
@@ -121,7 +132,10 @@ class DovecotVersion:
 
 
 def main():
-
+    """
+    Report the installed dovecot version, split into full, major and short
+    form.
+    """
     args = dict()
 
     module = AnsibleModule(

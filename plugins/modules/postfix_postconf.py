@@ -87,7 +87,11 @@ class PostfixPostconf:
         return result
 
     def _exec(self, cmd):
-        """ """
+        """
+        Run postconf and return (rc, stdout, stderr).
+
+        check_rc is on, so a failing postconf aborts the task right here.
+        """
         rc, out, err = self.module.run_command(cmd, check_rc=True)
 
         return rc, out, err
@@ -99,7 +103,9 @@ class PostfixPostconf:
 
 
 def main():
-
+    """
+    Read a single postfix setting with postconf and return its value.
+    """
     module = AnsibleModule(
         argument_spec=dict(
             config_name=dict(

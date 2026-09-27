@@ -80,7 +80,16 @@ class PostfixCheck:
         return result
 
     def _exec(self, cmd):
-        """ """
+        """
+        Run "postfix check" and return (rc, stdout, stderr).
+
+        check_rc is off on purpose: a non zero exit is the expected outcome
+        for a broken configuration and is reported through the result, not
+        as a module crash.
+
+        Note: run_command is called with encoding=None, so out and err are
+        BYTES. The isinstance(..., list) branches below never run.
+        """
         self.module.log(f"cmd: '{cmd}'")
 
         rc, out, err = self.module.run_command(cmd, encoding=None, check_rc=False)
@@ -114,7 +123,10 @@ class PostfixCheck:
 
 
 def main():
-
+    """
+    Run "postfix check" and report whether postfix considers its
+    configuration usable.
+    """
     module = AnsibleModule(
         argument_spec=dict(
             verbose=dict(

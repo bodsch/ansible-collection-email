@@ -76,7 +76,16 @@ class MailcowTLSCerts:
     #     )
 
     def run(self):
-        """ """
+        """
+        Verify the sources, create the destination and copy the files.
+
+        Note: the three copy_file() calls each overwrite `changed`, so only
+        the result of the LAST one survives - a renewed cert.pem alone is
+        reported as unchanged. ssl_ca is required by verify_source_files()
+        but never copied. And the early return passes the verification flag
+        straight into `failed`, so a failed verification is reported as
+        failed=False.
+        """
         failed = False
         changed = False
         msg = "module init."
@@ -112,7 +121,13 @@ class MailcowTLSCerts:
         return dict(failed=failed, changed=changed, msg=msg)
 
     def verify_source_files(self):
-        """ """
+        """
+        Check that the configured source files were given and exist.
+
+        Returns (ok, msg). Note that the "were they all given" check only
+        runs when fewer than three of the four files are set, so exactly
+        three configured files pass without the fourth being reported.
+        """
         missing = []
 
         if len(self.ssl_files) < 3:
@@ -141,7 +156,11 @@ class MailcowTLSCerts:
         return True, ""
 
     def create_destination_directory(self):
-        """ """
+        """
+        Create the destination directory if it is not there yet.
+
+        Returns a result mapping with failed / changed / msg.
+        """
         if os.path.isdir(self.destination):
             return dict(
                 failed=False,
@@ -164,7 +183,12 @@ class MailcowTLSCerts:
             return dict(failed=True, changed=False, msg=msg)
 
     def copy_files(self):
-        """ """
+        """
+        Copy every source file, keeping its own base name.
+
+        Unused: run() calls copy_file() per file instead, because mailcow
+        expects fixed names (cert.pem, key.pem, dhparams.pem).
+        """
         changed = False
         failed = False
 
@@ -193,7 +217,14 @@ class MailcowTLSCerts:
         return changed, failed
 
     def copy_file(self, source, dest=None):
-        """ """
+        """
+        Copy one source file to a fixed name in the destination directory.
+
+        The file is only written when its content differs, so an unchanged
+        certificate does not restart mailcow. The copy is set to mode 0440.
+
+        Returns (changed, failed).
+        """
         changed = False
         failed = False
 
@@ -213,7 +244,12 @@ class MailcowTLSCerts:
         return changed, failed
 
     def verify(self, source_file, destination_file):
-        """ """
+        """
+        Say whether two files differ, by comparing their checksums.
+
+        Returns False when either file is missing, so a missing source does
+        not trigger a copy.
+        """
         # self.module.log(msg=f"verify({source_file} : {destination_file})")
         s_checksum = None
         d_checksum = None
@@ -232,20 +268,29 @@ class MailcowTLSCerts:
             return False
 
     def __create_checksum_file(self, filename):
-        """ """
+        """
+        Checksum of a file's content, with the trailing newline stripped.
+
+        Reads in text mode, which is fine for PEM but not for binary data.
+        """
         with open(filename, "r") as d:
             _data = d.read().rstrip("\n")
             return self.__checksum(_data)
 
     def __checksum(self, plaintext):
-        """ """
+        """
+        SHA256 of a string, as hex.
+        """
         _bytes = plaintext.encode("utf-8")
         _hash = hashlib.sha256(_bytes)
         return _hash.hexdigest()
 
 
 def main():
-    """ """
+    """
+    Copy the TLS certificate files into the directory mailcow reads them
+    from, and report whether anything changed.
+    """
     specs = dict(
         source=dict(
             required=True,

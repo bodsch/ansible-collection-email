@@ -1,27 +1,39 @@
+---
 
 DOCUMENTATION:
   name: sasl_data
   author: Bodo Schulz (@bodsch)
   version_added: 1.0.0
-  short_description: enhance sasl data for valid relay host and port
+  short_description: Bring one SASL entry into the notation postfix expects.
   description:
-    - enhance sasl data for valid relay host and port
-  positional: _input
+    - Folds C(host) and C(port) into a single C(host) value and removes C(port).
+    - >-
+      Square brackets around the host name switch MX lookups off, which is what you want for
+      a fixed smarthost. See U(https://www.postfix.org/postconf.5.html#relayhost).
+    - >-
+      Without C(host) or C(port) the C(username) is used as the host, which covers the case
+      where the username already is the relay host.
+    - The input mapping is not modified, a copy is returned.
+  positional: _input, mxlookup
   options:
     _input:
-      description: TBD
+      description: One SASL entry with C(username) and optionally C(host) and C(port).
       required: true
       type: dict
     mxlookup:
-      description: TBD
+      description:
+        - Whether postfix may do an MX lookup for the host.
+        - C(false) wraps the host in square brackets, which turns the lookup off.
       required: false
       type: bool
       default: false
-  notes:
 
 EXAMPLES: |
-  data = u | bodsch.email.sasl_data(mxlookup)
+  # [smtp.example.com]:587    user:password
+  {% set data = u | bodsch.email.sasl_data(mxlookup) %}
+  {{ data.host }}  {{ data.username }}:{{ data.password }}
 
 RETURN:
   _value:
-    description: TBD
+    description: A copy of the entry, with C(host) rewritten and C(port) removed.
+    type: dict

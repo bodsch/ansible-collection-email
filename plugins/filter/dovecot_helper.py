@@ -1,7 +1,6 @@
 # python 3 headers, required if submitting to Ansible
 
-
-
+from ansible.errors import AnsibleFilterError
 from ansible.utils.display import Display
 
 display = Display()
@@ -18,48 +17,53 @@ class FilterModule:
             "database_connection": self.database_connection,
         }
 
-    def config_value(self, data, default=None):
-        """ """
-        # display.v(f"bodsch.email::config_value({data}, {default})")
+    def config_value(self, data, default=False):
+        """
+        Render a value the way a dovecot configuration file expects it.
 
-        result = None
+        Booleans become the strings "yes" / "no", everything else is passed
+        through unchanged. Templates also use the return value as a truth
+        test, so a value that must not be written has to stay falsy.
 
-        if type(data) is None:
-            result = False
-        elif type(data) is bool:
-            result = "yes" if data else "no"
-        else:
-            result = data
+            True    -> "yes"
+            False   -> "no"
+            "256M"  -> "256M"
+            0       -> 0        (falsy: the template skips the line)
+            None    -> default  (False unless given)
+        """
+        if data is None:
+            return default
 
-        # display.v(f"return : {result}")
-        return result
+        if isinstance(data, bool):
+            return "yes" if data else "no"
+
+        return data
 
     def database_connection(self, data):
-        """ """
-        # display.v(f"bodsch.email::database_connection({data})")
+        """
+        Build a dovecot 2.3 "connect" string from a mapping.
 
-        result = ""
+        Only the keys that carry a value end up in the result, always in the
+        same order, so the generated file does not change between runs.
 
-        if isinstance(data, dict):
-            _dba_hostname = data.get("host", None)
-            _dba_port = data.get("port", None)
-            _dba_schemaname = data.get("dbname", None)
-            _dba_username = data.get("user", None)
-            _dba_password = data.get("password", None)
-            _dba_connect = []
+            {host: localhost, dbname: mails, user: u, password: p}
+            -> "host=localhost dbname=mails user=u password=p"
 
-            if _dba_hostname:
-                _dba_connect.append(f"host={_dba_hostname}")
-            if _dba_port:
-                _dba_connect.append(f"port={_dba_port}")
-            if _dba_schemaname:
-                _dba_connect.append(f"dbname={_dba_schemaname}")
-            if _dba_username:
-                _dba_connect.append(f"user={_dba_username}")
-            if _dba_password:
-                _dba_connect.append(f"password={_dba_password}")
+        An empty mapping yields an empty string; the caller decides whether
+        that is an error.
 
-            result = " ".join(_dba_connect)
+        Note: dovecot 2.4 has no connect string any more - the connection is
+        expressed as driver specific settings (mysql_host, mysql_dbname, ...)
+        inside the passdb / userdb block.
+        """
+        if not isinstance(data, dict):
+            raise AnsibleFilterError(
+                f"database_connection expects a mapping, got {type(data).__name__}"
+            )
 
-        # display.v(f"return : {result}")
-        return result
+        # fixed order, so the rendered file is stable
+        keys = ("host", "port", "dbname", "user", "password")
+
+        return " ".join(
+            f"{key}={data[key]}" for key in keys if data.get(key) not in (None, "")
+        )

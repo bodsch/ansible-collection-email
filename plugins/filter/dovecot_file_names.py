@@ -2,6 +2,7 @@
 
 import os
 
+from ansible.errors import AnsibleFilterError
 from ansible.utils.display import Display
 
 display = Display()
@@ -19,22 +20,25 @@ class FilterModule:
 
     def file_names(self, data):
         """
-            input: [
-                '... /email/roles/dovecot/templates/etc/dovecot/conf.d/2.4/10-auth.conf.j2',
-                '... /email/roles/dovecot/templates/etc/dovecot/conf.d/2.4/10-director.conf.j2',
-                '... /email/roles/dovecot/templates/etc/dovecot/conf.d/2.4/10-logging.conf.j2'
-            ]
+        Turn template paths into the file names they are rendered to.
 
-            output: [
-                '10-auth.conf', '10-director.conf', '10-logging.conf',
-            ]
+        Used to derive the list of configuration files a dovecot version
+        owns, from the templates that exist for it.
 
+            ["…/2.4/conf.d/10-auth.conf.j2", "…/2.4/conf.d/10-mail.conf.j2"]
+            -> ["10-auth.conf", "10-mail.conf"]
+
+        Only a trailing ".j2" is removed, so a name that contains ".j2"
+        somewhere else stays intact. Empty entries - a fileglob that matched
+        nothing returns one - are dropped.
         """
-        display.vv(f"bodsch.email::file_names({data})")
+        if not isinstance(data, list):
+            raise AnsibleFilterError(
+                f"file_names expects a list, got {type(data).__name__}"
+            )
 
-        result = []
-
-        result = [os.path.basename(x).replace(".j2","") for x in data]
-
-        display.vv(f"return : {result}")
-        return result
+        return [
+            os.path.basename(entry).removesuffix(".j2")
+            for entry in data
+            if entry
+        ]

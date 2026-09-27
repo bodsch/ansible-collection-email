@@ -70,10 +70,15 @@ query    =
 
 
 class PostfixVirtualBackends:
-    """ """
+    """
+    Render the lookup table definitions postfix needs for virtual domains,
+    one file per backend, and report per file whether it changed.
+    """
 
     def __init__(self, module):
-        """ """
+        """
+        Initialize all needed Variables
+        """
         self.module = module
         self.module.log("PostfixVirtualBackends::__init__()")
 
@@ -84,7 +89,17 @@ class PostfixVirtualBackends:
         self.backup = module.params.get("backup")
 
     def run(self):
-        """ """
+        """
+        Write one map file per configured backend.
+
+        The whole backend definition is checksummed first, so a run that
+        changes nothing touches no file and fires no handler. With force the
+        checksum cache is discarded, which makes the next run rewrite
+        everything.
+
+        Returns a result mapping with failed, changed and the per file
+        state.
+        """
         self.module.log("PostfixVirtualBackends::run()")
 
         _changed = False
@@ -166,7 +181,15 @@ class PostfixVirtualBackends:
         return result
 
     def _validate_backend(self, backend_data):
-        """ """
+        """
+        Check one backend definition before anything is written.
+
+        A backend needs a name and the database connection details. Missing
+        pieces are collected so the message names every problem of that
+        entry at once, not just the first.
+
+        Returns (valid, msg).
+        """
         self.module.log("PostfixVirtualBackends::_validate_backend(backend_data)")
 
         valid = False
@@ -210,7 +233,16 @@ class PostfixVirtualBackends:
         return (valid, msg)
 
     def _write_template(self, file_name, data):
-        """ """
+        """
+        Write one backend definition and say whether it changed.
+
+        The rendered content is compared against a checksum kept in the
+        cache directory, so a run that changes nothing reports changed=False
+        and no handler fires. An existing file is backed up with a timestamp
+        suffix when backup is on.
+
+        Returns (changed, failed, msg).
+        """
         self.module.log(f"PostfixVirtualBackends::_write_template(file_name: {file_name}, data)")
 
         if isinstance(data, dict):
@@ -251,7 +283,9 @@ class PostfixVirtualBackends:
 
 
 def main():
-    """ """
+    """
+    Write the postfix virtual backend map files (mysql, pgsql, ldap, ...).
+    """
     args = dict(
         backends=dict(required=True, type="dict"),
         force=dict(

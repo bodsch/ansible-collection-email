@@ -1,0 +1,35 @@
+---
+
+DOCUMENTATION:
+  name: file_names
+  author: Bodo Schulz (@bodsch)
+  version_added: 1.0.0
+  short_description: Turn template paths into the file names they are rendered to.
+  description:
+    - Strips the directory and a trailing C(.j2) from every entry.
+    - >-
+      Used to derive the list of configuration files a dovecot version owns, from the
+      templates that exist for that version.
+    - >-
+      Only a trailing C(.j2) is removed, so a name that contains C(.j2) somewhere else
+      stays intact. Empty entries are dropped, which is what a C(fileglob) that matched
+      nothing returns after a C(split).
+  positional: _input
+  options:
+    _input:
+      description: The template paths.
+      required: true
+      type: list
+      elements: str
+
+EXAMPLES: |
+  # ["10-auth.conf", "10-mail.conf"]
+  _confd_templates: >-
+    {{ lookup('ansible.builtin.fileglob', 'templates/etc/dovecot/2.4/conf.d/*.j2').split(',')
+       | bodsch.email.file_names() }}
+
+RETURN:
+  _value:
+    description: The file names, without directory and without the C(.j2) suffix.
+    type: list
+    elements: str

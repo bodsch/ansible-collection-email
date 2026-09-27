@@ -1,0 +1,33 @@
+---
+
+DOCUMENTATION:
+  name: mailcow_compare_version
+  author: Bodo Schulz (@bodsch)
+  version_added: 1.0.0
+  short_description: Say whether the checked out mailcow differs from the installed one.
+  description:
+    - Compares the short commit id of both sides and returns C(true) when an update is pending.
+    - >-
+      A missing id on either side falls back to a different placeholder, so an unknown state
+      counts as "differs" and the playbook errs towards updating rather than skipping.
+  positional: _input, installed
+  options:
+    _input:
+      description: Information about the checked out repository, with C(git.commit_short_id).
+      required: true
+      type: dict
+    installed:
+      description: Information about the installed version, with C(git.commit_short_id).
+      required: false
+      type: dict
+      default: {}
+
+EXAMPLES: |
+  _mailcow_new_version: >-
+    {{ mailcow_repository_information
+       | bodsch.email.mailcow_compare_version(mailcow_installed_information) }}
+
+RETURN:
+  _value:
+    description: C(true) when the two commit ids differ or one of them is unknown.
+    type: bool

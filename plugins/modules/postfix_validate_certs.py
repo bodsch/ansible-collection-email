@@ -72,7 +72,17 @@ class PostfixValidateCerts:
         return res
 
     def validate(self, config):
-        """ """
+        """
+        Check every configured certificate file of one TLS configuration.
+
+        Covers the RSA, DSA and ECDSA pairs plus the CA file. Only the
+        entries that are actually configured are looked at, and all of them
+        are checked before returning, so one run reports every missing file
+        rather than stopping at the first.
+
+        Returns a mapping with failed, plus result_failed with the details
+        when something is missing.
+        """
         res = dict()
 
         cert_file = config.get("cert_file", None)
@@ -129,7 +139,14 @@ class PostfixValidateCerts:
         return final_result
 
     def _exists(self, file_name):
-        """ """
+        """
+        Check that a single file is there.
+
+        A value that starts with "$" is a postfix variable, not a path, and
+        counts as fine - it can only be resolved by postfix itself.
+
+        Returns a mapping with failed and msg.
+        """
         # self.module.log(f"_exists({file_name})")
 
         if file_name.startswith("$"):
@@ -149,7 +166,9 @@ class PostfixValidateCerts:
 
 
 def main():
-
+    """
+    Check that the configured TLS certificate files exist and are readable.
+    """
     module = AnsibleModule(
         argument_spec=dict(
             verbose=dict(

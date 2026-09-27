@@ -1,0 +1,37 @@
+---
+
+DOCUMENTATION:
+  name: mailcow_compose_active
+  author: Bodo Schulz (@bodsch)
+  version_added: 1.0.0
+  short_description: List the mailcow compose override files that should be in place.
+  description:
+    - Every entry whose C(state) is not C(absent) contributes C(<name>.conf).
+    - >-
+      When I(git_version) is given, entries the release no longer supports are dropped as
+      well. With mailcow 2025-01 SOLR was replaced by Flatcurve, which runs inside dovecot
+      instead of its own container, so the SOLR override is removed from that release on.
+    - See U(https://mailcow.email/posts/2025/release-2025-01/).
+  positional: _input, git_version
+  options:
+    _input:
+      description: The configured compose entries, each with a C(name) and optionally a C(state).
+      required: true
+      type: list
+      elements: dict
+    git_version:
+      description:
+        - The mailcow release that is being deployed.
+        - When omitted no release dependent filtering happens.
+      required: false
+      type: str
+
+EXAMPLES: |
+  # ["dovecot.conf", "postfix.conf"]   - solr.conf is dropped for 2025-01 and newer
+  {% set _services = mailcow_compose_services | bodsch.email.mailcow_compose_active(_version) %}
+
+RETURN:
+  _value:
+    description: The file names of the overrides that should exist.
+    type: list
+    elements: str

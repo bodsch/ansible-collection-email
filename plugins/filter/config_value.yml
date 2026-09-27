@@ -1,26 +1,40 @@
+---
 
 DOCUMENTATION:
   name: config_value
   author: Bodo Schulz (@bodsch)
   version_added: 1.0.0
-  short_description: TBD
+  short_description: Render a value the way a dovecot configuration file expects it.
   description:
-    - TBD
+    - Booleans become the strings C(yes) / C(no), every other value is passed through unchanged.
+    - >-
+      Templates also use the return value as a truth test, so a value that must not be
+      written to the configuration has to stay falsy.
   positional: _input
   options:
     _input:
-      description: TBD
+      description: The value to render.
       required: true
-      type: dict
+      type: raw
     default:
-      description: TBD
+      description: Returned when I(_input) is C(None).
       required: false
-      type: bool
-      defaul: None
-  notes:
+      type: raw
+      default: false
 
-EXAMPLES: TBD
+EXAMPLES: |
+  # verbose_proctitle = yes
+  verbose_proctitle = {{ true | bodsch.email.config_value }}
+
+  # only write the line when the value is set
+  {% if vv | bodsch.email.config_value %}
+  {{ kk }} = {{ vv | bodsch.email.config_value }}
+  {% endif %}
 
 RETURN:
   _value:
-    description: TBD
+    description:
+      - C(yes) or C(no) for a boolean.
+      - I(default) when the input is C(None).
+      - The unchanged input otherwise.
+    type: raw
