@@ -28,61 +28,32 @@
     - not running_in_check_mode
   ansible.builtin.setup:
 
-- name: collect available template versions
+# The template tree carries one directory per dovecot version:
+#
+#   templates/etc/dovecot/2.3/...
+#   templates/etc/dovecot/2.4/...
+#
+# The detected short version ("2.4") picks the directory, which is why no
+# template has to compare versions itself. The filter returns the file names
+# of that version, plus the files of every other version that this one does
+# not have - see "remove configuration files of another dovecot version".
+- name: sort template tree by dovecot version
   when:
     - not running_in_check_mode
   ansible.builtin.set_fact:
     _dovecot_templates: "{{
-      lookup('community.general.filetree', 'templates/etc/dovecot') | bodsch.email.dovecot_template_versions(version=dovecot_short_version) }}"
-      # map('dirname') | map('basename') | sort }}"
-
-- name: collect available template versions
-  when:
-    - not running_in_check_mode
-  ansible.builtin.set_fact:
-    dovecot_template_versions: "{{ _dovecot_templates.versions }}"
-    dovecot_template_available: "{{ _dovecot_templates.available | bool }}"
-
-- name: d
-  debug:
-    msg:
-      - "{{ dovecot_template_versions }}"
-      - "{{ dovecot_template_available }}"
-#
-# - name: collect available template versions
-#   when:
-#     - not running_in_check_mode
-#   ansible.builtin.set_fact:
-#     _dovecot_template_versions: "{{ lookup('ansible.builtin.fileglob', 'templates/etc/dovecot/') }}" #
-#       # map('dirname') | map('basename') | sort }}"
-#     # _dovecot_ext_templates: "{{ (lookup('ansible.builtin.fileglob', 'templates/etc/dovecot/' ~ dovecot_template_version ~ '/dovecot*.ext.j2') | default([]) ).split(',') | bodsch.email.file_names() }}"
-#
-# - name: d
-#   debug:
-#     msg: "{{ _dovecot_template_versions }}"
-
-# - name: choose template version for detected dovecot
-#   when:
-#     - not running_in_check_mode
-#     - dovecot_short_version is version(item, '>=')
-#   ansible.builtin.set_fact:
-#     dovecot_template_version: "{{ item }}"
-#   loop: "{{ _dovecot_template_versions }}"
-#   loop_control:
-#     label: "{{ item }}"
-
-- name: d
-  debug:
-    var: dovecot_template_versions
+      lookup('community.general.filetree', 'templates/etc/dovecot') |
+      bodsch.email.dovecot_template_versions(version=dovecot_short_version) }}"
 
 - name: fail on unsupported dovecot version
   when:
     - not running_in_check_mode
-    - not dovecot_template_available
+    - not _dovecot_templates.available | bool
   ansible.builtin.fail:
     msg: |
       Dovecot {{ dovecot_version }} is not supported by this role.
-      Available template versions: {{ dovecot_template_versions | join(', ') }}
+      There is no templates/etc/dovecot/{{ dovecot_short_version }} directory.
+      Supported versions: {{ _dovecot_templates.versions | join(', ') }}
 
 - name: include version specific defaults
   when:
@@ -171,56 +142,16 @@
   notify:
     - restart dovecot
 
-- name: find dovecot conf.d templates
-  when:
-    - not running_in_check_mode
-  ansible.builtin.set_fact:
-    _confd_templates: "{{ lookup('ansible.builtin.fileglob', 'templates/etc/dovecot/' ~ dovecot_short_version ~ '/conf.d/*.j2') | bodsch.email.file_names() }}"
-
-- name: find dovecot auth.d templates
-  when:
-    - not running_in_check_mode
-  ansible.builtin.set_fact:
-    _authd_templates: "{{ lookup('ansible.builtin.fileglob', 'templates/etc/dovecot/' ~ dovecot_short_version ~ '/auth.d/*.j2') | bodsch.email.file_names() }}"
-
-- name: find dovecot ext templates
-  when:
-    - not running_in_check_mode
-  ansible.builtin.set_fact:
-    _dovecot_ext_templates: "{{ lookup('ansible.builtin.fileglob', 'templates/etc/dovecot/' ~ dovecot_short_version ~ '/dovecot*.ext.j2') | bodsch.email.file_names() }}"
-
-# TODO
-# file_glob doesn't support recursivity !
-#
-# - name: collect configuration files of every template version
-#   when:
-#     - not running_in_check_mode
-#     - dovecot_remove_stale_configs | bool
-#   ansible.builtin.set_fact:
-#     _all_confd_configs: "{{ lookup('ansible.builtin.fileglob', 'templates/etc/dovecot/*/conf.d/*.j2').split(',') | bodsch.email.file_names() | unique }}"
-#     _all_authd_configs: "{{ lookup('ansible.builtin.fileglob', 'templates/etc/dovecot/*/auth.d/*.j2').split(',') | bodsch.email.file_names() | unique }}"
-#     _all_ext_configs: "{{ lookup('ansible.builtin.fileglob', 'templates/etc/dovecot/*/dovecot*.ext.j2').split(',') | bodsch.email.file_names() | unique }}"
-
-# - name: determine configuration files left over from another dovecot version
-#   when:
-#     - not running_in_check_mode
-#     - dovecot_remove_stale_configs | bool
-#   ansible.builtin.set_fact:
-#     _dovecot_stale_configs: "{{
-#       (_all_confd_configs | difference(_confd_templates | default([])) | map('regex_replace', '^', '/etc/dovecot/conf.d/') | list) +
-#       (_all_authd_configs | difference(_authd_templates | default([])) | map('regex_replace', '^', '/etc/dovecot/auth.d/') | list) +
-#       (_all_ext_configs | difference(_dovecot_ext_templates | default([])) | map('regex_replace', '^', '/etc/dovecot/') | list) }}"
-
 - name: create splitted configurations
   when:
     - not running_in_check_mode
-    - _confd_templates | count > 0
+    - _dovecot_templates.files['conf.d'] | count > 0
   ansible.builtin.template:
     src: etc/dovecot/{{ dovecot_short_version }}/conf.d/{{ item }}.j2
     dest: /etc/dovecot/conf.d/{{ item }}
     backup: true
     mode: "0644"
-  loop: "{{ _confd_templates }}"
+  loop: "{{ _dovecot_templates.files['conf.d'] }}"
   loop_control:
     label: "{{ item }}"
   notify:
@@ -229,13 +160,13 @@
 - name: create auth configurations
   when:
     - not running_in_check_mode
-    - _authd_templates | count > 0
+    - _dovecot_templates.files['auth.d'] | count > 0
   ansible.builtin.template:
     src: etc/dovecot/{{ dovecot_short_version }}/auth.d/{{ item }}.j2
     dest: /etc/dovecot/auth.d/{{ item }}
     backup: true
     mode: "0644"
-  loop: "{{ _authd_templates }}"
+  loop: "{{ _dovecot_templates.files['auth.d'] }}"
   loop_control:
     label: "{{ item }}"
   notify:
@@ -244,17 +175,36 @@
 - name: create conf.ext configuration files
   when:
     - not running_in_check_mode
-    - _dovecot_ext_templates | count > 0
+    - _dovecot_templates.files['root'] | count > 0
   ansible.builtin.template:
     src: etc/dovecot/{{ dovecot_short_version }}/{{ item }}.j2
     dest: /etc/dovecot/{{ item }}
     backup: true
     mode: "0644"
-  loop: "{{ _dovecot_ext_templates }}"
+  loop: "{{ _dovecot_templates.files['root'] }}"
   loop_control:
     label: "{{ item }}"
   notify:
     - restart dovecot
+
+# Dovecot reads every file in conf.d and auth.d, so a file left behind by
+# another version of this role keeps being parsed. The template tree is the
+# only source for these names: everything below templates/etc/dovecot/<version>
+# belongs to exactly that version, so the set difference between the versions
+# is the list of files that have to go.
+#
+# fileglob cannot collect them. It resolves everything up to the last "/" as a
+# literal directory, so a wildcard in the directory part - "*/conf.d/*.j2" -
+# never matches. filetree walks the tree instead.
+- name: determine configuration files left over from another dovecot version
+  when:
+    - not running_in_check_mode
+    - dovecot_remove_stale_configs | bool
+  ansible.builtin.set_fact:
+    _dovecot_stale_configs: "{{
+      (_dovecot_templates.stale['conf.d'] | map('regex_replace', '^', '/etc/dovecot/conf.d/') | list) +
+      (_dovecot_templates.stale['auth.d'] | map('regex_replace', '^', '/etc/dovecot/auth.d/') | list) +
+      (_dovecot_templates.stale['root'] | map('regex_replace', '^', '/etc/dovecot/') | list) }}"
 
 # Dovecot 2.4 refuses to start when it finds a setting it does not know, so a
 # 2.3 -> 2.4 upgrade has to get rid of the configuration files of the old

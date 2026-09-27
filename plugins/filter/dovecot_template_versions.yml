@@ -1,0 +1,112 @@
+---
+
+DOCUMENTATION:
+  name: dovecot_template_versions
+  author: Bodo Schulz (@bodsch)
+  version_added: 1.0.0
+  short_description: Sort a dovecot template tree into the files of one version.
+  description:
+    - >-
+      The dovecot role keeps one template directory per dovecot version,
+      C(templates/etc/dovecot/2.3) and C(templates/etc/dovecot/2.4). The short version of
+      the installed dovecot picks the directory, so no template has to compare versions
+      itself.
+    - >-
+      This filter takes what C(community.general.filetree) returns for that tree and
+      reports which versions exist, whether the asked for version is one of them, the
+      file names that version owns, and the file names that belong to another version
+      only.
+    - >-
+      That last list is what makes an upgrade work. Dovecot reads every file in C(conf.d)
+      and C(auth.d), so a C(10-director.conf) written by the 2.3 templates keeps being
+      parsed after the upgrade to 2.4 - which does not know that setting any more and
+      refuses to start. The role removes exactly the files in C(stale).
+    - >-
+      Only files that some version of this role ships are ever reported, so a file from
+      the distribution package or one written by hand is never in C(stale).
+    - >-
+      C(dovecot.conf) is left out of both lists. It is written by its own task, and
+      removing it would take the whole configuration with it.
+    - >-
+      An unknown version returns C(available=false) and an empty C(stale), so a version
+      the tree does not support can never delete a working configuration.
+    - >-
+      This does the job a C(fileglob) lookup cannot do. C(fileglob) resolves everything up
+      to the last C(/) as a literal directory, so a wildcard in the directory part -
+      C(templates/etc/dovecot/*/conf.d/*.j2) - never matches anything.
+  positional: _input
+  options:
+    _input:
+      description:
+        - The file tree below C(templates/etc/dovecot), as C(community.general.filetree)
+          returns it.
+        - Only the C(path) and C(state) of an entry are read.
+      required: true
+      type: list
+      elements: dict
+    version:
+      description:
+        - The short version of the installed dovecot, for example C(2.4).
+        - This is C(versions.short_version) of the M(bodsch.email.dovecot_version) module.
+      required: true
+      type: str
+
+EXAMPLES: |
+  - name: sort template tree by dovecot version
+    ansible.builtin.set_fact:
+      _dovecot_templates: >-
+        {{ lookup('community.general.filetree', 'templates/etc/dovecot')
+           | bodsch.email.dovecot_template_versions(version=dovecot_short_version) }}
+
+  # dovecot_short_version = "2.4"
+  #
+  # available: true
+  # versions:  ["2.3", "2.4"]
+  # selected:  "2.4"
+  # files:
+  #   conf.d: ["10-auth.conf", "10-logging.conf", ...]
+  #   auth.d: ["auth-deny.conf.ext", "auth-sql.conf.ext", ...]
+  #   root:   []
+  # stale:
+  #   conf.d: ["10-director.conf", "10-tcpwrapper.conf"]
+  #   auth.d: ["auth-checkpassword.conf.ext", "auth-dict.conf.ext", "auth-vpopmail.conf.ext"]
+  #   root:   ["dovecot-dict-auth.conf.ext", "dovecot-sql.conf.ext", ...]
+
+  - name: fail on unsupported dovecot version
+    when:
+      - not _dovecot_templates.available | bool
+    ansible.builtin.fail:
+      msg: "supported versions: {{ _dovecot_templates.versions | join(', ') }}"
+
+  - name: remove configuration files of another dovecot version
+    ansible.builtin.file:
+      path: "/etc/dovecot/conf.d/{{ item }}"
+      state: absent
+    loop: "{{ _dovecot_templates.stale['conf.d'] }}"
+
+RETURN:
+  _value:
+    description: The template tree, sorted by version.
+    type: dict
+    contains:
+      available:
+        description: Whether the tree has a directory for the given version.
+        type: bool
+      versions:
+        description: Every version the tree supports, sorted.
+        type: list
+        elements: str
+      selected:
+        description: The given version, or C(none) when the tree does not have it.
+        type: str
+      files:
+        description:
+          - The file names of the given version, without the C(.j2) suffix.
+          - Keyed by C(conf.d), C(auth.d) and C(root), the last one being the
+            C(dovecot-*.conf.ext) files in the version directory itself.
+        type: dict
+      stale:
+        description:
+          - The file names every other version owns and the given one does not.
+          - Keyed the same way as C(files). Empty when C(available) is C(false).
+        type: dict
