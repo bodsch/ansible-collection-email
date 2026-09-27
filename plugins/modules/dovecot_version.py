@@ -91,7 +91,7 @@ class DovecotVersion:
 
         rc, out, err = self._exec(args)
 
-        pattern = re.compile(rf"(?P<version>.*)\s+\(.*\)")
+        pattern = re.compile(r"(?P<version>.*)\s+\(.*\)")
 
         match = re.search(pattern, out)
 
@@ -125,7 +125,7 @@ class DovecotVersion:
             )
 
         result = dict(
-            failed=(rc!=0),
+            failed=(rc != 0),
             versions=version,
         )
 

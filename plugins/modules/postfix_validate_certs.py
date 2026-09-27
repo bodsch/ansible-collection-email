@@ -2,8 +2,6 @@
 
 # (c) 2022-2023, Bodo Schulz <bodo@boone-schulz.de>
 
-
-
 import os
 
 from ansible.module_utils.basic import AnsibleModule
