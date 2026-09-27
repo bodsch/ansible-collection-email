@@ -35,6 +35,13 @@ class FilterModule:
         somewhere else stays intact. Empty entries - a fileglob that matched
         nothing returns one - are dropped.
         """
+        display.v(
+            f"bodsch.email::file_names('{data}')"
+        )
+
+        if isinstance(data, str):
+            data = data.split(",")
+
         if not isinstance(data, list):
             raise AnsibleFilterError(
                 f"file_names expects a list, got {type(data).__name__}"
