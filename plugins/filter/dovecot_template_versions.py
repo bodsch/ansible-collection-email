@@ -1,6 +1,5 @@
 # python 3 headers, required if submitting to Ansible
 
-import os
 import re
 
 from ansible.utils.display import Display

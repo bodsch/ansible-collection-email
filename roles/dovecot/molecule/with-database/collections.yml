@@ -1,5 +1,5 @@
 ---
 
 collections:
-  # - name: bodsch.core
   - name: bodsch.database
+    version: ">=2.0.2"

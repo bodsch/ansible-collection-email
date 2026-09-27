@@ -35,7 +35,7 @@ class FilterModule:
         somewhere else stays intact. Empty entries - a fileglob that matched
         nothing returns one - are dropped.
         """
-        display.v(
+        display.vv(
             f"bodsch.email::file_names('{data}')"
         )
 

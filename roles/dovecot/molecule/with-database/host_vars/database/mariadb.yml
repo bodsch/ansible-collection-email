@@ -1,8 +1,12 @@
 ---
 
-mariadb_root_password: Y5FZfKXzCeOWGf4kBOiFSp6Il
+mariadb_use_external_repo: true
 
-mariadb_root_password_update: true
+mariadb_debian_repo: https://dlm.mariadb.com/repo
+mariadb_version: 12.rolling
+
+#mariadb_root_password: Y5FZfKXzCeOWGf4kBOiFSp6Il
+#mariadb_root_password_update: true
 
 mariadb_system_users:
   - username: root

@@ -96,7 +96,7 @@ class FilterModule:
         ):
             result = [entry for entry in result if not re.search(r".*solr.*", entry)]
 
-        display.v(f"bodsch.email::mailcow_compose_active({git_version}) = {result}")
+        display.vv(f"bodsch.email::mailcow_compose_active({git_version}) = {result}")
 
         return result
 
@@ -121,7 +121,7 @@ class FilterModule:
 
         result = repository_id != installed_id
 
-        display.v(
+        display.vv(
             f"bodsch.email::mailcow_compare_version({repository_id}, {installed_id}) = {result}"
         )
 

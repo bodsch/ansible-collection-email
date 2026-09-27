@@ -47,7 +47,7 @@ class FilterModule:
                 f"{type(compare_to_list).__name__}: {compare_to_list!r}"
             )
 
-        display.v(
+        display.vv(
             f"bodsch.email::validate_attachment_hash('{data}', '{compare_to_list}')"
         )
 
