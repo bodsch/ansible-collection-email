@@ -1,18 +1,26 @@
 ---
 
 dovecot_packages:
+  - dovecot-antispam
   - dovecot-imapd
   - dovecot-ldap
   - dovecot-lmtpd
-  - dovecot-lucene
   - dovecot-managesieved
   - dovecot-mysql
   - dovecot-pgsql
   - dovecot-pop3d
   - dovecot-sieve
-  - dovecot-sieve
   - dovecot-sqlite
   - dovecot-submissiond
-  - dovecot-antispam
+
+# Debian 12 ships dovecot 2.3: lucene is still available, flatcurve does not
+# exist yet.
+dovecot_fts_packages:
+  lucene:
+    - dovecot-lucene
+  solr:
+    - dovecot-solr
+  xapian:
+    - dovecot-fts-xapian
 
 ...

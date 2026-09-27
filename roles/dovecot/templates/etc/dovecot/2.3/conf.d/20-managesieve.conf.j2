@@ -1,0 +1,73 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+# {{ ansible_managed }}
+
+{% if dovecot_managesieve.enabled_protocols is defined and
+      dovecot_managesieve.enabled_protocols | length > 0 %}
+protocols                     = {{ dovecot_managesieve.enabled_protocols | join(' ') }}
+{% endif %}
+{% if dovecot_managesieve.services is defined and
+      dovecot_managesieve.services | count > 0 %}
+
+  {% for service in dovecot_managesieve.services %}
+
+    {% for key, values in service.items() %}
+service {{ key }} {
+      {% for k, v in values.items() %}
+        {% if k == "listeners" and
+              v | bodsch.core.type == "list" %}
+          {% for x in v %}
+            {% set _key = x.keys() | first %}
+            {% set _values = x.values() | first %}
+            {% if _values.type is defined %}
+              {% set _type = _values.type %}
+            {% else %}
+              {% set _type = "inet" %}
+            {% endif %}
+  {{ _type }}_listener {{ _key }} {
+              {% for kk, vv in _values.items() if kk != 'type' %}
+                {% if vv | string | length > 0 and
+                      vv | bodsch.email.config_value %}
+    {{ "%-25s" | format(kk) }} = {{ vv | bodsch.email.config_value }}
+                {% endif %}
+              {% endfor %}
+  }
+          {% endfor %}
+        {% else %}
+          {% if v | string | length > 0 and
+                v | bodsch.email.config_value %}
+  {{ "%-27s" | format(k) }} = {{ v | bodsch.email.config_value }}
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+}
+    {% endfor %}
+  {% endfor %}
+{% endif %}
+{% if dovecot_managesieve.protocols is defined and
+      dovecot_managesieve.protocols | count > 0 %}
+
+  {% for pr in dovecot_managesieve.protocols %}
+    {% if pr.name is defined %}
+      {% set _name = pr. name %}
+    {% else %}
+      {% set _name = pr.keys() | first %}
+    {% endif %}
+protocol {{ _name }} {
+    {% if pr | bodsch.core.type == "dict" %}
+      {% for k, v in pr[_name].items() %}
+        {% if v | bodsch.core.type == "list" %}
+          {% if v | count != 0 %}
+  {{ k }} = {{ v | join(' ') }}
+          {% endif %}
+        {% else %}
+          {% if v | string | length > 0 and
+                v | bodsch.email.config_value %}
+  {{ "%-27s" | format(k) }} = {{ v }}
+          {% endif %}
+  {# {{ k }} = {{ v }} #}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+}
+  {% endfor %}
+{% endif %}

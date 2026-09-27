@@ -1,0 +1,20 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{% import 'jinja_macros.j2' as mcr with context %}
+# {{ ansible_managed }}
+# SQL authentication
+
+{#
+  dovecot 2.4 requires passdb and userdb blocks to be named:
+    passdb { driver = sql }  ->  passdb sql { driver = sql }
+
+  dovecot-sql.conf.ext is gone: the connection and the queries moved into the
+  block itself (sql_driver, sql_hosts, passdb_sql_query, userdb_sql_query).
+#}
+{% if dovecot_authentications.sql is defined and
+      dovecot_authentications.sql | count > 0 %}
+  {% for _section, _values in dovecot_authentications.sql.items() %}
+    {% if _values | bodsch.core.type == "dict" and _values | count > 0 %}
+{{ mcr.auth_db(_section, _values.driver | default('sql'), _values) }}
+    {% endif %}
+  {% endfor %}
+{% endif %}

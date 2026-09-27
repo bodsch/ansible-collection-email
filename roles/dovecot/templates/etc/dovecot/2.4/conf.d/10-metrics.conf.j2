@@ -1,0 +1,66 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+# {{ ansible_managed }}
+
+{#
+  New in 2.4. Statistics are gathered from events through "metric" blocks and
+  need no plugin. This replaces the old auth_stats setting and the old-stats
+  plugin, both of which were removed.
+
+  See https://doc.dovecot.org/latest/core/config/statistics.html
+#}
+{% if dovecot_metrics.metrics is defined and
+      dovecot_metrics.metrics | count > 0 %}
+  {% for metric in dovecot_metrics.metrics %}
+    {% for name, values in metric.items() %}
+metric {{ name }} {
+      {% for k, v in values.items() %}
+        {% if k == 'group_by' and v | bodsch.core.type == "list" %}
+          {% for group in v %}
+            {% for field, method in group.items() %}
+  group_by {{ field }} {
+    method {{ method.name | default('discrete') }} {
+              {% for mk, mv in method.items() if mk != 'name' %}
+      {{ "%-21s" | format(mk) }} = {{ mv }}
+              {% endfor %}
+    }
+  }
+            {% endfor %}
+          {% endfor %}
+        {% elif v | string | length > 0 %}
+  {{ "%-27s" | format(k) }} = {{ v }}
+        {% endif %}
+      {% endfor %}
+}
+    {% endfor %}
+  {% endfor %}
+{% endif %}
+{% if dovecot_metrics.event_exporters is defined and
+      dovecot_metrics.event_exporters | count > 0 %}
+  {% for exporter in dovecot_metrics.event_exporters %}
+    {% for name, values in exporter.items() %}
+event_exporter {{ name }} {
+      {% for k, v in values.items() %}
+        {% if v | string | length > 0 %}
+  {{ "%-27s" | format(k) }} = {{ v }}
+        {% endif %}
+      {% endfor %}
+}
+    {% endfor %}
+  {% endfor %}
+{% endif %}
+{#
+  Prometheus scrapes /metrics from the http listener of the stats service.
+#}
+{% if dovecot_metrics.prometheus is defined and
+      dovecot_metrics.prometheus.enabled is defined and
+      dovecot_metrics.prometheus.enabled | bool %}
+service stats {
+  inet_listener http {
+    port                      = {{ dovecot_metrics.prometheus.port | default(9900) | int }}
+  {% if dovecot_metrics.prometheus.address is defined and
+        dovecot_metrics.prometheus.address | string | length > 0 %}
+    listen                    = {{ dovecot_metrics.prometheus.address }}
+  {% endif %}
+  }
+}
+{% endif %}

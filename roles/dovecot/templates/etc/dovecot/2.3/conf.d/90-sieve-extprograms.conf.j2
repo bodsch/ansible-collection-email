@@ -1,0 +1,56 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+# {{ ansible_managed }}
+
+{% if dovecot_sieve_extprograms.plugins is defined and
+      dovecot_sieve_extprograms.plugins | count > 0 %}
+  {% if dovecot_sieve_extprograms.plugins | bodsch.core.type == "list" %}
+    {% for plugin in dovecot_sieve_extprograms.plugins %}
+plugin {
+      {% if plugin | bodsch.core.type == "dict" %}
+        {% for _, v in plugin.items() %}
+          {% if v | count > 0 %}
+            {% for key, value in v.items() %}
+  {{ "%-27s" | format(key) }} = {{ value }}
+            {% endfor %}
+          {% endif %}
+        {% endfor %}
+      {% endif %}
+}
+    {% endfor %}
+  {% endif %}
+{% endif %}
+
+{% if dovecot_sieve_extprograms.services is defined and
+      dovecot_sieve_extprograms.services | count > 0 %}
+  {% for service in dovecot_sieve_extprograms.services %}
+    {% for key, values in service.items() %}
+service {{ key }} {
+      {% for k, v in values.items() %}
+        {% if k == "listeners" and v | bodsch.core.type == "list" %}
+          {% for x in v %}
+            {% set _key = x.keys() | first %}
+            {% set _values = x.values() | first %}
+            {% if _values.type is defined %}
+              {% set _type = _values.type %}
+            {% else %}
+              {% set _type = "inet" %}
+            {% endif %}
+  {{ _type }}_listener {{ _key }} {
+              {% for kk, vv in _values.items() if kk != 'type' %}
+                {% if vv | string | length > 0 and vv | bodsch.email.config_value %}
+    {{ "%-25s" | format(kk) }} = {{ vv | bodsch.email.config_value }}
+                {% endif %}
+              {% endfor %}
+  }
+          {% endfor %}
+        {% else %}
+          {% if v | string | length > 0 and v | bodsch.email.config_value %}
+  {{ "%-27s" | format(k) }} = {{ v | bodsch.email.config_value }}
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+}
+
+    {% endfor %}
+  {% endfor %}
+{% endif %}

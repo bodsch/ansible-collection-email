@@ -1,0 +1,78 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{% import 'jinja_macros.j2' as mcr with context %}
+# {{ ansible_managed }}
+
+{#
+  2.3 -> 2.4 mapping
+    pop3_client_workarounds -> boolean list block
+    pop3_uidl_format        -> %{uid | hex(8)}%{uidvalidity | hex(8)}
+    pop3_logout_format      -> new %{...} variables
+  Both formats are translated in vars/dovecot-2.4.yml for the role defaults;
+  values you set yourself are passed through unchanged.
+#}
+{% if dovecot_pop3.no_flag_updates is defined and
+      dovecot_pop3.no_flag_updates | string | length > 0 %}
+pop3_no_flag_updates         = {{ dovecot_pop3.no_flag_updates | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_pop3.enable_last is defined and
+      dovecot_pop3.enable_last | string | length > 0 %}
+pop3_enable_last             = {{ dovecot_pop3.enable_last | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_pop3.reuse_xuidl is defined and
+      dovecot_pop3.reuse_xuidl | string | length > 0 %}
+pop3_reuse_xuidl             = {{ dovecot_pop3.reuse_xuidl | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_pop3.lock_session is defined and
+      dovecot_pop3.lock_session | string | length > 0 %}
+pop3_lock_session            = {{ dovecot_pop3.lock_session | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_pop3.fast_size_lookups is defined and
+      dovecot_pop3.fast_size_lookups | string | length > 0 %}
+pop3_fast_size_lookups       = {{ dovecot_pop3.fast_size_lookups | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_pop3.uidl_format is defined and
+      dovecot_pop3.uidl_format | string | length > 0 %}
+pop3_uidl_format             = {{ dovecot_pop3.uidl_format }}
+{% endif %}
+{% if dovecot_pop3.save_uidl is defined and
+      dovecot_pop3.save_uidl | string | length > 0 %}
+pop3_save_uidl               = {{ dovecot_pop3.save_uidl | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_pop3.uidl_duplicates is defined and
+      dovecot_pop3.uidl_duplicates | string | length > 0 and
+      dovecot_pop3.uidl_duplicates in ['allow', 'rename'] %}
+pop3_uidl_duplicates         = {{ dovecot_pop3.uidl_duplicates }}
+{% endif %}
+{% if dovecot_pop3.deleted_flag is defined and
+      dovecot_pop3.deleted_flag | string | length > 0 %}
+pop3_deleted_flag            = {{ dovecot_pop3.deleted_flag }}
+{% endif %}
+{% if dovecot_pop3.logout_format is defined and
+      dovecot_pop3.logout_format | string | length > 0 %}
+pop3_logout_format           = {{ dovecot_pop3.logout_format }}
+{% endif %}
+{% if dovecot_pop3.client_workarounds is defined and
+      dovecot_pop3.client_workarounds | count > 0 %}
+  {% set _attr = ['outlook-no-nuls', 'oe-ns-eoh'] %}
+{{ mcr.bool_list('pop3_client_workarounds', dovecot_pop3.client_workarounds | bodsch.core.compare_list(compare_to_list=_attr)) }}
+{% endif %}
+{% if dovecot_pop3.protocols is defined and
+      dovecot_pop3.protocols | count > 0 %}
+  {% for pr in dovecot_pop3.protocols %}
+    {% set _name = pr.name | default(pr.keys() | first) %}
+    {% set _body = pr[_name] | default({}) if _name in pr else pr %}
+protocol {{ _name }} {
+    {% for k, v in _body.items() if k != 'name' %}
+      {% if k == 'mail_plugins' %}
+{{ mcr.bool_list('mail_plugins', v, '  ') }}
+      {% elif v | bodsch.core.type == "list" %}
+        {% if v | count > 0 %}
+  {{ "%-27s" | format(k) }} = {{ v | join(' ') }}
+        {% endif %}
+      {% elif v | string | length > 0 %}
+  {{ "%-27s" | format(k) }} = {{ v }}
+      {% endif %}
+    {% endfor %}
+}
+  {% endfor %}
+{% endif %}

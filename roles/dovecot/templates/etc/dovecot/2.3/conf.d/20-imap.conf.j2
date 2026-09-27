@@ -1,0 +1,68 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+# {{ ansible_managed }}
+
+{% if dovecot_imap.hibernate_timeout is defined and
+      dovecot_imap.hibernate_timeout | string | length > 0 %}
+imap_hibernate_timeout        = {{ dovecot_imap.hibernate_timeout }}
+{% endif %}
+{% if dovecot_imap.max_line_length is defined and
+      dovecot_imap.max_line_length | string | length > 0 %}
+imap_max_line_length          = {{ dovecot_imap.max_line_length }}
+{% endif %}
+{% if dovecot_imap.logout_format is defined and
+      dovecot_imap.logout_format | count > 0 %}
+imap_logout_format            = \
+  {{ dovecot_imap.logout_format | join(" \\\n") | indent(2) }}
+{% endif %}
+{% if dovecot_imap.capability is defined and
+      dovecot_imap.capability | string | length > 0 %}
+imap_capability               = {{ dovecot_imap.capability }}
+{% endif %}
+{% if dovecot_imap.idle_notify_interval is defined and
+      dovecot_imap.idle_notify_interval | string | length > 0 %}
+imap_idle_notify_interval     = {{ dovecot_imap.idle_notify_interval }}
+{% endif %}
+{% if dovecot_imap.id_send is defined and
+      dovecot_imap.id_send | string | length > 0 %}
+imap_id_send                  = {{ dovecot_imap.id_send }}
+{% endif %}
+{% if dovecot_imap.id_log is defined and
+      dovecot_imap.id_log | string | length > 0 %}
+imap_id_log                   = {{ dovecot_imap.id_log }}
+{% endif %}
+{% if dovecot_imap.client_workarounds is defined and
+      dovecot_imap.client_workarounds | count > 0 %}
+  {% set _attr = ['delay-newmail','tb-extra-mailbox-sep','tb-lsub-flags'] %}
+imap_client_workarounds       = {{ dovecot_imap.client_workarounds | bodsch.core.compare_list(compare_to_list=_attr) | join(' ') }}
+{% endif %}
+{% if dovecot_imap.urlauth_host is defined and
+      dovecot_imap.urlauth_host | string | length > 0 %}
+imap_urlauth_host             = {{ dovecot_imap.urlauth_host }}
+{% endif %}
+{% if dovecot_imap.literal_minus is defined and
+      dovecot_imap.literal_minus | string | length > 0 %}
+imap_literal_minus            = {{ dovecot_imap.literal_minus | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_imap.fetch_failure is defined and
+      dovecot_imap.fetch_failure | string | length > 0 %}
+  {% if dovecot_imap.fetch_failure in ['disconnect-immediately','disconnect-after','no-after'] %}
+imap_fetch_failure            = {{ dovecot_imap.fetch_failure }}
+  {% endif %}
+{% endif %}
+{% if dovecot_imap.protocols is defined and
+      dovecot_imap.protocols | count > 0 %}
+  {% for pr in dovecot_imap.protocols %}
+    {% if pr.name is defined %}
+      {% set _name = pr. name %}
+    {% else %}
+      {% set _name = pr.keys() | first %}
+    {% endif %}
+protocol {{ _name }} {
+    {% if pr | bodsch.core.type == "dict" %}
+      {% for k, v in pr[_name].items() %}
+  {{ k }} = {{ v }}
+      {% endfor %}
+    {% endif %}
+}
+  {% endfor %}
+{% endif %}

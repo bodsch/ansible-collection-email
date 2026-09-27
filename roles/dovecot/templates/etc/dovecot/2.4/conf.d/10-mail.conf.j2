@@ -1,0 +1,434 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{% import 'jinja_macros.j2' as mcr with context %}
+# {{ ansible_managed }}
+
+{#
+  2.3 -> 2.4 mapping
+    mail_location             -> mail_driver + mail_path (+ mail_*_path options)
+    namespace { location }    -> namespace { mail_driver + mail_path }
+    mail_attribute_dict       -> mail_attribute { dict <driver> { ... } }
+    mail_attachment_dir       -> mail_ext_attachment_path
+    mail_attachment_min_size  -> mail_ext_attachment_min_size
+    mail_attachment_hash      -> mail_ext_attachment_hash
+    mail_attachment_fs        -> fs inside the mail_ext_attachment filter
+    mail_plugins = a b        -> mail_plugins { a = yes  b = yes }
+
+  removed without replacement in 2.4:
+    mail_location (split, see above), mail_attribute_dict (now a filter)
+#}
+{% set _location_options = {
+  'INDEX': 'mail_index_path',
+  'INDEXPVT': 'mail_index_private_path',
+  'CONTROL': 'mail_control_path',
+  'VOLATILEDIR': 'mail_volatile_path',
+  'ALT': 'mail_alt_path',
+  'INBOX': 'mail_inbox_path',
+  'LAYOUT': 'mailbox_list_layout',
+} %}
+{# Mailbox locations and namespaces #}
+{% if dovecot_mail.mail_driver is defined and
+      dovecot_mail.mail_driver | string | length > 0 %}
+mail_driver                   = {{ dovecot_mail.mail_driver }}
+  {% if dovecot_mail.mail_path is defined and
+        dovecot_mail.mail_path | string | length > 0 %}
+mail_path                     = {{ mcr.path_vars(dovecot_mail.mail_path) }}
+  {% endif %}
+  {% if dovecot_mail.mail_inbox_path is defined and
+        dovecot_mail.mail_inbox_path | string | length > 0 %}
+mail_inbox_path               = {{ mcr.path_vars(dovecot_mail.mail_inbox_path) }}
+  {% endif %}
+{% elif dovecot_mail.mail_location is defined and
+        dovecot_mail.mail_location | string | length > 0 %}
+{#  split "driver:path:OPTION=value:..." into the separate 2.4 settings #}
+  {% set _parts = dovecot_mail.mail_location | string | split(':') %}
+mail_driver                   = {{ _parts[0] }}
+  {% if _parts | length > 1 and _parts[1] | length > 0 %}
+mail_path                     = {{ mcr.path_vars(_parts[1]) }}
+  {% endif %}
+  {% for _opt in _parts[2:] %}
+    {% set _kv = _opt | split('=') %}
+    {% set _name = _location_options.get(_kv[0] | upper) %}
+    {% if _name and _kv | length > 1 %}
+{{ "%-29s" | format(_name) }} = {{ mcr.path_vars(_kv[1:] | join('=')) }}
+    {% else %}
+# UNMAPPED mail_location option "{{ _opt }}" - dovecot 2.4 has no direct
+# equivalent. Set the matching mail_* setting explicitly via dovecot_mail.
+    {% endif %}
+  {% endfor %}
+{% endif %}
+{% if dovecot_mail.mail_home is defined and
+      dovecot_mail.mail_home | string | length > 0 %}
+mail_home                     = {{ mcr.path_vars(dovecot_mail.mail_home) }}
+{% endif %}
+{% if dovecot_mail.namespaces is defined and
+      dovecot_mail.namespaces | count > 0 %}
+  {% for ns in dovecot_mail.namespaces %}
+namespace {{ ns.name | default("") }} {
+    {% if ns.type is defined and
+          ns.type | length > 0 and
+          ns.type in ['private', 'shared', 'public'] %}
+  type                        = {{ ns.type }}
+    {% endif %}
+    {% if ns.separator is defined and
+          ns.separator | string | length > 0 %}
+  separator                   = {{ ns.separator }}
+    {% endif %}
+    {% if ns.prefix is defined and
+          ns.prefix | string | length > 0 %}
+  prefix                      = {{ mcr.prefix_vars(ns.prefix) }}
+    {% endif %}
+{#  namespace { location } was replaced by the per-namespace mail_* settings #}
+    {% set _ns_location = ns.mail_location | default(ns.location, true) | default('', true) %}
+    {% if ns.mail_driver is defined and ns.mail_driver | string | length > 0 %}
+  mail_driver                 = {{ ns.mail_driver }}
+      {% if ns.mail_path is defined and ns.mail_path | string | length > 0 %}
+  mail_path                   = {{ mcr.path_vars(ns.mail_path) }}
+      {% endif %}
+    {% elif _ns_location | string | length > 0 %}
+      {% set _ns_parts = _ns_location | string | split(':') %}
+  mail_driver                 = {{ _ns_parts[0] }}
+      {% if _ns_parts | length > 1 and _ns_parts[1] | length > 0 %}
+  mail_path                   = {{ mcr.path_vars(_ns_parts[1]) }}
+      {% endif %}
+      {% for _opt in _ns_parts[2:] %}
+        {% set _kv = _opt | split('=') %}
+        {% set _name = _location_options.get(_kv[0] | upper) %}
+        {% if _name and _kv | length > 1 %}
+  {{ "%-27s" | format(_name) }} = {{ mcr.path_vars(_kv[1:] | join('=')) }}
+        {% else %}
+  # UNMAPPED namespace location option "{{ _opt }}"
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+    {% if ns.inbox is defined and
+          ns.inbox | string | length > 0 %}
+  inbox                       = {{ ns.inbox | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+    {% endif %}
+    {% if ns.hidden is defined and
+          ns.hidden | string | length > 0 %}
+  hidden                      = {{ ns.hidden | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+    {% endif %}
+    {% if ns.list is defined and
+          ns.list | string | length > 0 %}
+      {% if ns.list | bodsch.core.type == "bool" %}
+  list                        = {{ ns.list | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+      {% elif ns.list | bodsch.core.type == "str" and ns.list == "children" %}
+  list                        = children
+      {% endif %}
+    {% endif %}
+    {% if ns.subscriptions is defined and
+          ns.subscriptions | string | length > 0 %}
+  subscriptions               = {{ ns.subscriptions | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+    {% endif %}
+}
+  {% endfor %}
+{% endif %}
+{% if dovecot_mail.mail_shared_explicit_inbox is defined and
+      dovecot_mail.mail_shared_explicit_inbox | string | length > 0 %}
+mail_shared_explicit_inbox    = {{ dovecot_mail.mail_shared_explicit_inbox | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_mail.mail_uid is defined and
+      dovecot_mail.mail_uid | string | length > 0 %}
+mail_uid                      = {{ dovecot_mail.mail_uid }}
+{% endif %}
+{% if dovecot_mail.mail_gid is defined and
+      dovecot_mail.mail_gid | string | length > 0 %}
+mail_gid                      = {{ dovecot_mail.mail_gid }}
+{% endif %}
+{% if dovecot_mail.mail_privileged_group is defined and
+      dovecot_mail.mail_privileged_group | string | length > 0 %}
+mail_privileged_group         = {{ dovecot_mail.mail_privileged_group }}
+{% endif %}
+{% if dovecot_mail.mail_access_groups is defined and
+      dovecot_mail.mail_access_groups | string | length > 0 %}
+mail_access_groups            = {{ dovecot_mail.mail_access_groups }}
+{% endif %}
+{% if dovecot_mail.mail_full_filesystem_access is defined and
+      dovecot_mail.mail_full_filesystem_access | string | length > 0 %}
+mail_full_filesystem_access   = {{ dovecot_mail.mail_full_filesystem_access | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{#
+  mail_attribute_dict = "file:%h/Maildir/dovecot-attributes"
+  becomes a named dict filter in 2.4.
+#}
+{% if dovecot_mail.mail_attribute_dict is defined and
+      dovecot_mail.mail_attribute_dict | string | length > 0 %}
+  {% set _attr = dovecot_mail.mail_attribute_dict | string | split(':') %}
+mail_attribute {
+  dict {{ _attr[0] }} {
+  {% if _attr | length > 1 %}
+    path                      = {{ mcr.path_vars(_attr[1:] | join(':')) }}
+  {% endif %}
+  }
+}
+{% endif %}
+{% if dovecot_mail.mail_server_comment is defined and
+      dovecot_mail.mail_server_comment | string | length > 0 %}
+mail_server_comment           = "{{ dovecot_mail.mail_server_comment }}"
+{% endif %}
+{% if dovecot_mail.mail_server_admin is defined and
+      dovecot_mail.mail_server_admin | string | length > 0 %}
+mail_server_admin             = {{ dovecot_mail.mail_server_admin }}
+{% endif %}
+
+{# Mail processes #}
+{% if dovecot_mail.mmap_disable is defined and
+      dovecot_mail.mmap_disable | string | length > 0 %}
+mmap_disable                  = {{ dovecot_mail.mmap_disable | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_mail.dotlock_use_excl is defined and
+      dovecot_mail.dotlock_use_excl | string | length > 0 %}
+dotlock_use_excl              = {{ dovecot_mail.dotlock_use_excl | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_mail.mail_fsync is defined and
+      dovecot_mail.mail_fsync | string | length > 0 and
+      dovecot_mail.mail_fsync in ['optimized', 'always', 'never'] %}
+mail_fsync                    = {{ dovecot_mail.mail_fsync }}
+{% endif %}
+{% if dovecot_mail.lock_method is defined and
+      dovecot_mail.lock_method | string | length > 0 and
+      dovecot_mail.lock_method in ['fcntl', 'flock', 'dotlock'] %}
+lock_method                   = {{ dovecot_mail.lock_method }}
+{% endif %}
+{% if dovecot_mail.mail_temp_dir is defined and
+      dovecot_mail.mail_temp_dir | string | length > 0 %}
+mail_temp_dir                 = {{ dovecot_mail.mail_temp_dir }}
+{% endif %}
+{% if dovecot_mail.first_valid_uid is defined and
+      dovecot_mail.first_valid_uid | int >= 500 %}
+first_valid_uid               = {{ dovecot_mail.first_valid_uid | int }}
+{% endif %}
+{% if dovecot_mail.last_valid_uid is defined and
+      dovecot_mail.last_valid_uid | int %}
+last_valid_uid                = {{ dovecot_mail.last_valid_uid | int }}
+{% endif %}
+{% if dovecot_mail.first_valid_gid is defined and
+      dovecot_mail.first_valid_gid | int >= 500 %}
+first_valid_gid               = {{ dovecot_mail.first_valid_gid | int }}
+{% endif %}
+{% if dovecot_mail.last_valid_gid is defined and
+      dovecot_mail.last_valid_gid | int %}
+last_valid_gid                = {{ dovecot_mail.last_valid_gid | int }}
+{% endif %}
+{% if dovecot_mail.mail_max_keyword_length is defined and
+      dovecot_mail.mail_max_keyword_length | string | length > 0 %}
+mail_max_keyword_length       = {{ dovecot_mail.mail_max_keyword_length | int }}
+{% endif %}
+{% if dovecot_mail.valid_chroot_dirs is defined and
+      dovecot_mail.valid_chroot_dirs | count > 0 %}
+valid_chroot_dirs             = {{ dovecot_mail.valid_chroot_dirs | join(':') }}
+{% endif %}
+{% if dovecot_mail.mail_chroot is defined and
+      dovecot_mail.mail_chroot | string | length > 0 %}
+mail_chroot                   = {{ mcr.path_vars(dovecot_mail.mail_chroot) }}
+{% endif %}
+{% if dovecot_mail.auth_socket_path is defined and
+      dovecot_mail.auth_socket_path | string | length > 0 %}
+auth_socket_path              = {{ dovecot_mail.auth_socket_path }}
+{% endif %}
+{% if dovecot_mail.mail_plugin_dir is defined and
+      dovecot_mail.mail_plugin_dir | string | length > 0 %}
+mail_plugin_dir               = {{ dovecot_mail.mail_plugin_dir }}
+{% endif %}
+{#
+  In 2.4 mail_plugins is a boolean list. "mail_plugins = a b" REPLACES the
+  list, the block form ADDS to it - which is what "$mail_plugins a b" did
+  in 2.3. The '$mail_plugins' placeholder itself no longer exists.
+#}
+{% if dovecot_mail.mail_plugins is defined and
+      dovecot_mail.mail_plugins | count > 0 %}
+  {% set _plugins = [] %}
+  {% for _p in dovecot_mail.mail_plugins %}
+    {% if not _p | string | first == '$' %}{% set _ = _plugins.append(_p) %}{% endif %}
+  {% endfor %}
+  {% if _plugins | count > 0 %}
+mail_plugins {
+    {% for _plugin in _plugins %}
+  {{ "%-27s" | format(_plugin) }} = yes
+    {% endfor %}
+}
+  {% endif %}
+{% endif %}
+
+{# Mailbox handling optimizations #}
+{% if dovecot_mail.mailbox_list_index is defined and
+      dovecot_mail.mailbox_list_index | string | length > 0 %}
+mailbox_list_index            = {{ dovecot_mail.mailbox_list_index | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_mail.mailbox_list_index_very_dirty_syncs is defined and
+      dovecot_mail.mailbox_list_index_very_dirty_syncs | string | length > 0 %}
+mailbox_list_index_very_dirty_syncs = {{ dovecot_mail.mailbox_list_index_very_dirty_syncs | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_mail.mailbox_list_index_include_inbox is defined and
+      dovecot_mail.mailbox_list_index_include_inbox | string | length > 0 %}
+mailbox_list_index_include_inbox = {{ dovecot_mail.mailbox_list_index_include_inbox | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_mail.mail_cache_min_mail_count is defined and
+      dovecot_mail.mail_cache_min_mail_count | string | length > 0 %}
+mail_cache_min_mail_count     = {{ dovecot_mail.mail_cache_min_mail_count | int }}
+{% endif %}
+{% if dovecot_mail.mailbox_idle_check_interval is defined and
+      dovecot_mail.mailbox_idle_check_interval | string | length > 0 %}
+mailbox_idle_check_interval   = {{ dovecot_mail.mailbox_idle_check_interval }}
+{% endif %}
+{% if dovecot_mail.mail_save_crlf is defined and
+      dovecot_mail.mail_save_crlf | string | length > 0 %}
+mail_save_crlf                = {{ dovecot_mail.mail_save_crlf | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_mail.mail_prefetch_count is defined and
+      dovecot_mail.mail_prefetch_count | string | length > 0 %}
+mail_prefetch_count           = {{ dovecot_mail.mail_prefetch_count | int }}
+{% endif %}
+{% if dovecot_mail.mail_temp_scan_interval is defined and
+      dovecot_mail.mail_temp_scan_interval | string | length > 0 %}
+mail_temp_scan_interval       = {{ dovecot_mail.mail_temp_scan_interval }}
+{% endif %}
+{% if dovecot_mail.mail_sort_max_read_count is defined and
+      dovecot_mail.mail_sort_max_read_count | string | length > 0 %}
+mail_sort_max_read_count      = {{ dovecot_mail.mail_sort_max_read_count | int }}
+{% endif %}
+{% if dovecot_mail.mail_protocols is defined and
+      dovecot_mail.mail_protocols | count > 0 %}
+
+  {% for pr in dovecot_mail.mail_protocols %}
+    {% if pr.name is defined %}
+      {% set _name = pr.name %}
+protocol {{ _name }} {
+      {% for k, v in pr.items() if k != 'name' %}
+        {% if k == 'mail_plugins' %}
+          {% set _pl = [] %}
+          {% for _p in v %}
+            {% if not _p | string | first == '$' %}{% set _ = _pl.append(_p) %}{% endif %}
+          {% endfor %}
+          {% if _pl | count > 0 %}
+  mail_plugins {
+            {% for _plugin in _pl %}
+    {{ "%-25s" | format(_plugin) }} = yes
+            {% endfor %}
+  }
+          {% endif %}
+        {% elif v | bodsch.core.type == "list" %}
+          {% if v | count > 0 %}
+  {{ "%-27s" | format(k) }} = {{ v | join(' ') }}
+          {% endif %}
+        {% elif v | string | length > 0 %}
+  {{ "%-27s" | format(k) }} = {{ v }}
+        {% endif %}
+      {% endfor %}
+}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+{# Maildir-specific settings #}
+{% if dovecot_mail.maildir_stat_dirs is defined and
+      dovecot_mail.maildir_stat_dirs | string | length > 0 %}
+maildir_stat_dirs             = {{ dovecot_mail.maildir_stat_dirs | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_mail.maildir_copy_with_hardlinks is defined and
+      dovecot_mail.maildir_copy_with_hardlinks | string | length > 0 %}
+maildir_copy_with_hardlinks   = {{ dovecot_mail.maildir_copy_with_hardlinks | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_mail.maildir_very_dirty_syncs is defined and
+      dovecot_mail.maildir_very_dirty_syncs | string | length > 0 %}
+maildir_very_dirty_syncs      = {{ dovecot_mail.maildir_very_dirty_syncs | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_mail.maildir_broken_filename_sizes is defined and
+      dovecot_mail.maildir_broken_filename_sizes | string | length > 0 %}
+maildir_broken_filename_sizes = {{ dovecot_mail.maildir_broken_filename_sizes | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_mail.maildir_empty_new is defined and
+      dovecot_mail.maildir_empty_new | string | length > 0 %}
+maildir_empty_new             = {{ dovecot_mail.maildir_empty_new | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{# mbox-specific settings #}
+{% if dovecot_mail.mbox_read_locks is defined and
+      dovecot_mail.mbox_read_locks | count > 0 %}
+  {% set _attr = ['fcntl', 'flock', 'dotlock', 'dotlock_try', 'lockf'] %}
+mbox_read_locks               = {{ dovecot_mail.mbox_read_locks | bodsch.core.compare_list(compare_to_list=_attr) | join(' ') }}
+{% endif %}
+{% if dovecot_mail.mbox_write_locks is defined and
+      dovecot_mail.mbox_write_locks | count > 0 %}
+  {% set _attr = ['fcntl', 'flock', 'dotlock', 'dotlock_try', 'lockf'] %}
+mbox_write_locks              = {{ dovecot_mail.mbox_write_locks | bodsch.core.compare_list(compare_to_list=_attr) | join(' ') }}
+{% endif %}
+{% if dovecot_mail.mbox_lock_timeout is defined and
+      dovecot_mail.mbox_lock_timeout | string | length > 0 %}
+mbox_lock_timeout             = {{ dovecot_mail.mbox_lock_timeout }}
+{% endif %}
+{% if dovecot_mail.mbox_dotlock_change_timeout is defined and
+      dovecot_mail.mbox_dotlock_change_timeout | string | length > 0 %}
+mbox_dotlock_change_timeout   = {{ dovecot_mail.mbox_dotlock_change_timeout }}
+{% endif %}
+{% if dovecot_mail.mbox_dirty_syncs is defined and
+      dovecot_mail.mbox_dirty_syncs | string | length > 0 %}
+mbox_dirty_syncs              = {{ dovecot_mail.mbox_dirty_syncs | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_mail.mbox_very_dirty_syncs is defined and
+      dovecot_mail.mbox_very_dirty_syncs | string | length > 0 %}
+mbox_very_dirty_syncs         = {{ dovecot_mail.mbox_very_dirty_syncs | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_mail.mbox_lazy_writes is defined and
+      dovecot_mail.mbox_lazy_writes | string | length > 0 %}
+mbox_lazy_writes              = {{ dovecot_mail.mbox_lazy_writes | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_mail.mbox_min_index_size is defined and
+      dovecot_mail.mbox_min_index_size | string | length > 0 %}
+mbox_min_index_size           = {{ dovecot_mail.mbox_min_index_size | int }}
+{% endif %}
+{% if dovecot_mail.mbox_md5 is defined and
+      dovecot_mail.mbox_md5 | string | length > 0 %}
+mbox_md5                      = {{ dovecot_mail.mbox_md5 }}
+{% endif %}
+{# mdbox-specific settings #}
+{% if dovecot_mail.mdbox_rotate_size is defined and
+      dovecot_mail.mdbox_rotate_size | string | length > 0 %}
+mdbox_rotate_size             = {{ dovecot_mail.mdbox_rotate_size }}
+{% endif %}
+{% if dovecot_mail.mdbox_rotate_interval is defined and
+      dovecot_mail.mdbox_rotate_interval | string | length > 0 %}
+mdbox_rotate_interval         = {{ dovecot_mail.mdbox_rotate_interval }}
+{% endif %}
+{% if dovecot_mail.mdbox_preallocate_space is defined and
+      dovecot_mail.mdbox_preallocate_space | string | length > 0 %}
+mdbox_preallocate_space       = {{ dovecot_mail.mdbox_preallocate_space | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{# Mail attachments #}
+{% if dovecot_mail.mail_attachment_dir is defined and
+      dovecot_mail.mail_attachment_dir | string | length > 0 %}
+mail_ext_attachment_path      = {{ mcr.path_vars(dovecot_mail.mail_attachment_dir) }}
+{#
+  SiS (single instance storage) write support was removed in 2.4, only reading
+  is still supported. 'sis posix' and 'sis-queue posix' therefore degrade to
+  plain 'posix' here.
+#}
+  {% if dovecot_mail.mail_attachment_fs is defined and
+        dovecot_mail.mail_attachment_fs | string | length > 0 %}
+    {% set _fs = dovecot_mail.mail_attachment_fs | string | split(' ') | last %}
+mail_ext_attachment {
+  fs {{ _fs }} {
+  }
+}
+  {% endif %}
+{% endif %}
+{% if dovecot_mail.mail_attachment_min_size is defined and
+      dovecot_mail.mail_attachment_min_size | string | length > 0 %}
+mail_ext_attachment_min_size  = {{ dovecot_mail.mail_attachment_min_size }}
+{% endif %}
+{% if dovecot_mail.mail_attachment_hash is defined and
+      dovecot_mail.mail_attachment_hash | string | length > 0 %}
+  {% if dovecot_mail.mail_attachment_hash.startswith("%{") %}
+    {% set _attr = ['%{md4}', '%{md5}', '%{sha1}', '%{sha256}', '%{sha512}', '%{size}'] %}
+    {% if dovecot_mail.mail_attachment_hash | bodsch.email.validate_attachment_hash(_attr) %}
+      {% set _mail_attachment_hash = dovecot_mail.mail_attachment_hash %}
+    {% endif %}
+  {% else %}
+    {% set _mail_attachment_hash = dovecot_mail.mail_attachment_hash %}
+  {% endif %}
+  {% if _mail_attachment_hash is defined %}
+mail_ext_attachment_hash      = {{ _mail_attachment_hash }}
+  {% endif %}
+{% endif %}
+{% if dovecot_mail.mail_attachment_detection_options is defined and
+      dovecot_mail.mail_attachment_detection_options | string | length > 0 %}
+mail_attachment_detection_options = {{ dovecot_mail.mail_attachment_detection_options }}
+{% endif %}

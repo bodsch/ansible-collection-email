@@ -1,13 +1,45 @@
 ---
 
+# Dovecot resolves these at runtime and accepts ANY name while parsing the
+# config, so the role checks them (see tasks/validate.yml).
+dovecot_valid_mail_drivers:
+  - maildir
+  - mbox
+  - sdbox
+  - mdbox
+  - imapc
+  - pop3c
+  - raw
+  - shared
+  - virtual
+  - fail
+
+dovecot_valid_quota_drivers:
+  - count
+  - maildir
+  - fs
+  - imapc
+  # dirsize was removed in dovecot 2.4 - use count plus quota-clone
+
 dovecot_dependencies:
   - iproute2
 
 dovecot_packages: []
 
+# Full text search backend -> packages, overridden per distribution in
+# vars/<os>.yml. Only the backend named by dovecot_fts.driver is installed.
+dovecot_fts_packages: {}
+
 # ---------------------------------------------------------------------------------------
 
 dovecot_defaults_config:
+  # dovecot >= 2.4 only: must be the first settings in dovecot.conf.
+  # empty means "use the detected dovecot version".
+  config_version: ""
+  storage_version: ""
+  # dovecot >= 2.4 enables no protocol by default. When this list is empty the
+  # role falls back to '!include_try /usr/share/dovecot/protocols.d/*.protocol'.
+  protocols: []
   listen:
     - "*"
     - "::"
@@ -72,8 +104,9 @@ dovecot_defaults_auth:
   verbose: ""                                       # default: false
   verbose_passwords: ""                             # default: false
   winbind_helper_path: ""                           # default: ""
-  worker_max_count: 80                              # default: 30
-  disable_plaintext_auth: ""                        # default: true
+  worker_max_count: 80                              # default: 30 (2.4: service auth-worker { process_limit })
+  disable_plaintext_auth: ""                        # default: true (2.4: auth_allow_cleartext, inverted)
+  allow_weak_schemes: ""                            # default: false (2.4 only)
   includes:
     - "# auth-deny.conf.ext"
     - "# auth-master.conf.ext"
@@ -275,10 +308,10 @@ dovecot_defaults_ssl:
     - P-521                                         #
     - P-384                                         #
     - P-256                                         #
-  ssl_prefer_server_ciphers: ""                     # false
+  prefer_server_ciphers: ""                     # false
   ## for valid values run "openssl engine"          #
-  ssl_crypto_device: ""                             #
-  ssl_options:                                      # no-compression | [compression, no_compression, no_ticket]
+  crypto_device: ""                             #
+  options:                                      # no-compression | [compression, no_compression, no_ticket]
     - no_compression                                #
   dh: ""                                            #
   dh_parameters_length: 2048                        #
@@ -474,8 +507,27 @@ dovecot_defaults_plugin:
   services: []
 
 dovecot_defaults_quota:
+  ## 2.3 style: rendered into the plugin { } block
   plugins: []
   services: []
+
+  ## dovecot >= 2.4 only: the plugin block is gone, a quota root is a named
+  ## filter. Keys are dovecot setting names, with or without the block prefix
+  ## (both "driver" and "quota_driver" work).
+  quotas: {}
+    # user:
+    #   quota_driver: count
+    #   quota_storage_size: 1G
+    #   quota_message_count: 10000
+    #   warnings:
+    #     w80:
+    #       quota_warning_resource: storage
+    #       quota_warning_threshold: over
+    #       quota_storage_percentage: 80
+    #       # a warning MUST have an execute block in 2.4
+    #       execute:
+    #         quota-warning.sh:
+    #           execute_args: "80 %{user}"
 
 dovecot_defaults_sieve_extprograms:
   plugins: []
@@ -483,6 +535,35 @@ dovecot_defaults_sieve_extprograms:
 
 dovecot_defaults_sieve:
   plugins: []
+
+# dovecot >= 2.4 only: statistics are gathered from events, no plugin needed.
+dovecot_defaults_metrics:
+  metrics: []
+    # - auth_failures:
+    #     filter: "event=auth_request_finished AND NOT success=yes"
+  event_exporters: []
+    # - log:
+    #     format: json
+    #     time_format: rfc3339
+  prometheus:
+    enabled: false
+    port: 9900
+    address: ""
+
+# dovecot >= 2.4 only: replaces the global "dict { }" block plus the
+# dovecot-dict-sql.conf.ext file.
+dovecot_defaults_dict_server:
+  dicts: []
+    # - quota:
+    #     driver: sql
+    #     sql_driver: mysql
+    #     hostname: localhost
+    #     maps:
+    #       - priv/quota/storage:
+    #           sql_table: quota
+    #           username_field: username
+    #           value_field bytes:
+    #             type: uint
 
 dovecot_defaults_authentications:
   - checkpassword:
@@ -627,5 +708,48 @@ dovecot_defaults_sql: {}
 #   SELECT home, uid, gid
 #   FROM users WHERE username: '%n' AND domain: '%d'
 # iterate_query: SELECT username AS user FROM users
+
+# dovecot >= 2.4 only
+dovecot_defaults_fts:
+  ## Selects the backend. Empty means full text search is off - configuring a
+  ## backend below does NOT switch it on. This is what "plugin { fts = ... }"
+  ## did in 2.3.
+  driver: ""                                        # default: "" | ['flatcurve','solr','xapian','elastic']
+  autoindex: ""                                     # default: true
+  autoindex_max_recent_msgs: ""                     # default: 999
+  search_add_missing: ""                            # default: true
+  search_read_fallback: ""                          # default: true
+  search_timeout: ""                                # default: 30 secs
+  message_max_size: ""                              # default: unlimited
+
+  ## attachment decoding
+  decoder_driver: ""                                # default: "" | ['tika','script']
+  decoder_tika_url: ""                              # with decoder_driver: tika
+  decoder_script_socket_path: ""                    # with decoder_driver: script
+
+  ## Backend configuration, rendered as "fts <name> { ... }".
+  ## Accepts a mapping or a list of single key mappings.
+  backends: {}
+    # solr:
+    #   url: http://localhost:8983/solr/dovecot/
+    #   batch_size: 1000
+    # flatcurve:
+    #   substring_search: true
+
+  ## language handling, applies regardless of the backend
+  language_filters: []                              # default: normalizer-icu snowball stopwords
+  language_tokenizers: []                           # default: generic email-address
+  language_tokenizer_generic_algorithm: ""          # default: simple
+  language_filter_stopwords_dir: ""                 # default: /usr/share/dovecot/stopwords
+
+  ## rendered as "language <name> { ... }"
+  language: []
+    # - en:
+    #     default: true
+    #     filters:
+    #       - lowercase
+    #       - snowball
+    #       - english-possessive
+    #       - stopwords
 
 ## grep -v "# " templates/etc/dovecot/conf.d/10-ssl.conf.j2 | sed -e '/^;/ d'  -e '/^ *$/ d'

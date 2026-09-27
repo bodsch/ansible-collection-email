@@ -1,0 +1,79 @@
+---
+
+# Dovecot resolves storage and quota driver names at RUNTIME, not while
+# parsing the configuration. "doveconf -n" happily accepts
+#
+#   mail_driver = totalnonsense
+#   quota_driver = totalnonsense
+#
+# so a typo produces a configuration that every syntax check calls valid and
+# that only fails once mail is delivered. These asserts move that failure to
+# the ansible run.
+#
+# Set dovecot_validate_drivers=false when you use a storage or quota driver
+# provided by a plugin this role does not know about.
+#
+# This runs BEFORE install.yml, so a typo fails the run before any package is
+# installed. That means it sees the variables as the user set them, not the
+# ones merged with dovecot_defaults_* in configure.yml - which is what we
+# want: the role defaults carry no driver name of their own.
+
+- name: collect configured storage drivers
+  when:
+    - not running_in_check_mode
+    - dovecot_validate_drivers | bool
+  ansible.builtin.set_fact:
+    _dovecot_storage_drivers: "{{ (
+      [dovecot_mail.mail_driver | default('', true)] +
+      [(dovecot_mail.mail_location | default('', true)) | split(':') | first] +
+      (dovecot_mail.namespaces | default([]) | map(attribute='mail_driver', default='') | list) +
+      (dovecot_mail.namespaces | default([]) | map(attribute='location', default='') | map('split', ':') | map('first') | list)
+      ) | reject('equalto', '') | unique | sort }}"
+
+- name: collect configured quota drivers
+  when:
+    - not running_in_check_mode
+    - dovecot_validate_drivers | bool
+  ansible.builtin.set_fact:
+    _dovecot_quota_drivers: "{{ (
+      dovecot_quota.quotas | default({}) | dict2items |
+      map(attribute='value') |
+      map(attribute='quota_driver', default='') | list
+      ) | reject('equalto', '') | unique | sort }}"
+
+- name: validate storage drivers
+  when:
+    - not running_in_check_mode
+    - dovecot_validate_drivers | bool
+    - _dovecot_storage_drivers | default([]) | count > 0
+  ansible.builtin.assert:
+    that:
+      - _dovecot_storage_drivers | difference(dovecot_valid_mail_drivers) | count == 0
+    fail_msg: |
+      Unknown dovecot storage driver: {{ _dovecot_storage_drivers | difference(dovecot_valid_mail_drivers) | join(', ') }}
+      Known drivers: {{ dovecot_valid_mail_drivers | join(', ') }}
+
+      Dovecot does not reject an unknown driver while parsing the config, so
+      this would only surface when mail is delivered. Fix the name, or set
+      dovecot_validate_drivers=false if the driver comes from a plugin.
+    success_msg: "storage driver(s) ok: {{ _dovecot_storage_drivers | join(', ') }}"
+    quiet: true
+
+- name: validate quota drivers
+  when:
+    - not running_in_check_mode
+    - dovecot_validate_drivers | bool
+    - _dovecot_quota_drivers | default([]) | count > 0
+  ansible.builtin.assert:
+    that:
+      - _dovecot_quota_drivers | difference(dovecot_valid_quota_drivers) | count == 0
+    fail_msg: |
+      Unknown dovecot quota driver: {{ _dovecot_quota_drivers | difference(dovecot_valid_quota_drivers) | join(', ') }}
+      Known drivers: {{ dovecot_valid_quota_drivers | join(', ') }}
+
+      Note that the dirsize quota driver was removed in dovecot 2.4; use the
+      count driver together with quota-clone instead.
+    success_msg: "quota driver(s) ok: {{ _dovecot_quota_drivers | join(', ') }}"
+    quiet: true
+
+...

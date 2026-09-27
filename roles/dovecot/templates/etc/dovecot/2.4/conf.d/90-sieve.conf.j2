@@ -1,0 +1,41 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{% import 'jinja_macros.j2' as mcr with context %}
+# {{ ansible_managed }}
+
+{#
+  2.3 -> 2.4
+    plugin { }                        -> removed, sieve settings are global
+    sieve_before / _after / _default  -> sieve_script blocks with
+                                         sieve_script_type (structural)
+    sieve_dir / _global*              -> sieve_script_path in a sieve_script block
+    sieve_default_name                -> sieve_script_name
+    sieve_user_log                    -> sieve_user_log_path
+    sieve_quota_max_scripts           -> sieve_quota_script_count
+    sieve_quota_max_storage           -> sieve_quota_storage_size
+    sieve_vacation_dont_check_recipient -> sieve_vacation_check_recipient (inverted)
+    sieve_*_max_header / _max_value   -> sieve_*_score_max_header / _score_max_value
+
+  The sieve plugin is enabled through mail_plugins { sieve = yes } in 2.4,
+  not through "mail_plugins = $mail_plugins sieve".
+#}
+{% if dovecot_sieve.plugins is defined and
+      dovecot_sieve.plugins | count > 0 and
+      dovecot_sieve.plugins | bodsch.core.type == "list" %}
+  {% for plugin in dovecot_sieve.plugins %}
+    {% for key, value in plugin.items() %}
+      {% if value | bodsch.core.type == "dict" %}
+        {% for k, v in value.items() %}
+          {% if v | bodsch.core.type == "bool" %}
+{{ mcr.plugin_setting(k, v | bodsch.core.config_bool(true_as='yes', false_as='no')) }}
+          {% elif v | string | length > 0 %}
+{{ mcr.plugin_setting(k, v) }}
+          {% endif %}
+        {% endfor %}
+      {% elif value | bodsch.core.type == "bool" %}
+{{ mcr.plugin_setting(key, value | bodsch.core.config_bool(true_as='yes', false_as='no')) }}
+      {% elif value | string | length > 0 %}
+{{ mcr.plugin_setting(key, value) }}
+      {% endif %}
+    {% endfor %}
+  {% endfor %}
+{% endif %}

@@ -2,7 +2,7 @@
 export TOX_SCENARIO  ?= default
 export TOX_ANSIBLE   ?= ansible_8.5
 
-.PHONY: converge destroy verify test lint
+.PHONY: converge destroy verify test lint template-check
 
 default: converge
 
@@ -20,3 +20,6 @@ test:
 
 lint:
 	@hooks/lint
+
+template-check:
+	@tests/doveconf/check_templates.py --upgrade $(DOVECOT_VERSION)

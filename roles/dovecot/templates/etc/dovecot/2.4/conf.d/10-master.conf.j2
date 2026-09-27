@@ -1,0 +1,184 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+# {{ ansible_managed }}
+
+{#
+  2.3 -> 2.4 mapping
+    service { service_count }  -> service_restart_request_count
+    service { idle_kill }      -> service_idle_kill_interval
+    default_idle_kill          -> default_idle_kill_interval
+    inet_listener { address }  -> listen
+    auth_worker_max_count      -> service auth-worker { process_limit }
+    $default_vsz_limit         -> $SET:default_vsz_limit
+#}
+{% set _service_renames = {
+  'service_count': 'service_restart_request_count',
+  'idle_kill': 'service_idle_kill_interval',
+} %}
+{% set _listener_renames = {
+  'address': 'listen',
+} %}
+{% if dovecot_master.default_process_limit is defined and
+      dovecot_master.default_process_limit | string | length > 0 %}
+default_process_limit        = {{ dovecot_master.default_process_limit | int }}
+{% endif %}
+{% if dovecot_master.default_client_limit is defined and
+      dovecot_master.default_client_limit | string | length > 0 %}
+default_client_limit         = {{ dovecot_master.default_client_limit | int }}
+{% endif %}
+{% if dovecot_master.default_vsz_limit is defined and
+      dovecot_master.default_vsz_limit | string | length > 0 %}
+default_vsz_limit            = {{ dovecot_master.default_vsz_limit }}
+{% endif %}
+{% if dovecot_master.default_idle_kill is defined and
+      dovecot_master.default_idle_kill | string | length > 0 %}
+default_idle_kill_interval   = {{ dovecot_master.default_idle_kill }}
+{% endif %}
+{% if dovecot_master.default_login_user is defined and
+      dovecot_master.default_login_user | string | length > 0 %}
+default_login_user           = {{ dovecot_master.default_login_user }}
+{% endif %}
+{% if dovecot_master.default_internal_user is defined and
+      dovecot_master.default_internal_user | string | length > 0 %}
+default_internal_user        = {{ dovecot_master.default_internal_user }}
+{% endif %}
+
+{% if dovecot_master.services is defined and
+      dovecot_master.services | count > 0 %}
+  {% for service in dovecot_master.services %}
+    {% for key, values in service.items() %}
+service {{ key }} {
+      {% for k, v in values.items() %}
+        {% if k == "listeners" and v | bodsch.core.type == "list" %}
+          {% for x in v %}
+            {% set _key = x.keys() | first %}
+            {% set _values = x.values() | first %}
+            {% if _values.type is defined %}
+              {% set _type = _values.type %}
+            {% else %}
+              {% set _type = "inet" %}
+            {% endif %}
+  {{ _type }}_listener {{ _key }} {
+              {% for kk, vv in _values.items() if kk != 'type' %}
+                {% if vv | string | length > 0 and vv | bodsch.email.config_value %}
+    {{ "%-25s" | format(_listener_renames.get(kk, kk)) }} = {{ vv | bodsch.email.config_value }}
+                {% endif %}
+              {% endfor %}
+  }
+          {% endfor %}
+        {% else %}
+          {% if v | string | length > 0 and v | bodsch.email.config_value %}
+  {{ "%-27s" | format(_service_renames.get(k, k)) }} = {{ v | bodsch.email.config_value | replace('$default_', '$SET:default_') }}
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+{#
+  auth_worker_max_count no longer exists in 2.4; the number of auth workers is
+  now the process limit of the auth-worker service.
+#}
+      {% if key == "auth-worker" and
+            "process_limit" not in values and
+            dovecot_auth.worker_max_count is defined and
+            dovecot_auth.worker_max_count | int > 0 %}
+  {{ "%-27s" | format("process_limit") }} = {{ dovecot_auth.worker_max_count | int }}
+      {% endif %}
+}
+
+    {% endfor %}
+  {% endfor %}
+{% else %}
+service imap-login {
+  inet_listener imap {
+    #port = 143
+  }
+  inet_listener imaps {
+    #port = 993
+    #ssl = yes
+  }
+
+  # Number of connections to handle before starting a new process. Typically
+  # the only useful values are 0 (unlimited) or 1. 1 is more secure, but 0
+  # is faster.
+  #service_restart_request_count = 1
+
+  # Number of processes to always keep waiting for more connections.
+  #process_min_avail = 0
+
+  # If you set service_restart_request_count=0, you probably need to grow this.
+  #vsz_limit = 256M # default
+}
+
+service pop3-login {
+  inet_listener pop3 {
+    #port = 110
+  }
+  inet_listener pop3s {
+    #port = 995
+    #ssl = yes
+  }
+}
+
+service submission-login {
+  inet_listener submission {
+    #port = 587
+  }
+  inet_listener submissions {
+    #port = 465
+  }
+}
+
+service lmtp {
+  unix_listener lmtp {
+    #mode = 0666
+  }
+
+  # Create inet listener only if you can't use the above UNIX socket
+  #inet_listener lmtp {
+    # Avoid making LMTP visible for the entire internet
+    #listen = 127.0.0.1
+    #port = 24
+  #}
+}
+
+service imap {
+  #vsz_limit = 256M # default
+  #process_limit = 1024
+}
+
+service pop3 {
+  #process_limit = 1024
+}
+
+service submission {
+  #process_limit = 1024
+}
+
+service auth {
+  unix_listener auth-userdb {
+    #mode = 0666
+    #user =
+    #group =
+  }
+
+  # Postfix smtp-auth
+  #unix_listener /var/spool/postfix/private/auth {
+  #  mode = 0666
+  #}
+
+  #user = $SET:default_internal_user
+}
+
+service auth-worker {
+  # Auth worker process is run as root by default, so that it can access
+  # /etc/shadow. If this isn't necessary, the user should be changed to
+  # $SET:default_internal_user.
+  #user = root
+}
+
+service dict {
+  unix_listener dict {
+    #mode = 0600
+    #user =
+    #group =
+  }
+}
+{% endif %}

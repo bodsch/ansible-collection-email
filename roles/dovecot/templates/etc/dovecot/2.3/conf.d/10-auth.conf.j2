@@ -1,0 +1,92 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{% import 'jinja_macros.j2' as mcr with context %}
+# {{ ansible_managed }}
+
+{% if dovecot_auth.disable_plaintext_auth is defined and
+      dovecot_auth.disable_plaintext_auth | string | length > 0 %}
+disable_plaintext_auth       = {{ dovecot_auth.disable_plaintext_auth | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_auth.cache_size is defined and
+      dovecot_auth.cache_size | string | length > 0 %}
+auth_cache_size              = {{ dovecot_auth.cache_size | int }}
+{% endif %}
+{% if dovecot_auth.cache_ttl is defined and
+      dovecot_auth.cache_ttl | string | length > 0 %}
+auth_cache_ttl               = {{ dovecot_auth.cache_ttl }}
+{% endif %}
+{% if dovecot_auth.cache_negative_ttl is defined and
+      dovecot_auth.cache_negative_ttl | string | length > 0 %}
+auth_cache_negative_ttl      = {{ dovecot_auth.cache_negative_ttl }}
+{% endif %}
+{% if dovecot_auth.realms is defined and
+      dovecot_auth.realms | count > 0 %}
+auth_realms                  = {{ dovecot_auth.realms | join(' ') }}
+{% endif %}
+{% if dovecot_auth.default_realm is defined and
+      dovecot_auth.default_realm | string | length > 0 %}
+auth_default_realm           = {{ dovecot_auth.default_realm }}
+{% endif %}
+{% if dovecot_auth.username_chars is defined and
+      dovecot_auth.username_chars | string  | length > 0 %}
+auth_username_chars          = {{ dovecot_auth.username_chars }}
+{% endif %}
+{% if dovecot_auth.username_translation is defined and
+      dovecot_auth.username_translation | string  | length > 0 %}
+auth_username_translation    = {{ dovecot_auth.username_translation }}
+{% endif %}
+{% if dovecot_auth.username_format is defined and
+      dovecot_auth.username_format | string  | length > 0 %}
+auth_username_format         = {{ dovecot_auth.username_format }}
+{% endif %}
+{% if dovecot_auth.master_user_separator is defined and
+      dovecot_auth.master_user_separator | string  | length > 0 %}
+auth_master_user_separator   = {{ dovecot_auth.master_user_separator }}
+{% endif %}
+{% if dovecot_auth.anonymous_username is defined and
+      dovecot_auth.anonymous_username | string  | length > 0 %}
+auth_anonymous_username      = {{ dovecot_auth.anonymous_username }}
+{% endif %}
+{% if dovecot_auth.worker_max_count is defined and
+      dovecot_auth.worker_max_count | int > 0 %}
+auth_worker_max_count        = {{ dovecot_auth.worker_max_count | int }}
+{% endif %}
+{% if dovecot_auth.gssapi_hostname is defined and
+      dovecot_auth.gssapi_hostname | string  | length > 0 %}
+auth_gssapi_hostname         = {{ dovecot_auth.gssapi_hostname }}
+{% endif %}
+{% if dovecot_auth.krb5_keytab is defined and
+      dovecot_auth.krb5_keytab | string  | length > 0 %}
+auth_krb5_keytab             = {{ dovecot_auth.krb5_keytab }}
+{% endif %}
+{% if dovecot_auth.use_winbind is defined %}
+auth_use_winbind             = {{ dovecot_auth.use_winbind | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_auth.winbind_helper_path is defined and
+      dovecot_auth.winbind_helper_path | string  | length > 0 %}
+auth_winbind_helper_path     = {{ dovecot_auth.winbind_helper_path }}
+{% endif %}
+{% if dovecot_auth.failure_delay is defined and
+      dovecot_auth.failure_delay | string  | length > 0 %}
+auth_failure_delay           = {{ dovecot_auth.failure_delay }}
+{% endif %}
+{% if dovecot_auth.ssl_require_client_cert is defined %}
+auth_ssl_require_client_cert = {{ dovecot_auth.ssl_require_client_cert | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_auth.ssl_username_from_cert is defined %}
+auth_ssl_username_from_cert  = {{ dovecot_auth.ssl_username_from_cert | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_auth.mechanisms is defined and
+      dovecot_auth.mechanisms | length > 0 %}
+{% set _attr = [
+  'plain', 'login',
+  'digest-md5', 'cram-md5',
+  'ntlm', 'rpa',
+  'apop', 'anonymous',
+  'gssapi', 'otp',
+  'skey', 'gss-spnego'] %}
+auth_mechanisms              = {{ dovecot_auth.mechanisms | bodsch.core.compare_list(compare_to_list=_attr) | join(' ') }}
+{% endif %}
+
+{% if dovecot_auth.includes is defined and dovecot_auth.includes | count > 0 %}
+{{ mcr.include_paramaters(dovecot_auth.includes) }}
+{% endif %}

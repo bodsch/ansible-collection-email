@@ -12,4 +12,18 @@ dovecot_packages:
   - dovecot-sqlite
   - dovecot-submissiond
 
+# Packages needed for a full text search backend, installed only for the
+# backend selected via dovecot_fts.driver. An empty list means the backend is
+# part of dovecot itself.
+#
+# Debian 13 ships dovecot 2.4: fts-lucene and fts-squat were removed upstream,
+# flatcurve replaces them.
+dovecot_fts_packages:
+  flatcurve:
+    - dovecot-flatcurve
+  solr:
+    - dovecot-solr
+  xapian:
+    - dovecot-fts-xapian
+
 ...

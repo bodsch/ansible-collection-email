@@ -1,0 +1,18 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{% import 'jinja_macros.j2' as mcr with context %}
+# {{ ansible_managed }}
+# passwd-file authentication
+
+{#
+  dovecot 2.4 requires passdb and userdb blocks to be named:
+    passdb { driver = x }  ->  passdb x { driver = x }
+  The 'args' setting no longer exists; each driver has its own settings.
+#}
+{% if dovecot_authentications.passwdfile is defined and
+      dovecot_authentications.passwdfile | count > 0 %}
+  {% for _section, _values in dovecot_authentications.passwdfile.items() %}
+    {% if _values | bodsch.core.type == "dict" and _values | count > 0 %}
+{{ mcr.auth_db(_section, _values.driver | default('passwdfile'), _values) }}
+    {% endif %}
+  {% endfor %}
+{% endif %}

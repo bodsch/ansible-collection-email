@@ -10,6 +10,35 @@
     - dovecot
     - dovecot_install
 
+# The full text search backend is a separate package on most distributions,
+# and which one exists differs per release (lucene on 2.3, flatcurve on 2.4).
+# Only the backend selected via dovecot_fts.driver is installed.
+- name: report unsupported full text search backend
+  when:
+    - not running_in_check_mode
+    - dovecot_fts.driver | default('') | string | length > 0
+    - dovecot_fts.driver not in (dovecot_fts_packages | default({}))
+  ansible.builtin.debug:
+    msg: >-
+      dovecot_fts.driver is "{{ dovecot_fts.driver }}", but this role does not
+      know a package for it on {{ ansible_facts.distribution }}
+      {{ ansible_facts.distribution_major_version }}
+      (known: {{ dovecot_fts_packages | default({}) | list | join(', ') | default('none', true) }}).
+      Install the backend yourself or extend dovecot_fts_packages.
+
+- name: install full text search backend
+  when:
+    - not running_in_check_mode
+    - dovecot_fts.driver | default('') | string | length > 0
+    - dovecot_fts.driver in (dovecot_fts_packages | default({}))
+    - dovecot_fts_packages[dovecot_fts.driver] | count > 0
+  ansible.builtin.package:
+    name: "{{ dovecot_fts_packages[dovecot_fts.driver] }}"
+    state: present
+  tags:
+    - dovecot
+    - dovecot_install
+
 - name: detected installed dovecot version
   when:
     - not running_in_check_mode

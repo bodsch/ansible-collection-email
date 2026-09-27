@@ -3,15 +3,318 @@
 #}
 {% set print = self %}
 
+{#
+  Translate the legacy 2.3 '%x' variables to the 2.4 '%{name|filter}' syntax.
+
+  Only safe for PATH-like values, where the meaning of a variable is
+  unambiguous. Do NOT use this for log format strings - there the same letter
+  means different things depending on the setting (e.g. '%m' is the SASL
+  mechanism in login_log_format_elements but the message-id in
+  deliver_log_format).
+#}
+{% macro path_vars(value) %}
+{%- set v = value | string -%}
+{#- '%%x' refers to the OWNER of a shared mailbox, '%x' to the logged in user.
+    The doubled form must be replaced first, otherwise '%%u' would turn into
+    '%%{user}'. -#}
+{{- v | replace('%%h', '%{owner_home}')
+      | replace('%%u', '%{owner_user}')
+      | replace('%%n', '%{owner_user|username}')
+      | replace('%%d', '%{owner_user|domain}')
+      | replace('%h', '%{home}')
+      | replace('%u', '%{user}')
+      | replace('%n', '%{user|username}')
+      | replace('%d', '%{user|domain}') -}}
+{% endmacro %}
+
+{#
+  Same idea for a namespace PREFIX. Dovecot 2.4 expands the shared mailbox
+  owner as '$user' / '$username' / '$domain' here - not as '%{owner_*}', which
+  is only valid in path settings.
+#}
+{% macro prefix_vars(value) %}
+{%- set v = value | string -%}
+{{- v | replace('%%u', '$user')
+      | replace('%%n', '$username')
+      | replace('%%d', '$domain')
+      | replace('%h', '%{home}')
+      | replace('%u', '%{user}')
+      | replace('%n', '%{user|username}')
+      | replace('%d', '%{user|domain}') -}}
+{% endmacro %}
+
+{#
+  Render "!include_try auth.d/<file>" lines.
+
+  An entry prefixed with '#' is rendered as a comment, so the generated file
+  documents which auth backends are available but inactive.
+#}
+{#
+  The include lives in conf.d/10-auth.conf, while the files are written to
+  /etc/dovecot/auth.d - a sibling of conf.d. Dovecot resolves an include
+  relative to the FILE doing the including, so the path needs the '../'.
+  Without it every include silently misses, because include_try does not
+  complain about a file that is not there.
+#}
 {% macro include_paramaters(data, include_type="include_try") %}
-  {% set attr_include_type = ["include", "include_try"] %}
-  {% for incl in dovecot_auth.includes %}
-    {% if incl is defined and not incl == None %}
-      {% if incl[0] != "#" %}
-!{{ include_type }} auth.d/{{ incl }}
+  {% for incl in data %}
+    {% if incl is defined and incl is not none and incl | string | length > 0 %}
+      {% set entry = incl | string | trim %}
+      {% set name = entry | regex_replace('^#\s*', '') %}
+      {% if entry[0] != "#" %}
+!{{ include_type }} ../auth.d/{{ name }}
       {% else %}
-# !{{ include_type }} auth.d/{{ incl }}
+# !{{ include_type }} ../auth.d/{{ name }}
       {% endif %}
     {% endif %}
   {% endfor -%}
+{% endmacro %}
+
+{#
+  Dovecot 2.4 turned several space separated lists into "boolean lists".
+  "name = a b" REPLACES the list, "name { a = yes }" ADDS to it - the latter
+  is what "$name a b" expressed in 2.3.
+
+  Entries starting with '$' (such as the old '$mail_plugins' placeholder) are
+  dropped: 2.4 has no setting variable expansion.
+#}
+{% macro bool_list(name, values, indent='') %}
+{%- set entries = [] -%}
+{%- for value in values | default([]) -%}
+  {%- if not value | string | first == '$' -%}
+    {%- set _ = entries.append(value | string) -%}
+  {%- endif -%}
+{%- endfor -%}
+{%- if entries | count > 0 %}
+{{ indent }}{{ name }} {
+{% for entry in entries %}
+{{ indent }}  {{ "%-25s" | format(entry) }} = yes
+{% endfor %}
+{{ indent }}}
+{%- endif -%}
+{% endmacro %}
+
+{#
+  The "plugin { }" section was removed in dovecot 2.4 - plugin settings are
+  global now. Most old names survived, some were renamed, and a few need a
+  structural change that cannot be derived from a key/value pair.
+
+  Pure renames are applied. Anything structural is written as an UNMAPPED
+  comment instead of an invalid setting, because dovecot 2.4 refuses to start
+  on an unknown setting - a comment shows you exactly what to migrate.
+
+  Sources: the 2.3-to-2.4 upgrade guide and "doveconf -a" of dovecot 2.4.1.
+#}
+{% set plugin_renames = {
+  'acl': 'acl_driver',
+  'acl_anyone': 'imap_acl_allow_anyone',
+  'quota_grace': 'quota_storage_grace',
+  'quota_max_mail_size': 'quota_mail_size',
+  'quota_over_flag': 'quota_over_status_current',
+  'quota_over_flag_lazy_check': 'quota_over_status_lazy_check',
+  'quota_over_flag_value': 'quota_over_status_mask',
+  'sieve_default_name': 'sieve_script_name',
+  'sieve_editheader_forbid_add': 'sieve_editheader_header_forbid_add',
+  'sieve_editheader_forbid_delete': 'sieve_editheader_header_forbid_delete',
+  'sieve_quota_max_scripts': 'sieve_quota_script_count',
+  'sieve_quota_max_storage': 'sieve_quota_storage_size',
+  'sieve_spamtest_max_header': 'sieve_spamtest_score_max_header',
+  'sieve_spamtest_max_value': 'sieve_spamtest_score_max_value',
+  'sieve_user_log': 'sieve_user_log_path',
+  'sieve_variables_max_scope_size': 'sieve_variables_max_scope_count',
+  'sieve_variables_max_variable_size': 'sieve_variables_max_value_size',
+  'sieve_virustest_max_header': 'sieve_virustest_score_max_header',
+  'sieve_virustest_max_value': 'sieve_virustest_score_max_value',
+} %}
+
+{# old name -> what to do instead; these need more than a rename #}
+{% set plugin_unmapped = {
+  'quota': 'configure a "quota <name> { quota_driver = ... }" block',
+  'quota_rule': 'use quota_storage_size / quota_message_count in a quota block',
+  'quota_rule2': 'use quota_storage_size / quota_message_count in a quota block',
+  'quota_over_script': 'use quota_over_status together with an execute filter',
+  'quota_warning': 'configure a "quota_warning <name> { }" block',
+  'quota_warning2': 'configure a "quota_warning <name> { }" block',
+  'sieve_after': 'use a sieve_script block with sieve_script_type = after',
+  'sieve_before': 'use a sieve_script block with sieve_script_type = before',
+  'sieve_default': 'use a sieve_script block with sieve_script_type = default',
+  'sieve_dir': 'use sieve_script_path inside a sieve_script block',
+  'sieve_discard': 'use a sieve_script block with sieve_script_type = discard',
+  'sieve_global': 'use a sieve_script block with sieve_script_type = global',
+  'sieve_global_dir': 'use sieve_script_path inside a sieve_script block',
+  'sieve_global_path': 'use sieve_script_path inside a sieve_script block',
+  'sieve_editheader_protected': 'split into sieve_editheader_header_forbid_add and _forbid_delete',
+  'sieve_vacation_max_subject_codepoints': 'removed in 2.4',
+} %}
+
+{#
+  Render one plugin setting the 2.4 way (no surrounding plugin { } block).
+#}
+{% macro plugin_setting(key, value) %}
+{%- if key in plugin_unmapped %}
+# UNMAPPED {{ key }} = {{ value }}
+#   dovecot 2.4: {{ plugin_unmapped[key] }}
+{%- elif key == 'sieve_vacation_dont_check_recipient' %}
+{#- the meaning was inverted along with the rename -#}
+{{ "%-29s" | format('sieve_vacation_check_recipient') }} = {{ 'no' if (value | string | lower in ['yes', 'true', '1', 'on']) else 'yes' }}
+{%- elif key == 'quota_grace' and '%' in (value | string) %}
+{#- 2.3 quota_grace was a percentage of the quota (default 10%%). 2.4
+    quota_storage_grace is a SIZE (default 10M) - a percentage cannot be
+    carried over, so it has to be restated as an absolute size. -#}
+# UNMAPPED quota_grace = {{ value }}
+#   dovecot 2.4: quota_storage_grace is a size, not a percentage.
+#   Restate it as an absolute size, e.g. quota_storage_grace = 10M
+{%- elif key == 'acl_anyone' %}
+{#- 2.3 took allow / authenticated, 2.4 takes a boolean. Both old values
+    enable the "anyone" and "authenticated" ACL identifiers, so both become
+    yes - the distinction between them no longer exists. -#}
+{%- if value | string | lower == 'authenticated' %}
+# NOTE acl_anyone = authenticated has no 2.4 equivalent that distinguishes it
+#   from "allow"; imap_acl_allow_anyone only enables or disables the
+#   anyone/authenticated ACL identifiers.
+{%- endif %}
+{{ "%-29s" | format('imap_acl_allow_anyone') }} = {{ 'yes' if (value | string | lower in ['allow', 'authenticated', 'yes', 'true']) else 'no' }}
+{%- else %}
+{#- 2.3 escaped a literal percent sign as '%%' because '%' started a variable.
+    2.4 uses '%{...}', so a bare '%' is literal and '%%' is wrong (e.g. a
+    quota grace of '10%%'). Only '%%' that is NOT followed by a letter is
+    unescaped - '%%u' and friends are shared-mailbox variables and are handled
+    by path_vars / prefix_vars instead. -#}
+{{ "%-29s" | format(plugin_renames.get(key, key)) }} = {{ value | string | regex_replace('%%(?![A-Za-z])', '%') }}
+{%- endif %}
+{% endmacro %}
+
+{#
+  Render a passdb / userdb block for dovecot >= 2.4.
+
+  2.3 -> 2.4
+    passdb { }        -> passdb <name> { }      (naming is mandatory)
+    userdb { }        -> userdb <name> { }
+    args = ...        -> driver specific settings (structural, see below)
+    default_fields    -> fields { }
+    override_fields   -> fields { }
+
+  The block name defaults to the driver, in which case the driver setting
+  itself can be omitted - but writing it is always valid, so it is kept.
+
+  "args" has no generic equivalent: every driver got its own settings in 2.4
+  (passdb_sql_query, passwd_file_path, passdb_pam_service_name, ...). It is
+  written as an UNMAPPED comment rather than an invalid setting.
+#}
+{% set auth_db_args_hint = {
+  'sql': 'use passdb_sql_query / userdb_sql_query and the sql_* connection settings',
+  'ldap': 'use passdb_ldap_filter / userdb_ldap_filter and the ldap_* settings',
+  'passwd-file': 'use passwd_file_path',
+  'pam': 'use passdb_pam_service_name and the other passdb_pam_* settings',
+  'static': 'use fields { } and passdb_static_password',
+} %}
+
+{% macro auth_db(section, name, values) %}
+{%- set driver = values.driver | default(name) -%}
+{{ section }} {{ name }} {
+{% set fields = {} %}
+{% for key, value in values.items() %}
+  {% if key in ['default_fields', 'override_fields'] %}
+    {% if value | bodsch.core.type == "dict" %}
+      {% for fk, fv in value.items() %}
+        {% set _ = fields.update({fk: fv}) %}
+      {% endfor %}
+    {% endif %}
+  {% elif key == 'args' %}
+  # UNMAPPED args = {{ value }}
+  #   dovecot 2.4: {{ auth_db_args_hint.get(driver, 'use the driver specific settings of ' ~ driver) }}
+  {% elif value | bodsch.core.type == "bool" %}
+  {{ "%-27s" | format(key) }} = {{ value | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+  {% elif value | bodsch.core.type == "list" %}
+    {% if value | count > 0 %}
+  {{ "%-27s" | format(key) }} = {{ value | join(' ') }}
+    {% endif %}
+  {% elif value | string | length > 0 %}
+  {{ "%-27s" | format(key) }} = {{ value }}
+  {% endif %}
+{% endfor %}
+{% if fields | count > 0 %}
+  fields {
+  {% for fk, fv in fields.items() %}
+{#- userdb fields are mostly paths (home, mail); translate the legacy
+    '%x' variables so they still expand under 2.4 -#}
+    {{ "%-25s" | format(fk) }} = {{ path_vars(fv) }}
+  {% endfor %}
+  }
+{% endif %}
+}
+{% endmacro %}
+
+{#
+  Render dovecot 2.4 named filter blocks:
+
+      fts flatcurve {
+        substring_search = yes
+      }
+
+  Accepts either a mapping
+
+      backends:
+        flatcurve:
+          substring_search: true
+
+  or a list of single key mappings
+
+      backends:
+        - flatcurve:
+            substring_search: true
+
+  so the variable can be written either way. Booleans become yes/no and lists
+  become space separated values, which is what dovecot expects.
+#}
+{% macro named_filters(kind, data) %}
+{%- set blocks = [] -%}
+{%- if data | bodsch.core.type == "dict" -%}
+  {%- for name, values in data.items() -%}
+    {%- set _ = blocks.append([name, values]) -%}
+  {%- endfor -%}
+{%- elif data | bodsch.core.type == "list" -%}
+  {%- for entry in data -%}
+    {%- if entry | bodsch.core.type == "dict" -%}
+      {%- for name, values in entry.items() -%}
+        {%- set _ = blocks.append([name, values]) -%}
+      {%- endfor -%}
+    {%- endif -%}
+  {%- endfor -%}
+{%- endif -%}
+{%- for block in blocks %}
+{{ kind }} {{ block[0] }} {
+{% for key, value in (block[1] | default({})).items() %}
+{% if value | bodsch.core.type == "bool" %}
+  {{ "%-27s" | format(key) }} = {{ value | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% elif value | bodsch.core.type == "list" %}
+{% if value | count > 0 %}
+  {{ "%-27s" | format(key) }} = {{ value | join(' ') }}
+{% endif %}
+{% elif value | string | length > 0 %}
+  {{ "%-27s" | format(key) }} = {{ value }}
+{% endif %}
+{% endfor %}
+}
+{% endfor -%}
+{% endmacro %}
+
+{#
+  Names of the named filters in such a variable, for cross checks.
+  Returns a space separated string, because a jinja macro cannot return a list.
+#}
+{% macro named_filter_names(data) %}
+{%- if data | bodsch.core.type == "dict" -%}
+{{- data.keys() | join(' ') -}}
+{%- elif data | bodsch.core.type == "list" -%}
+{%- set names = [] -%}
+{%- for entry in data -%}
+  {%- if entry | bodsch.core.type == "dict" -%}
+    {%- for name in entry.keys() -%}
+      {%- set _ = names.append(name) -%}
+    {%- endfor -%}
+  {%- endif -%}
+{%- endfor -%}
+{{- names | join(' ') -}}
+{%- endif -%}
 {% endmacro %}

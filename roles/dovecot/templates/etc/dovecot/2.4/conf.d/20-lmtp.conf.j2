@@ -1,0 +1,55 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{% import 'jinja_macros.j2' as mcr with context %}
+# {{ ansible_managed }}
+
+{#
+  2.3 -> 2.4 mapping
+    lmtp_client_workarounds -> boolean list block
+    lmtp_add_received_header -> new in 2.4
+  The default LMTP port changed from 24 in 2.4 (see 10-master.conf).
+#}
+{% if dovecot_lmtp.proxy is defined and
+      dovecot_lmtp.proxy | string | length > 0 %}
+lmtp_proxy                    = {{ dovecot_lmtp.proxy | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_lmtp.save_to_detail_mailbox is defined and
+      dovecot_lmtp.save_to_detail_mailbox | string | length > 0 %}
+lmtp_save_to_detail_mailbox   = {{ dovecot_lmtp.save_to_detail_mailbox | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_lmtp.rcpt_check_quota is defined and
+      dovecot_lmtp.rcpt_check_quota | string | length > 0 %}
+lmtp_rcpt_check_quota         = {{ dovecot_lmtp.rcpt_check_quota | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_lmtp.add_received_header is defined and
+      dovecot_lmtp.add_received_header | string | length > 0 %}
+lmtp_add_received_header      = {{ dovecot_lmtp.add_received_header | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_lmtp.hdr_delivery_address is defined and
+      dovecot_lmtp.hdr_delivery_address | string | length > 0 and
+      dovecot_lmtp.hdr_delivery_address in ['final', 'original', 'none'] %}
+lmtp_hdr_delivery_address     = {{ dovecot_lmtp.hdr_delivery_address }}
+{% endif %}
+{% if dovecot_lmtp.client_workarounds is defined and
+      dovecot_lmtp.client_workarounds | count > 0 %}
+{{ mcr.bool_list('lmtp_client_workarounds', dovecot_lmtp.client_workarounds) }}
+{% endif %}
+{% if dovecot_lmtp.protocols is defined and
+      dovecot_lmtp.protocols | count > 0 %}
+  {% for pr in dovecot_lmtp.protocols %}
+    {% set _name = pr.name | default(pr.keys() | first) %}
+    {% set _body = pr[_name] | default({}) if _name in pr else pr %}
+protocol {{ _name }} {
+    {% for k, v in _body.items() if k != 'name' %}
+      {% if k == 'mail_plugins' %}
+{{ mcr.bool_list('mail_plugins', v, '  ') }}
+      {% elif v | bodsch.core.type == "list" %}
+        {% if v | count > 0 %}
+  {{ "%-27s" | format(k) }} = {{ v | join(' ') }}
+        {% endif %}
+      {% elif v | string | length > 0 %}
+  {{ "%-27s" | format(k) }} = {{ v }}
+      {% endif %}
+    {% endfor %}
+}
+  {% endfor %}
+{% endif %}

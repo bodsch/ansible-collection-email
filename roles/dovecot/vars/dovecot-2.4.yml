@@ -1,0 +1,59 @@
+---
+
+# Version specific default VALUES for dovecot >= 2.4.
+#
+# The variable SCHEMA is identical for 2.3 and 2.4 - only values whose syntax
+# changed belong in here. Dovecot 2.4 replaced the old '%x' variable expansion
+# with '%{name|filter}'. A mechanical rewrite of user supplied format strings
+# is not possible, because the meaning of a legacy variable depends on its
+# context (e.g. '%m' is the SASL mechanism in login_log_format_elements but the
+# message-id in deliver_log_format). Therefore only the role defaults are
+# translated here; values set by the user are passed through untouched.
+#
+# Sources: the upstream dovecot 2.4 example configuration, see
+#   templates/etc/dovecot/2.4/conf.d/*.conf.j2
+
+_dovecot_version_defaults:
+  auth:
+    # 2.3: %Lu
+    username_format: "%{user|lower}"
+    # the checkpassword, dict and vpopmail auth drivers were removed in 2.4,
+    # oauth2 was added.
+    includes:
+      - "# auth-deny.conf.ext"
+      - "# auth-master.conf.ext"
+      - auth-system.conf.ext
+      - "# auth-sql.conf.ext"
+      - "# auth-ldap.conf.ext"
+      - "# auth-passwdfile.conf.ext"
+      - "# auth-oauth2.conf.ext"
+      - "# auth-static.conf.ext"
+
+  logging:
+    # 2.3: "%Us(%u): "
+    mail_log_prefix: "%{service}(%{user})<%{process:pid}><%{session}>: "
+    # 2.3: "msgid=%m [from=%f subject=%s]: %$"
+    deliver_log_format: "msgid=%{msgid}: %{message} (subject=%{subject} from=%{from} size=%{size})"
+    # 2.3: "%$: %s"
+    login_log_format: "%{message}: %{elements}"
+    # 2.3: user=[%u] method=%m rip=%r lip=%l mpid=%e %c
+    login_log_format_elements:
+      - "user=<%{user}>"
+      - "method=%{mechanism}"
+      - "rip=%{remote_ip}"
+      - "lip=%{local_ip}"
+      - "mpid=%{mail_pid}"
+      - "%{secured}"
+      - "session=<%{session}>"
+
+  pop3:
+    # 2.3: "%08Xu%08Xv"
+    uidl_format: "%{uid | hex(8)}%{uidvalidity | hex(8)}"
+    # 2.3: "top=%t/%p, retr=%r/%b, del=%d/%m, size=%s"
+    logout_format: "top=%{top_count}/%{top_bytes}, retr=%{retr_count}/%{retr_bytes}, del=%{deleted_count}/%{deleted_bytes}, size=%{message_bytes}"
+
+  submission:
+    # 2.3: "in=%i out=%o"
+    logout_format: "in=%{input} out=%{output}"
+
+...

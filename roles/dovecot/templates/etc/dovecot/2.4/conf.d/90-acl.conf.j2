@@ -1,0 +1,26 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{% import 'jinja_macros.j2' as mcr with context %}
+# {{ ansible_managed }}
+
+{#
+  The plugin { } block is gone in 2.4 - acl settings are global.
+    acl        -> acl_driver
+    acl_anyone -> imap_acl_allow_anyone
+#}
+{% if dovecot_acl.plugins is defined and
+      dovecot_acl.plugins | count > 0 and
+      dovecot_acl.plugins | bodsch.core.type == "list" %}
+  {% for plugin in dovecot_acl.plugins %}
+    {% for key, value in plugin.items() %}
+      {% if value | bodsch.core.type == "dict" %}
+        {% for k, v in value.items() %}
+          {% if v | string | length > 0 %}
+{{ mcr.plugin_setting(k, v) }}
+          {% endif %}
+        {% endfor %}
+      {% elif value | string | length > 0 %}
+{{ mcr.plugin_setting(key, value) }}
+      {% endif %}
+    {% endfor %}
+  {% endfor %}
+{% endif %}
