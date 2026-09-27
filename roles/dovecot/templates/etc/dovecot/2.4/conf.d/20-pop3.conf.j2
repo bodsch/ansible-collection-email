@@ -7,8 +7,14 @@
     pop3_client_workarounds -> boolean list block
     pop3_uidl_format        -> %{uid | hex(8)}%{uidvalidity | hex(8)}
     pop3_logout_format      -> new %{...} variables
-  Both formats are translated in vars/dovecot-2.4.yml for the role defaults;
-  values you set yourself are passed through unchanged.
+  uidl_format is translated by bodsch.email.dovecot_uidl_format, so a 2.3
+  value works here as well. It has to be: dovecot 2.4 refuses to start on a
+  value without a single %{...} - and "doveconf -n" does NOT catch that, only
+  the service does.
+
+  logout_format is translated in vars/dovecot-2.4.yml for the role defaults;
+  a value you set yourself is passed through unchanged, because the same
+  letter means different things depending on the setting.
 #}
 {% if dovecot_pop3.no_flag_updates is defined and
       dovecot_pop3.no_flag_updates | string | length > 0 %}
@@ -32,7 +38,7 @@ pop3_fast_size_lookups       = {{ dovecot_pop3.fast_size_lookups | bodsch.core.c
 {% endif %}
 {% if dovecot_pop3.uidl_format is defined and
       dovecot_pop3.uidl_format | string | length > 0 %}
-pop3_uidl_format             = {{ dovecot_pop3.uidl_format }}
+pop3_uidl_format             = {{ dovecot_pop3.uidl_format | bodsch.email.dovecot_uidl_format }}
 {% endif %}
 {% if dovecot_pop3.save_uidl is defined and
       dovecot_pop3.save_uidl | string | length > 0 %}

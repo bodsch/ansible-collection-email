@@ -1,0 +1,100 @@
+---
+
+DOCUMENTATION:
+  name: dovecot_plugin_setting
+  author: Bodo Schulz (@bodsch)
+  version_added: 1.0.0
+  short_description: Decide what a dovecot 2.3 plugin setting becomes in 2.4.
+  description:
+    - >-
+      Dovecot 2.4 removed the C(plugin { }) block - every setting that lived in it is
+      global now. Most old names survived, some were renamed, and a few need a structural
+      change that cannot be derived from a key and a value.
+    - >-
+      This filter decides which of the three it is. It returns WHAT to write, never the
+      text itself, so the template keeps the layout and the filter keeps the knowledge.
+    - >-
+      A setting with no 2.4 counterpart is reported rather than renamed, because 2.4
+      refuses to start on an unknown setting. The role writes it as a comment, which
+      leaves the generated file telling you exactly what to migrate by hand.
+    - >-
+      A numbered variant falls back to its base name - C(quota2) to C(quota),
+      C(sieve_before3) to C(sieve_before) - but only when that base name is known.
+      Otherwise a setting that legitimately contains a digit, such as
+      C(imapsieve_mailbox1_name), would be mangled.
+    - >-
+      Dovecot 2.3 escaped a literal percent sign as C(%%), because C(%) started a
+      variable. In 2.4 a variable is C(%{...}), so a bare C(%) is literal and C(%%) is
+      wrong. A C(%%) that is not followed by a letter is unescaped; C(%%u) and friends are
+      shared mailbox variables and belong to M(bodsch.email.dovecot_path_vars).
+    - >-
+      Sources for the tables are the 2.3-to-2.4 upgrade guide and C(doveconf -a) of
+      dovecot 2.4.1, re-checked against 2.4.4.
+  positional: _input
+  options:
+    _input:
+      description: The name of the setting as dovecot 2.3 knew it.
+      required: true
+      type: str
+    value:
+      description: The value of the setting.
+      required: true
+      type: raw
+
+EXAMPLES: |
+  # {kind: setting, key: quota_mail_size, value: 100M, notes: []}
+  {{ 'quota_max_mail_size' | bodsch.email.dovecot_plugin_setting('100M') }}
+
+  # {kind: unmapped, key: quota_rule, value: "*:storage=1G",
+  #  hints: ["dovecot 2.4: use quota_storage_size / quota_message_count in a quota block"]}
+  {{ 'quota_rule' | bodsch.email.dovecot_plugin_setting('*:storage=1G') }}
+
+  # {kind: acl_sharing_map, driver: file, path: /var/vmail/shared-mailboxes}
+  {{ 'acl_shared_dict' | bodsch.email.dovecot_plugin_setting('file:/var/vmail/shared-mailboxes') }}
+
+  # rendering the three shapes
+  {% set result = key | bodsch.email.dovecot_plugin_setting(value) %}
+  {% if result.kind == 'unmapped' %}
+  # UNMAPPED {{ result.key }} = {{ result.value }}
+  {% elif result.kind == 'acl_sharing_map' %}
+  acl_sharing_map { dict {{ result.driver }} { path = {{ result.path }} } }
+  {% else %}
+  {{ result.key }} = {{ result.value }}
+  {% endif %}
+
+RETURN:
+  _value:
+    description: What to write for this setting.
+    type: dict
+    contains:
+      kind:
+        description:
+          - C(setting) - write C(key = value).
+          - C(unmapped) - the setting is structural; write the original key and value as a
+            comment, followed by every line of C(hints).
+          - C(acl_sharing_map) - C(acl_shared_dict) became a named filter holding a dict.
+        type: str
+        choices: [setting, unmapped, acl_sharing_map]
+      key:
+        description: The 2.4 name, or the original one when nothing was renamed.
+        type: str
+      value:
+        description: The value to write.
+        type: raw
+      notes:
+        description:
+          - Complete comment lines to put in FRONT of the setting, usually empty.
+          - Only C(acl_anyone = authenticated) produces one, because 2.4 cannot tell it
+            apart from C(allow) any more.
+        type: list
+        elements: str
+      hints:
+        description: What to do instead, one line each. Only on C(kind=unmapped).
+        type: list
+        elements: str
+      driver:
+        description: The dict driver. Only on C(kind=acl_sharing_map).
+        type: str
+      path:
+        description: The path of the dict. Only on C(kind=acl_sharing_map).
+        type: str

@@ -31,11 +31,11 @@
 mail_driver                   = {{ dovecot_mail.mail_driver }}
   {% if dovecot_mail.mail_path is defined and
         dovecot_mail.mail_path | string | length > 0 %}
-mail_path                     = {{ mcr.path_vars(dovecot_mail.mail_path) }}
+mail_path                     = {{ dovecot_mail.mail_path | bodsch.email.dovecot_path_vars }}
   {% endif %}
   {% if dovecot_mail.mail_inbox_path is defined and
         dovecot_mail.mail_inbox_path | string | length > 0 %}
-mail_inbox_path               = {{ mcr.path_vars(dovecot_mail.mail_inbox_path) }}
+mail_inbox_path               = {{ dovecot_mail.mail_inbox_path | bodsch.email.dovecot_path_vars }}
   {% endif %}
 {% elif dovecot_mail.mail_location is defined and
         dovecot_mail.mail_location | string | length > 0 %}
@@ -43,13 +43,13 @@ mail_inbox_path               = {{ mcr.path_vars(dovecot_mail.mail_inbox_path) }
   {% set _parts = dovecot_mail.mail_location | string | split(':') %}
 mail_driver                   = {{ _parts[0] }}
   {% if _parts | length > 1 and _parts[1] | length > 0 %}
-mail_path                     = {{ mcr.path_vars(_parts[1]) }}
+mail_path                     = {{ _parts[1] | bodsch.email.dovecot_path_vars }}
   {% endif %}
   {% for _opt in _parts[2:] %}
     {% set _kv = _opt | split('=') %}
     {% set _name = _location_options.get(_kv[0] | upper) %}
     {% if _name and _kv | length > 1 %}
-{{ "%-29s" | format(_name) }} = {{ mcr.path_vars(_kv[1:] | join('=')) }}
+{{ "%-29s" | format(_name) }} = {{ (_kv[1:] | join('=')) | bodsch.email.dovecot_path_vars }}
     {% else %}
 # UNMAPPED mail_location option "{{ _opt }}" - dovecot 2.4 has no direct
 # equivalent. Set the matching mail_* setting explicitly via dovecot_mail.
@@ -58,7 +58,7 @@ mail_path                     = {{ mcr.path_vars(_parts[1]) }}
 {% endif %}
 {% if dovecot_mail.mail_home is defined and
       dovecot_mail.mail_home | string | length > 0 %}
-mail_home                     = {{ mcr.path_vars(dovecot_mail.mail_home) }}
+mail_home                     = {{ dovecot_mail.mail_home | bodsch.email.dovecot_path_vars }}
 {% endif %}
 {% if dovecot_mail.namespaces is defined and
       dovecot_mail.namespaces | count > 0 %}
@@ -75,26 +75,26 @@ namespace {{ ns.name | default("") }} {
     {% endif %}
     {% if ns.prefix is defined and
           ns.prefix | string | length > 0 %}
-  prefix                      = {{ mcr.prefix_vars(ns.prefix) }}
+  prefix                      = {{ ns.prefix | bodsch.email.dovecot_prefix_vars }}
     {% endif %}
 {#  namespace { location } was replaced by the per-namespace mail_* settings #}
     {% set _ns_location = ns.mail_location | default(ns.location, true) | default('', true) %}
     {% if ns.mail_driver is defined and ns.mail_driver | string | length > 0 %}
   mail_driver                 = {{ ns.mail_driver }}
       {% if ns.mail_path is defined and ns.mail_path | string | length > 0 %}
-  mail_path                   = {{ mcr.path_vars(ns.mail_path) }}
+  mail_path                   = {{ ns.mail_path | bodsch.email.dovecot_path_vars }}
       {% endif %}
     {% elif _ns_location | string | length > 0 %}
       {% set _ns_parts = _ns_location | string | split(':') %}
   mail_driver                 = {{ _ns_parts[0] }}
       {% if _ns_parts | length > 1 and _ns_parts[1] | length > 0 %}
-  mail_path                   = {{ mcr.path_vars(_ns_parts[1]) }}
+  mail_path                   = {{ _ns_parts[1] | bodsch.email.dovecot_path_vars }}
       {% endif %}
       {% for _opt in _ns_parts[2:] %}
         {% set _kv = _opt | split('=') %}
         {% set _name = _location_options.get(_kv[0] | upper) %}
         {% if _name and _kv | length > 1 %}
-  {{ "%-27s" | format(_name) }} = {{ mcr.path_vars(_kv[1:] | join('=')) }}
+  {{ "%-27s" | format(_name) }} = {{ (_kv[1:] | join('=')) | bodsch.email.dovecot_path_vars }}
         {% else %}
   # UNMAPPED namespace location option "{{ _opt }}"
         {% endif %}
@@ -173,7 +173,7 @@ mail_full_filesystem_access   = {{ dovecot_mail.mail_full_filesystem_access | bo
 mail_attribute {
   dict {{ _attr[0] }} {
   {% if _attr | length > 1 %}
-    path                      = {{ mcr.path_vars(_attr[1:] | join(':')) }}
+    path                      = {{ (_attr[1:] | join(':')) | bodsch.email.dovecot_path_vars }}
   {% endif %}
   }
 }
@@ -236,7 +236,7 @@ valid_chroot_dirs             = {{ dovecot_mail.valid_chroot_dirs | join(':') }}
 {% endif %}
 {% if dovecot_mail.mail_chroot is defined and
       dovecot_mail.mail_chroot | string | length > 0 %}
-mail_chroot                   = {{ mcr.path_vars(dovecot_mail.mail_chroot) }}
+mail_chroot                   = {{ dovecot_mail.mail_chroot | bodsch.email.dovecot_path_vars }}
 {% endif %}
 {% if dovecot_mail.auth_socket_path is defined and
       dovecot_mail.auth_socket_path | string | length > 0 %}
@@ -411,7 +411,7 @@ mdbox_preallocate_space       = {{ dovecot_mail.mdbox_preallocate_space | bodsch
 {# Mail attachments #}
 {% if dovecot_mail.mail_attachment_dir is defined and
       dovecot_mail.mail_attachment_dir | string | length > 0 %}
-mail_ext_attachment_path      = {{ mcr.path_vars(dovecot_mail.mail_attachment_dir) }}
+mail_ext_attachment_path      = {{ dovecot_mail.mail_attachment_dir | bodsch.email.dovecot_path_vars }}
 {#
   SiS (single instance storage) write support was removed in 2.4, only reading
   is still supported. 'sis posix' and 'sis-queue posix' therefore degrade to

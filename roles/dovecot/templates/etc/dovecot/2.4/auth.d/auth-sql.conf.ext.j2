@@ -72,15 +72,15 @@
           {% set _ = _queries.update({'default_password_scheme': _sql.default_pass_scheme}) %}
         {% endif %}
         {% if _sql.password_query | default('') | length > 0 %}
-          {% set _ = _queries.update({'passdb_sql_query': mcr.path_vars(_sql.password_query | replace('\n', ' ') | trim)}) %}
+          {% set _ = _queries.update({'passdb_sql_query': (_sql.password_query | replace('\n', ' ') | trim) | bodsch.email.dovecot_path_vars}) %}
         {% endif %}
       {% endif %}
       {% if _section == 'userdb' %}
         {% if _sql.user_query | default('') | length > 0 %}
-          {% set _ = _queries.update({'userdb_sql_query': mcr.path_vars(_sql.user_query | replace('\n', ' ') | trim)}) %}
+          {% set _ = _queries.update({'userdb_sql_query': (_sql.user_query | replace('\n', ' ') | trim) | bodsch.email.dovecot_path_vars}) %}
         {% endif %}
         {% if _sql.iterate_query | default('') | length > 0 %}
-          {% set _ = _queries.update({'userdb_sql_iterate_query': mcr.path_vars(_sql.iterate_query | replace('\n', ' ') | trim)}) %}
+          {% set _ = _queries.update({'userdb_sql_iterate_query': (_sql.iterate_query | replace('\n', ' ') | trim) | bodsch.email.dovecot_path_vars}) %}
         {% endif %}
       {% endif %}
 {#    explicit settings win over anything folded in from dovecot_sql #}

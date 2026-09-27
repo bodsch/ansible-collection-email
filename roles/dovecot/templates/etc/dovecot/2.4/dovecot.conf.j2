@@ -5,8 +5,8 @@
   dovecot_config_version MUST be the very first setting in this file.
   see: https://doc.dovecot.org/2.4.1/installation/upgrade/2.3-to-2.4.html
 #}
-dovecot_config_version        = {{ dovecot_config.config_version | default(dovecot_version, true) }}
-dovecot_storage_version       = {{ dovecot_config.storage_version | default(dovecot_version, true) }}
+dovecot_config_version        = {{ dovecot_config.config_version | default(dovecot_upstream_version, true) }}
+dovecot_storage_version       = {{ dovecot_config.storage_version | default(dovecot_upstream_version, true) }}
 
 # {{ ansible_managed }}
 

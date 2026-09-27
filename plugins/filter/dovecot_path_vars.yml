@@ -1,0 +1,42 @@
+---
+
+DOCUMENTATION:
+  name: dovecot_path_vars
+  author: Bodo Schulz (@bodsch)
+  version_added: 1.0.0
+  short_description: Translate the dovecot 2.3 variables of a path to the 2.4 syntax.
+  description:
+    - Dovecot 2.3 wrote a variable as a single letter, 2.4 as C(%{name}) with an optional
+      filter such as C(%{user|domain}).
+    - >-
+      A DOUBLED percent sign refers to the owner of a shared mailbox, a single one to the
+      logged in user. The doubled form wins, so C(%%u) does not become a literal percent
+      followed by C(%u).
+    - >-
+      Everything is translated in a single pass, which is what makes the result
+      independent of the order of the table - a chain of replacements would have to make
+      sure that no replacement can be matched again by a later one.
+    - >-
+      Only use this where the meaning of a letter is unambiguous. A log format string is
+      NOT such a place: there the same letter means different things depending on the
+      setting - C(%m) is the SASL mechanism in C(login_log_format_elements) and the
+      message-id in C(deliver_log_format).
+    - For a namespace prefix use M(bodsch.email.dovecot_prefix_vars) instead.
+  positional: _input
+  options:
+    _input:
+      description: The value to translate. A number is read as its string form.
+      required: true
+      type: str
+
+EXAMPLES: |
+  # /var/vmail/%{user|domain}/%{user|username}
+  mail_path: "{{ '/var/vmail/%d/%n' | bodsch.email.dovecot_path_vars }}"
+
+  # /var/vmail/%{owner_user|domain}/%{owner_user|username}
+  mail_path: "{{ '/var/vmail/%%d/%%n' | bodsch.email.dovecot_path_vars }}"
+
+RETURN:
+  _value:
+    description: The value with every variable written the 2.4 way.
+    type: str

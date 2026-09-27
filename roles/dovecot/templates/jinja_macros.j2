@@ -4,44 +4,14 @@
 {% set print = self %}
 
 {#
-  Translate the legacy 2.3 '%x' variables to the 2.4 '%{name|filter}' syntax.
+  The 2.3 '%x' variables are translated by the filters
 
-  Only safe for PATH-like values, where the meaning of a variable is
-  unambiguous. Do NOT use this for log format strings - there the same letter
-  means different things depending on the setting (e.g. '%m' is the SASL
-  mechanism in login_log_format_elements but the message-id in
-  deliver_log_format).
-#}
-{% macro path_vars(value) %}
-{%- set v = value | string -%}
-{#- '%%x' refers to the OWNER of a shared mailbox, '%x' to the logged in user.
-    The doubled form must be replaced first, otherwise '%%u' would turn into
-    '%%{user}'. -#}
-{{- v | replace('%%h', '%{owner_home}')
-      | replace('%%u', '%{owner_user}')
-      | replace('%%n', '%{owner_user|username}')
-      | replace('%%d', '%{owner_user|domain}')
-      | replace('%h', '%{home}')
-      | replace('%u', '%{user}')
-      | replace('%n', '%{user|username}')
-      | replace('%d', '%{user|domain}') -}}
-{% endmacro %}
+    bodsch.email.dovecot_path_vars     for path-like values
+    bodsch.email.dovecot_prefix_vars   for a namespace prefix
 
-{#
-  Same idea for a namespace PREFIX. Dovecot 2.4 expands the shared mailbox
-  owner as '$user' / '$username' / '$domain' here - not as '%{owner_*}', which
-  is only valid in path settings.
+  They used to be macros here. As filters they are unit tested directly
+  (tests/unit/filter/) instead of only through a rendered template.
 #}
-{% macro prefix_vars(value) %}
-{%- set v = value | string -%}
-{{- v | replace('%%u', '$user')
-      | replace('%%n', '$username')
-      | replace('%%d', '$domain')
-      | replace('%h', '%{home}')
-      | replace('%u', '%{user}')
-      | replace('%n', '%{user|username}')
-      | replace('%d', '%{user|domain}') -}}
-{% endmacro %}
 
 {#
   Render "!include_try auth.d/<file>" lines.
@@ -99,7 +69,10 @@
 {% macro bool_list(name, values, indent='') %}
 {%- set entries = [] -%}
 {%- for value in values | default([]) -%}
-  {%- if not value | string | first == '$' -%}
+{#- an empty entry has nothing to enable, and "'' | first" would raise.
+    A value split from an empty string is exactly that: "" | split(' ')
+    yields [''], not []. -#}
+  {%- if value | string | length > 0 and not value | string | first == '$' -%}
     {%- set _ = entries.append(value | string) -%}
   {%- endif -%}
 {%- endfor -%}
@@ -117,111 +90,39 @@
   global now. Most old names survived, some were renamed, and a few need a
   structural change that cannot be derived from a key/value pair.
 
-  Pure renames are applied. Anything structural is written as an UNMAPPED
-  comment instead of an invalid setting, because dovecot 2.4 refuses to start
-  on an unknown setting - a comment shows you exactly what to migrate.
+  What a setting becomes is decided by
 
-  Sources: the 2.3-to-2.4 upgrade guide and "doveconf -a" of dovecot 2.4.1.
-#}
-{% set plugin_renames = {
-  'acl': 'acl_driver',
-  'acl_anyone': 'imap_acl_allow_anyone',
-  'quota_grace': 'quota_storage_grace',
-  'quota_max_mail_size': 'quota_mail_size',
-  'quota_over_flag': 'quota_over_status_current',
-  'quota_over_flag_lazy_check': 'quota_over_status_lazy_check',
-  'quota_over_flag_value': 'quota_over_status_mask',
-  'sieve_default_name': 'sieve_script_name',
-  'sieve_editheader_forbid_add': 'sieve_editheader_header_forbid_add',
-  'sieve_editheader_forbid_delete': 'sieve_editheader_header_forbid_delete',
-  'sieve_quota_max_scripts': 'sieve_quota_script_count',
-  'sieve_quota_max_storage': 'sieve_quota_storage_size',
-  'sieve_spamtest_max_header': 'sieve_spamtest_score_max_header',
-  'sieve_spamtest_max_value': 'sieve_spamtest_score_max_value',
-  'sieve_user_log': 'sieve_user_log_path',
-  'sieve_variables_max_scope_size': 'sieve_variables_max_scope_count',
-  'sieve_variables_max_variable_size': 'sieve_variables_max_value_size',
-  'sieve_virustest_max_header': 'sieve_virustest_score_max_header',
-  'sieve_virustest_max_value': 'sieve_virustest_score_max_value',
-} %}
+    bodsch.email.dovecot_plugin_setting
 
-{# old name -> what to do instead; these need more than a rename #}
-{% set plugin_unmapped = {
-  'autosubscribe': 'use "mailbox <name> { auto = subscribe }" in 15-mailboxes',
-  'quota': 'configure a "quota <name> { quota_driver = ... }" block',
-  'quota_rule': 'use quota_storage_size / quota_message_count in a quota block',
-  'quota_rule2': 'use quota_storage_size / quota_message_count in a quota block',
-  'quota_over_script': 'use quota_over_status together with an execute filter',
-  'quota_warning': 'configure a "quota_warning <name> { }" block',
-  'quota_warning2': 'configure a "quota_warning <name> { }" block',
-  'sieve': 'use sieve_script_path inside a sieve_script block',
-  'sieve_after': 'use a sieve_script block with sieve_script_type = after',
-  'sieve_before': 'use a sieve_script block with sieve_script_type = before',
-  'sieve_default': 'use a sieve_script block with sieve_script_type = default',
-  'sieve_dir': 'use sieve_script_path inside a sieve_script block',
-  'sieve_discard': 'use a sieve_script block with sieve_script_type = discard',
-  'sieve_global': 'use a sieve_script block with sieve_script_type = global',
-  'sieve_global_dir': 'use sieve_script_path inside a sieve_script block',
-  'sieve_global_path': 'use sieve_script_path inside a sieve_script block',
-  'acl_global_path': 'removed in 2.4.4; configure the acl settings inside the mailbox blocks',
-  'sieve_spamtest_text_value': 'became a string list; put all values under one sieve_spamtest_text_value',
-  'sieve_virustest_text_value': 'became a string list; put all values under one sieve_virustest_text_value',
-  'sieve_editheader_protected': 'split into sieve_editheader_header_forbid_add and _forbid_delete',
-  'sieve_vacation_max_subject_codepoints': 'removed in 2.4',
-} %}
-
-{#
-  Render one plugin setting the 2.4 way (no surrounding plugin { } block).
+  which holds the rename table and the list of settings that have no 2.4
+  counterpart. It returns WHAT to write, this macro decides HOW it looks.
+  The tables used to live here; as a filter they are unit tested directly
+  (tests/unit/filter/) instead of only through a rendered template.
 #}
 {% macro plugin_setting(key, value) %}
-{#- 2.3 numbered its repeatable plugin settings: quota2, quota2_rule,
-    sieve_before2, sieve_before3, autosubscribe4, ... They mean the same as
-    their base name, and 2.4 replaced all of them with named filters. Look the
-    base name up, but only use it when it is actually known - otherwise a
-    setting that legitimately contains a digit would be mangled. -#}
-{%- set base = key | regex_replace('[0-9]+', '') -%}
-{%- set unmapped_key = key if key in plugin_unmapped
-      else (base if base in plugin_unmapped else none) -%}
-{%- if unmapped_key %}
-# UNMAPPED {{ key }} = {{ value }}
-#   dovecot 2.4: {{ plugin_unmapped[unmapped_key] }}
-{%- elif key == 'sieve_vacation_dont_check_recipient' %}
-{#- the meaning was inverted along with the rename -#}
-{{ "%-29s" | format('sieve_vacation_check_recipient') }} = {{ 'no' if (value | string | lower in ['yes', 'true', '1', 'on']) else 'yes' }}
-{%- elif key == 'quota_grace' and '%' in (value | string) %}
-{#- 2.3 quota_grace was a percentage of the quota (default 10%%). 2.4
-    quota_storage_grace is a SIZE (default 10M) - a percentage cannot be
-    carried over, so it has to be restated as an absolute size. -#}
-# UNMAPPED quota_grace = {{ value }}
-#   dovecot 2.4: quota_storage_grace is a size, not a percentage.
-#   Restate it as an absolute size, e.g. quota_storage_grace = 10M
-{%- elif key == 'acl_shared_dict' %}
-{#- 2.3: acl_shared_dict = file:/var/vmail/shared-mailboxes
-    2.4: a named filter holding a dict, the driver comes from the prefix -#}
-{%- set parts = value | string | split(':') %}
-acl_sharing_map {
-  dict {{ parts[0] }} {
-    path                      = {{ parts[1:] | join(':') }}
-  }
-}
-{%- elif key == 'acl_anyone' %}
-{#- 2.3 took allow / authenticated, 2.4 takes a boolean. Both old values
-    enable the "anyone" and "authenticated" ACL identifiers, so both become
-    yes - the distinction between them no longer exists. -#}
-{%- if value | string | lower == 'authenticated' %}
-# NOTE acl_anyone = authenticated has no 2.4 equivalent that distinguishes it
-#   from "allow"; imap_acl_allow_anyone only enables or disables the
-#   anyone/authenticated ACL identifiers.
-{%- endif %}
-{{ "%-29s" | format('imap_acl_allow_anyone') }} = {{ 'yes' if (value | string | lower in ['allow', 'authenticated', 'yes', 'true']) else 'no' }}
-{%- else %}
-{#- 2.3 escaped a literal percent sign as '%%' because '%' started a variable.
-    2.4 uses '%{...}', so a bare '%' is literal and '%%' is wrong (e.g. a
-    quota grace of '10%%'). Only '%%' that is NOT followed by a letter is
-    unescaped - '%%u' and friends are shared-mailbox variables and are handled
-    by path_vars / prefix_vars instead. -#}
-{{ "%-29s" | format(plugin_renames.get(key, plugin_renames.get(base, key))) }} = {{ value | string | regex_replace('%%(?![A-Za-z])', '%') }}
-{%- endif %}
+{%- set result = key | bodsch.email.dovecot_plugin_setting(value) -%}
+{#- Every branch builds a LIST OF LINES and joins it once. Emitting the lines
+    directly does not work here: with trim_blocks a branch either swallows its
+    last newline or keeps one, depending on whether it ends in a loop - which
+    is how "acl_anyone = authenticated" used to glue the setting onto the end
+    of its own comment, and lose it. -#}
+{%- if result.kind == 'unmapped' -%}
+{#-   dovecot 2.4 refuses to start on an unknown setting, so a setting that
+      needs a structural change is written as a comment, not as an invalid
+      setting. -#}
+{%-   set lines = ['# UNMAPPED ' ~ result.key ~ ' = ' ~ result.value] + result.hints -%}
+{%-   set text = lines | join('\n#   ') -%}
+{%- elif result.kind == 'acl_sharing_map' -%}
+{%-   set text = ['acl_sharing_map {',
+                  '  dict ' ~ result.driver ~ ' {',
+                  '    path                      = ' ~ result.path,
+                  '  }',
+                  '}'] | join('\n') -%}
+{%- else -%}
+{%-   set line = '%-29s' | format(result.key) ~ ' = ' ~ result.value -%}
+{%-   set text = (result.notes + [line]) | join('\n') -%}
+{%- endif -%}
+{{ text -}}
 {% endmacro %}
 
 {#
@@ -288,7 +189,7 @@ acl_sharing_map {
   {% for fk, fv in fields.items() %}
 {#- userdb fields are mostly paths (home, mail); translate the legacy
     '%x' variables so they still expand under 2.4 -#}
-    {{ "%-25s" | format(fk) }} = {{ path_vars(fv) }}
+    {{ "%-25s" | format(fk) }} = {{ fv | bodsch.email.dovecot_path_vars }}
   {% endfor %}
   }
 {% endif %}

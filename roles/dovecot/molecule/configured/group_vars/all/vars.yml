@@ -32,6 +32,9 @@ dovecot_mail:
       location: "maildir:%h:INDEX=/srv/mail/INDEX/%d/%n:CONTROL=/srv/mail/CONTROL/%d/%n:LAYOUT=maildir++"
 
     - type: public
+      # mandatory in dovecot 2.4: an unnamed namespace renders as
+      # "namespace  { }" and 2.4 refuses to start on it
+      name: public
       separator: "."
       prefix: shared.
       location: "maildir:/srv/mail/PUBLIC:INDEX=/srv/mail/PUBLIC/indexes:CONTROL=/srv/mail/PUBLIC/control:LAYOUT=maildir++"

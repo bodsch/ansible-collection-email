@@ -37,12 +37,12 @@ namespace {{ namespace }} {
               {% set _loc = values | string | split(':') %}
   mail_driver = {{ _loc[0] }}
               {% if _loc | length > 1 and _loc[1] | length > 0 %}
-  mail_path = {{ mcr.path_vars(_loc[1]) }}
+  mail_path = {{ _loc[1] | bodsch.email.dovecot_path_vars }}
               {% endif %}
             {% elif mailbox == 'prefix' %}
-  {{ mailbox }} = {{ mcr.prefix_vars(values) }}
+  {{ mailbox }} = {{ values | bodsch.email.dovecot_prefix_vars }}
             {% elif mailbox in _path_attr %}
-  {{ mailbox }} = {{ mcr.path_vars(values) }}
+  {{ mailbox }} = {{ values | bodsch.email.dovecot_path_vars }}
             {% elif mailbox in _inbox_attr %}
   {{ mailbox }} = {{ values }}
             {% endif %}

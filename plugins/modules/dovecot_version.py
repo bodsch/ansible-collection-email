@@ -42,7 +42,8 @@ versions:
     returned: always
     type: dict
     sample:
-        full_version: "2.4.1"
+        full_version: "2.4.1-4"
+        upstream_version: "2.4.1"
         major_version: "2"
         short_version: "2.4"
 """
@@ -70,10 +71,17 @@ class DovecotVersion:
         """
         Read the dovecot version and split it into its parts.
 
-            2.4.1 (7d8c0e5759)
-              full_version  = "2.4.1"
-              major_version = "2"
-              short_version = "2.4"
+            2.4.1-4 (7d8c0e5759)
+              full_version     = "2.4.1-4"
+              upstream_version = "2.4.1"
+              major_version    = "2"
+              short_version    = "2.4"
+
+        A distribution may append its own package release to the version, the
+        way arch linux prints "2.4.1-4". upstream_version drops it, because
+        dovecot_config_version only accepts a version dovecot itself knows -
+        "2.4.1-4" is rejected with "Currently supported versions are: 2.4.0
+        2.4.1".
 
         The dovecot role picks its template directory by short_version, so
         that value decides which configuration format is written.
@@ -118,8 +126,13 @@ class DovecotVersion:
             else:
                 short_version = major_version
 
+            # only the leading digits-and-dots part is dovecot's own version,
+            # everything after it belongs to the distribution package
+            upstream = re.match(r"[0-9]+(?:\.[0-9]+)*", dovecot_version)
+
             version = dict(
                 full_version=dovecot_version,
+                upstream_version=upstream.group(0) if upstream else dovecot_version,
                 major_version=major_version,
                 short_version=short_version,
             )
