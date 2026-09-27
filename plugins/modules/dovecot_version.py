@@ -99,7 +99,7 @@ class DovecotVersion:
 
         rc, out, err = self._exec(args)
 
-        pattern = re.compile(r"(?P<version>.*)\s+\(.*\)")
+        pattern = re.compile(r"(?P<version>\d+(?:\.\d+)+)")
 
         match = re.search(pattern, out)
 
