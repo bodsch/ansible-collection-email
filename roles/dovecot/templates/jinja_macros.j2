@@ -56,17 +56,35 @@
   Without it every include silently misses, because include_try does not
   complain about a file that is not there.
 #}
-{% macro include_paramaters(data, include_type="include_try") %}
+{% macro include_paramaters(data, include_type="include_try", authentications={}) %}
+{#
+  Every backend configured in dovecot_authentications gets its file enabled,
+  even when the includes list still has it commented out. Otherwise the two
+  have to be kept in sync by hand, and forgetting it produces a dovecot that
+  starts with no passdb at all:
+
+      auth: Fatal: No passdbs specified in configuration file.
+#}
+  {% set active = [] %}
+  {% for backend in authentications | default({}) %}
+    {% set _ = active.append('auth-' ~ backend ~ '.conf.ext') %}
+  {% endfor %}
+  {% set listed = [] %}
   {% for incl in data %}
     {% if incl is defined and incl is not none and incl | string | length > 0 %}
       {% set entry = incl | string | trim %}
       {% set name = entry | regex_replace('^#\s*', '') %}
-      {% if entry[0] != "#" %}
+      {% set _ = listed.append(name) %}
+      {% if entry[0] != "#" or name in active %}
 !{{ include_type }} ../auth.d/{{ name }}
       {% else %}
 # !{{ include_type }} ../auth.d/{{ name }}
       {% endif %}
     {% endif %}
+  {% endfor %}
+{#- a configured backend that is not in the list at all still has to be included -#}
+  {% for name in active if name not in listed %}
+!{{ include_type }} ../auth.d/{{ name }}
   {% endfor -%}
 {% endmacro %}
 
@@ -245,6 +263,16 @@ acl_sharing_map {
   {% elif key == 'args' %}
   # UNMAPPED args = {{ value }}
   #   dovecot 2.4: {{ auth_db_args_hint.get(driver, 'use the driver specific settings of ' ~ driver) }}
+  {% elif value | bodsch.core.type == "dict" %}
+{#  a nested mapping is a named filter, e.g. the connection block
+    "mysql <name> { host = ... }" a 2.4 sql passdb needs #}
+  {{ key }} {
+    {% for subkey, subvalue in value.items() %}
+      {% if subvalue | string | length > 0 %}
+    {{ "%-23s" | format(subkey) }} = {{ subvalue }}
+      {% endif %}
+    {% endfor %}
+  }
   {% elif value | bodsch.core.type == "bool" %}
   {{ "%-27s" | format(key) }} = {{ value | bodsch.core.config_bool(true_as='yes', false_as='no') }}
   {% elif value | bodsch.core.type == "list" %}

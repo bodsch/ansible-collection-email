@@ -88,5 +88,5 @@ auth_mechanisms              = {{ dovecot_auth.mechanisms | bodsch.core.compare_
 {% endif %}
 
 {% if dovecot_auth.includes is defined and dovecot_auth.includes | count > 0 %}
-{{ mcr.include_paramaters(dovecot_auth.includes) }}
+{{ mcr.include_paramaters(dovecot_auth.includes, authentications=dovecot_authentications | default({})) }}
 {% endif %}

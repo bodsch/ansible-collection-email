@@ -14,7 +14,7 @@
       dovecot_mailboxes.namespaces | count > 0 %}
 {#  'location' is gone in 2.4, mail_driver / mail_path replace it #}
   {% set _inbox_attr = [
-    'disabled', 'hidden', 'ignore_on_failure', 'inbox', 'list',
+    'alias_for', 'disabled', 'hidden', 'ignore_on_failure', 'inbox', 'list',
     'mail_driver', 'mail_path', 'mail_index_path',
     'order', 'prefix', 'separator', 'subscriptions', 'type'] %}
   {% set _path_attr = ['mail_path', 'mail_index_path'] %}

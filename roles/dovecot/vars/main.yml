@@ -602,27 +602,31 @@ dovecot_defaults_dict_server:
     #           value_field bytes:
     #             type: uint
 
-dovecot_defaults_authentications:
-  - checkpassword:
-      passdb:
-        driver: checkpassword
-        args: /usr/bin/checkpassword
-      userdb:
-        driver: prefetch
-  - deny:
-      passdb:
-        driver: passwd-file
-        deny: true
-        args: /etc/dovecot/deny-users
-  - dict:
-      passdb:
-        driver: dict
-        args: /etc/dovecot/dovecot-dict-auth.conf.ext
-      userdb:
-        driver: dict
-        args: /etc/dovecot/dovecot-dict-auth.conf.ext
+## Authentication backends. Empty by default, like every other group here -
+## a backend configured in here is automatically included from 10-auth.conf,
+## so an active example would enable a passdb nobody asked for.
+##
+## checkpassword, dict and vpopmail were removed in dovecot 2.4; oauth2 was
+## added. See templates/etc/dovecot/<version>/auth.d/ for what exists per
+## version.
+dovecot_defaults_authentications: []
+  # - system:
+  #     passdb:
+  #       driver: pam
+  #       passdb_pam_service_name: dovecot
+  # - sql:
+  #     passdb:
+  #       driver: sql
+  #       args: /etc/dovecot/dovecot-sql.conf.ext      # 2.3
+  #     userdb:
+  #       driver: sql
+  #       args: /etc/dovecot/dovecot-sql.conf.ext      # 2.3
+  # - deny:
+  #     passdb:
+  #       driver: passwd-file
+  #       deny: true
+  #       args: /etc/dovecot/deny-users
 
-# https://doc.dovecot.org/configuration_manual/authentication/dict/?highlight=default_pass_scheme
 dovecot_defaults_dict_auth:
   # uri: ""
   default_pass_scheme: MD5

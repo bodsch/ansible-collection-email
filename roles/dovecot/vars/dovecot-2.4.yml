@@ -14,6 +14,20 @@
 #   templates/etc/dovecot/2.4/conf.d/*.conf.j2
 
 _dovecot_version_defaults:
+  config:
+    # Dovecot 2.4 enables NO protocol by default, and it dropped the
+    # protocols.d mechanism that 2.3 used to pick them up from the installed
+    # packages - arch does not even ship that directory. Without an explicit
+    # list the server starts with no IMAP and no POP3 at all.
+    #
+    # These four match what 2.3 ended up with on a default install of this
+    # role (dovecot-imapd, -pop3d, -lmtpd, -submissiond).
+    protocols:
+      - imap
+      - pop3
+      - lmtp
+      - submission
+
   auth:
     # 2.3: %Lu
     username_format: "%{user|lower}"

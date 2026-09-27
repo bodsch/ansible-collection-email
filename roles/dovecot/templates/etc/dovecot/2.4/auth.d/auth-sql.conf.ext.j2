@@ -7,14 +7,94 @@
   dovecot 2.4 requires passdb and userdb blocks to be named:
     passdb { driver = sql }  ->  passdb sql { driver = sql }
 
-  dovecot-sql.conf.ext is gone: the connection and the queries moved into the
-  block itself (sql_driver, sql_hosts, passdb_sql_query, userdb_sql_query).
+  dovecot-sql.conf.ext is gone. The connection and the queries moved into the
+  block itself, so what 2.3 kept in that file is folded in here from
+  dovecot_sql:
+
+    driver              -> sql_driver
+    connects.host       -> <driver>_host
+    connects.port       -> <driver>_port
+    connects.dbname     -> <driver>_dbname
+    connects.user       -> <driver>_user
+    connects.password   -> <driver>_password
+    default_pass_scheme -> default_password_scheme
+    password_query      -> passdb_sql_query
+    user_query          -> userdb_sql_query
+    iterate_query       -> userdb_sql_iterate_query
+
+  Settings given directly under dovecot_authentications.sql win, so a 2.4
+  native configuration does not have to go through dovecot_sql at all.
 #}
 {% if dovecot_authentications.sql is defined and
       dovecot_authentications.sql | count > 0 %}
+  {% set _sql = dovecot_sql | default({}) %}
+  {% set _driver = _sql.driver | default('') %}
+  {% set _connects = _sql.connects | default({}) %}
+{#  connection settings are named after the driver: mysql_host, pgsql_host, ... #}
+{#
+  The connection is a NAMED FILTER in 2.4, not a set of flat settings:
+
+      passdb sql {
+        sql_driver = mysql
+        mysql <name> {
+          host = ...
+        }
+      }
+
+  Flat mysql_host / mysql_dbname settings do parse - "doveconf -n" accepts
+  them - but the auth process refuses them at runtime with
+  "mysql { .. } named list filter is missing".
+#}
+  {% set _connection = {} %}
+  {% if _driver | length > 0 %}
+    {% set _ = _connection.update({'sql_driver': _driver}) %}
+    {% set _params = {} %}
+    {% for _key in ['host', 'port', 'dbname', 'user', 'password'] %}
+      {% if _connects.get(_key) not in [none, ''] %}
+        {% set _ = _params.update({_key: _connects[_key]}) %}
+      {% endif %}
+    {% endfor %}
+    {% if _params | count > 0 %}
+{#    the filter needs a name; the database name is the obvious stable one #}
+      {% set _filter_name = _connects.dbname | default('default', true) %}
+      {% set _ = _connection.update({_driver ~ ' ' ~ _filter_name: _params}) %}
+    {% endif %}
+  {% endif %}
+
   {% for _section, _values in dovecot_authentications.sql.items() %}
     {% if _values | bodsch.core.type == "dict" and _values | count > 0 %}
-{{ mcr.auth_db(_section, _values.driver | default('sql'), _values) }}
+{#    the query belongs to the section: passdb reads the password, userdb the
+      user data #}
+      {% set _queries = {} %}
+      {% if _section == 'passdb' %}
+{#      only a passdb knows about password schemes #}
+        {% if _sql.default_pass_scheme | default('') | length > 0 %}
+          {% set _ = _queries.update({'default_password_scheme': _sql.default_pass_scheme}) %}
+        {% endif %}
+        {% if _sql.password_query | default('') | length > 0 %}
+          {% set _ = _queries.update({'passdb_sql_query': mcr.path_vars(_sql.password_query | replace('\n', ' ') | trim)}) %}
+        {% endif %}
+      {% endif %}
+      {% if _section == 'userdb' %}
+        {% if _sql.user_query | default('') | length > 0 %}
+          {% set _ = _queries.update({'userdb_sql_query': mcr.path_vars(_sql.user_query | replace('\n', ' ') | trim)}) %}
+        {% endif %}
+        {% if _sql.iterate_query | default('') | length > 0 %}
+          {% set _ = _queries.update({'userdb_sql_iterate_query': mcr.path_vars(_sql.iterate_query | replace('\n', ' ') | trim)}) %}
+        {% endif %}
+      {% endif %}
+{#    explicit settings win over anything folded in from dovecot_sql #}
+      {% set _explicit = _values %}
+{#    the pointer to dovecot-sql.conf.ext is resolved once the connection was
+      folded in, so it no longer needs an UNMAPPED comment #}
+      {% if _connection | count > 0 %}
+        {% set _explicit = {} %}
+        {% for _k, _v in _values.items() if _k != 'args' %}
+          {% set _ = _explicit.update({_k: _v}) %}
+        {% endfor %}
+      {% endif %}
+      {% set _merged = _connection | combine(_queries) | combine(_explicit) %}
+{{ mcr.auth_db(_section, _values.driver | default('sql'), _merged) }}
     {% endif %}
   {% endfor %}
 {% endif %}

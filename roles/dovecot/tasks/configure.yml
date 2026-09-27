@@ -101,6 +101,7 @@
     - not running_in_check_mode
     - _dovecot_version_defaults | default({}) | count > 0
   ansible.builtin.set_fact:
+    dovecot_defaults_config: "{{ dovecot_defaults_config | combine(_dovecot_version_defaults.config | default({}), recursive=True) }}"
     dovecot_defaults_auth: "{{ dovecot_defaults_auth | combine(_dovecot_version_defaults.auth | default({}), recursive=True) }}"
     dovecot_defaults_logging: "{{ dovecot_defaults_logging | combine(_dovecot_version_defaults.logging | default({}), recursive=True) }}"
     dovecot_defaults_mail: "{{ dovecot_defaults_mail | combine(_dovecot_version_defaults.mail | default({}), recursive=True) }}"

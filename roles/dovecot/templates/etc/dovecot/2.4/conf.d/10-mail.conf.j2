@@ -116,6 +116,22 @@ namespace {{ ns.name | default("") }} {
   list                        = children
       {% endif %}
     {% endif %}
+    {% if ns.order is defined and
+          ns.order | string | length > 0 %}
+  order                       = {{ ns.order | int }}
+    {% endif %}
+    {% if ns.alias_for is defined and
+          ns.alias_for | string | length > 0 %}
+  alias_for                   = {{ ns.alias_for }}
+    {% endif %}
+    {% if ns.disabled is defined and
+          ns.disabled | string | length > 0 %}
+  disabled                    = {{ ns.disabled | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+    {% endif %}
+    {% if ns.ignore_on_failure is defined and
+          ns.ignore_on_failure | string | length > 0 %}
+  ignore_on_failure           = {{ ns.ignore_on_failure | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+    {% endif %}
     {% if ns.subscriptions is defined and
           ns.subscriptions | string | length > 0 %}
   subscriptions               = {{ ns.subscriptions | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}

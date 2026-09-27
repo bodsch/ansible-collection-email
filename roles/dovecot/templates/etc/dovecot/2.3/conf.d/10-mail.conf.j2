@@ -42,6 +42,32 @@ namespace {{ ns.name | default("") }} {
   list                        = children
       {% endif %}
     {% endif %}
+    {% if ns.order is defined and
+          ns.order | string | length > 0 %}
+  order                       = {{ ns.order | int }}
+    {% endif %}
+{#
+  alias_for is version dependent: 2.4 points at the namespace NAME, 2.3 at its
+  PREFIX. Write the name and the role resolves it here, so the same variables
+  work on both.
+#}
+    {% if ns.alias_for is defined %}
+      {% set _alias_prefix = namespace(value=ns.alias_for) %}
+      {% for _other in dovecot_mail.namespaces %}
+        {% if _other.name | default('') == ns.alias_for %}
+          {% set _alias_prefix.value = _other.prefix | default('') %}
+        {% endif %}
+      {% endfor %}
+  alias_for                   = {{ _alias_prefix.value }}
+    {% endif %}
+    {% if ns.disabled is defined and
+          ns.disabled | string | length > 0 %}
+  disabled                    = {{ ns.disabled | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+    {% endif %}
+    {% if ns.ignore_on_failure is defined and
+          ns.ignore_on_failure | string | length > 0 %}
+  ignore_on_failure           = {{ ns.ignore_on_failure | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+    {% endif %}
     {% if ns.subscriptions is defined and
           ns.subscriptions | string | length > 0 %}
   subscriptions               = {{ ns.subscriptions | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
