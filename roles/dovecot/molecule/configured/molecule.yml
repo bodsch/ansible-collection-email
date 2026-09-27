@@ -10,7 +10,7 @@ driver:
 
 platforms:
   - name: instance
-    image: "ghcr.io/bodsch/docker-ansible/ansible-${DISTRIBUTION:-debian:12}"
+    image: "ghcr.io/bodsch/docker-ansible/ansible-${DISTRIBUTION:-archlinux:latest}"
     command: ${MOLECULE_DOCKER_COMMAND:-""}
     docker_host: "${DOCKER_HOST:-unix://run/docker.sock}"
     privileged: true
@@ -20,7 +20,7 @@ platforms:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
       - /var/lib/containerd
     capabilities:
-      - SYS_TIME
+      - SYS_ADMIN
     tmpfs:
       - /run
       - /tmp
@@ -36,7 +36,7 @@ provisioner:
       callback_result_format: yaml
       gathering: smart
       fact_caching: jsonfile
-      fact_caching_timeout: 8640
+      fact_caching_timeout: 320
       fact_caching_connection: ansible_facts
 
 scenario:

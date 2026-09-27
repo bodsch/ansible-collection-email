@@ -20,6 +20,16 @@
   when:
     - not running_in_check_mode
   ansible.builtin.set_fact:
-    dovecot_version: "{{ _dovecot_version.version }}"
+    dovecot_version: "{{ _dovecot_version.versions.full_version }}"
+    dovecot_short_version: "{{ _dovecot_version.versions.short_version }}"
+
+- name: create custom fact file
+  bodsch.core.facts:
+    name: dovecot_version
+    facts:
+      version: "{{ _dovecot_version.versions.full_version  }}"
+      short_version: "{{ _dovecot_version.versions.short_version }}"
+  when:
+    - not running_in_check_mode
 
 ...

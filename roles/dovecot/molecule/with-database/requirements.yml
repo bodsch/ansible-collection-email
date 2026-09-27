@@ -1,7 +1,0 @@
----
-
-- name: bodsch.mariadb
-  src: bodsch.mariadb
-  version: 2.6.0
-
-...

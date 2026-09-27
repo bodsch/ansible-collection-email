@@ -28,6 +28,19 @@
     - not running_in_check_mode
   ansible.builtin.setup:
 
+- name: detected installed dovecot version
+  when:
+    - not running_in_check_mode
+  bodsch.email.dovecot_version:
+  register: _dovecot_version
+
+- name: define dovecot_version
+  when:
+    - not running_in_check_mode
+  ansible.builtin.set_fact:
+    dovecot_version: "{{ _dovecot_version.versions.full_version }}"
+    dovecot_short_version: "{{ _dovecot_version.versions.short_version }}"
+
 - name: merge dovecot configuration between defaults and custom
   when:
     - not running_in_check_mode
@@ -71,29 +84,6 @@
       - path: auth.d
       - path: sql.d
 
-# - name: create logging directory
-#   when:
-#     - not running_in_check_mode
-#   ansible.builtin.file:
-#     state: directory
-#     path: "{{ dovecot_logging_directory }}"
-#     mode: "0755"
-#
-# - name: create configuration directory
-#   when:
-#     - not running_in_check_mode
-#   ansible.builtin.file:
-#     state: directory
-#     path: "{{ item }}"
-#     mode: "0755"
-#   loop:
-#     - /etc/dovecot
-#     - /etc/dovecot/conf.d
-#     - /etc/dovecot/auth.d
-#     - /etc/dovecot/sql.d
-#   loop_control:
-#     label: "{{ item }}"
-
 - name: create dovecot.conf
   when:
     - not running_in_check_mode
@@ -105,36 +95,34 @@
   notify:
     - restart dovecot
 
+- name: find dovecot conf.d templates
+  when:
+    - not running_in_check_mode
+  ansible.builtin.set_fact:
+    _confd_templates: "{{ lookup('ansible.builtin.fileglob', 'templates/etc/dovecot/conf.d/' ~ dovecot_short_version ~ '/*.j2').split(',') | bodsch.email.file_names() }}"
+
+- name: find dovecot auth.d templates
+  when:
+    - not running_in_check_mode
+  ansible.builtin.set_fact:
+    _authd_templates: "{{ lookup('ansible.builtin.fileglob', 'templates/etc/dovecot/auth.d/' ~ dovecot_short_version ~ '/*.j2').split(',') | bodsch.email.file_names() }}"
+
+- name: find dovecot ext templates
+  when:
+    - not running_in_check_mode
+  ansible.builtin.set_fact:
+    _dovecot_ext_templates: "{{ (lookup('ansible.builtin.fileglob', 'templates/etc/dovecot/' ~ '/dovecot*.ext.j2') | default([]) ).split(',') | bodsch.email.file_names() }}"
+
 - name: create splitted configurations
   when:
     - not running_in_check_mode
+    - _confd_templates | count > 0
   ansible.builtin.template:
-    src: etc/dovecot/conf.d/{{ item }}.j2
+    src: etc/dovecot/conf.d/{{ dovecot_short_version }}/{{ item }}.j2
     dest: /etc/dovecot/conf.d/{{ item }}
     backup: true
     mode: "0644"
-  loop:
-    - 10-auth.conf
-    - 10-director.conf
-    - 10-logging.conf
-    - 10-mail.conf
-    - 10-master.conf
-    - 10-metrics.conf
-    - 10-ssl.conf
-    - 10-tcpwrapper.conf
-    - 15-lda.conf
-    - 15-mailboxes.conf
-    - 20-imap.conf
-    - 20-lmtp.conf
-    - 20-managesieve.conf
-    - 20-pop3.conf
-    - 20-submission.conf
-    - 30-dict-server.conf
-    - 90-acl.conf
-    - 90-plugin.conf
-    - 90-quota.conf
-    - 90-sieve-extprograms.conf
-    - 90-sieve.conf
+  loop: "{{ _confd_templates }}"
   loop_control:
     label: "{{ item }}"
   notify:
@@ -143,22 +131,13 @@
 - name: create auth configurations
   when:
     - not running_in_check_mode
+    - _authd_templates | count > 0
   ansible.builtin.template:
-    src: etc/dovecot/auth.d/{{ item }}.j2
+    src: etc/dovecot/auth.d/{{ dovecot_short_version }}/{{ item }}.j2
     dest: /etc/dovecot/auth.d/{{ item }}
     backup: true
     mode: "0644"
-  loop:
-    - auth-checkpassword.conf.ext
-    - auth-deny.conf.ext
-    - auth-dict.conf.ext
-    - auth-ldap.conf.ext
-    - auth-master.conf.ext
-    - auth-passwdfile.conf.ext
-    - auth-sql.conf.ext
-    - auth-static.conf.ext
-    - auth-system.conf.ext
-    - auth-vpopmail.conf.ext
+  loop: "{{ _authd_templates }}"
   loop_control:
     label: "{{ item }}"
   notify:
@@ -167,19 +146,16 @@
 - name: create conf.ext configuration files
   when:
     - not running_in_check_mode
+    - _dovecot_ext_templates | count > 0
   ansible.builtin.template:
     src: etc/dovecot/{{ item }}.j2
     dest: /etc/dovecot/{{ item }}
     backup: true
     mode: "0644"
-  loop:
-    - dovecot-dict-auth.conf.ext
-    - dovecot-dict-sql.conf.ext
-    - dovecot-ldap.conf.ext
-    - dovecot-sql.conf.ext
+  loop: "{{ _dovecot_ext_templates }}"
   loop_control:
     label: "{{ item }}"
   notify:
-    - restart dovecot
+#     - restart dovecot
 
 ...
