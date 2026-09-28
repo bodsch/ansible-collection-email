@@ -1,7 +1,7 @@
 namespace: bodsch
 name: email
 
-version: 1.1.1
+version: 2.0.0
 
 readme: README.md
 
@@ -16,11 +16,12 @@ tags:
   - email
   - postfix
   - dovecot
+  - rspamd
   - mailcow
 
 dependencies:
   "community.general": "*"
-  "bodsch.core": ">=2.7.0"
+  "bodsch.core": ">=2.14.0"
 
 repository: https://github.com/bodsch/ansible-collection-email
 documentation: https://github.com/bodsch/ansible-collection-email/README.md
@@ -28,12 +29,19 @@ homepage: https://github.com/bodsch/ansible-collection-email
 issues: https://github.com/bodsch/ansible-collection-email/issues
 
 build_ignore:
-  - "galaxy.yml"
   - "*.pyc"
   - "*.retry"
+  - "*/molecule"
   - ".ansible-lint"
+  - ".config"
   - ".editorconfig"
   - ".flake8"
+  - ".git"
+  - ".github"
   - ".gitignore"
   - ".yamllint"
-  - ".github"
+  - "Makefile"
+  - "galaxy.yml"
+  - "hooks"
+  - "test-requirements.txt"
+  - "tox.ini"
