@@ -53,15 +53,15 @@
     dovecot_short_version: "{{ _dovecot_version.versions.short_version }}"
     # without the package release - dovecot_config_version only accepts a
     # version dovecot itself knows, so arch linux' "2.4.1-4" is rejected
-    dovecot_upstream_version: "{{ _dovecot_version.versions.upstream_version }}"
+    # dovecot_upstream_version: "{{ _dovecot_version.versions.upstream_version }}"
 
 - name: create custom fact file
+  when:
+    - not running_in_check_mode
   bodsch.core.facts:
-    name: dovecot_version
+    name: dovecot
     facts:
       version: "{{ _dovecot_version.versions.full_version  }}"
       short_version: "{{ _dovecot_version.versions.short_version }}"
-  when:
-    - not running_in_check_mode
 
 ...

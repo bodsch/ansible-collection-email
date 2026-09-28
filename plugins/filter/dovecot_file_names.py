@@ -28,7 +28,7 @@ class FilterModule:
         Used to derive the list of configuration files a dovecot version
         owns, from the templates that exist for it.
 
-            ["…/2.4/conf.d/10-auth.conf.j2", "…/2.4/conf.d/10-mail.conf.j2"]
+            ["../2.4/conf.d/10-auth.conf.j2", "../2.4/conf.d/10-mail.conf.j2"]
             -> ["10-auth.conf", "10-mail.conf"]
 
         Only a trailing ".j2" is removed, so a name that contains ".j2"

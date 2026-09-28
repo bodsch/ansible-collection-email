@@ -36,6 +36,10 @@ class FilterModule:
             "%{md5}"               + ["%{sha1}"]    -> False
             "sha1"                 + ["%{sha1}"]    -> False
         """
+        display.vv(
+            f"bodsch.email::validate_attachment_hash('{data}', '{compare_to_list}')"
+        )
+
         if not isinstance(data, str):
             raise AnsibleFilterError(
                 f"validate_attachment_hash expects a string, got {type(data).__name__}: {data!r}"
@@ -46,10 +50,6 @@ class FilterModule:
                 "validate_attachment_hash expects a list of allowed hashes, got "
                 f"{type(compare_to_list).__name__}: {compare_to_list!r}"
             )
-
-        display.vv(
-            f"bodsch.email::validate_attachment_hash('{data}', '{compare_to_list}')"
-        )
 
         if ":" in data:
             # "%{sha1}" has to match "%{sha1:2}" as well, so compare without

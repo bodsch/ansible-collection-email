@@ -75,6 +75,9 @@ class FilterModule:
         resolves everything up to the last "/" as a literal directory, so a
         wildcard in the directory part - "2.*/conf.d/*.j2" - never matches.
         """
+        display.vv(
+            f"bodsch.email::dovecot_template_versions(data, {version})")
+
         if not isinstance(data, list):
             raise AnsibleFilterError(
                 f"dovecot_template_versions expects the filetree as a list, "
@@ -141,10 +144,6 @@ class FilterModule:
             },
         }
 
-        display.vv(
-            f"bodsch.email::dovecot_template_versions({version}) = "
-            f"available={result['available']}, versions={result['versions']}, "
-            f"stale={result['stale']}"
-        )
+        display.vv(f"result = {result}")
 
         return result

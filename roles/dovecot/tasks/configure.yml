@@ -23,10 +23,10 @@
         createhome: true
         home: "{{ dovecot_virtual_user.home }}"
 
-- name: gathering facts now
-  when:
-    - not running_in_check_mode
-  ansible.builtin.setup:
+# - name: gathering facts now
+#   when:
+#     - not running_in_check_mode
+#   ansible.builtin.setup:
 
 # The template tree carries one directory per dovecot version:
 #
@@ -204,7 +204,7 @@
     _dovecot_stale_configs: "{{
       (_dovecot_templates.stale['conf.d'] | map('regex_replace', '^', '/etc/dovecot/conf.d/') | list) +
       (_dovecot_templates.stale['auth.d'] | map('regex_replace', '^', '/etc/dovecot/auth.d/') | list) +
-      (_dovecot_templates.stale['root'] | map('regex_replace', '^', '/etc/dovecot/') | list) }}"
+      (_dovecot_templates.stale['root']   | map('regex_replace', '^', '/etc/dovecot/') | list) }}"
 
 # Dovecot 2.4 refuses to start when it finds a setting it does not know, so a
 # 2.3 -> 2.4 upgrade has to get rid of the configuration files of the old
