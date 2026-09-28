@@ -1,0 +1,96 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{% import 'jinja_macros.j2' as mcr with context %}
+# {{ ansible_managed }}
+
+{#
+  2.3 -> 2.4 mapping
+    submission_client_workarounds -> boolean list block
+    submission_logout_format      -> in=%{input} out=%{output}
+  New in 2.4: submission_backend_capabilities
+#}
+{% if dovecot_submission.hostname is defined and
+      dovecot_submission.hostname | string | length > 0 %}
+hostname                      = {{ dovecot_submission.hostname }}
+{% endif %}
+{% if dovecot_submission.logout_format is defined and
+      dovecot_submission.logout_format | string | length > 0 %}
+submission_logout_format      = {{ dovecot_submission.logout_format }}
+{% endif %}
+{% if dovecot_submission.max_mail_size is defined and
+      dovecot_submission.max_mail_size | string | length > 0 %}
+submission_max_mail_size      = {{ dovecot_submission.max_mail_size }}
+{% endif %}
+{% if dovecot_submission.max_recipients is defined and
+      dovecot_submission.max_recipients | string | length > 0 %}
+submission_max_recipients     = {{ dovecot_submission.max_recipients }}
+{% endif %}
+{% if dovecot_submission.backend_capabilities is defined and
+      dovecot_submission.backend_capabilities | string | length > 0 %}
+submission_backend_capabilities = {{ dovecot_submission.backend_capabilities }}
+{% endif %}
+{% if dovecot_submission.client_workarounds is defined and
+      dovecot_submission.client_workarounds | count > 0 %}
+  {% set _attr = ['whitespace-before-path', 'mailbox-for-path'] %}
+{{ mcr.bool_list('submission_client_workarounds', dovecot_submission.client_workarounds | bodsch.core.compare_list(compare_to_list=_attr)) }}
+{% endif %}
+{% if dovecot_submission.relay_host is defined and
+      dovecot_submission.relay_host | string | length > 0 %}
+submission_relay_host         = {{ dovecot_submission.relay_host }}
+{% endif %}
+{% if dovecot_submission.relay_port is defined and
+      dovecot_submission.relay_port | string | length > 0 %}
+submission_relay_port         = {{ dovecot_submission.relay_port }}
+{% endif %}
+{% if dovecot_submission.relay_trusted is defined and
+      dovecot_submission.relay_trusted | string | length > 0 %}
+submission_relay_trusted      = {{ dovecot_submission.relay_trusted | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_submission.relay_user is defined and
+      dovecot_submission.relay_user | string | length > 0 %}
+submission_relay_user         = {{ dovecot_submission.relay_user }}
+{% endif %}
+{% if dovecot_submission.relay_master_user is defined and
+      dovecot_submission.relay_master_user | string | length > 0 %}
+submission_relay_master_user  = {{ dovecot_submission.relay_master_user }}
+{% endif %}
+{% if dovecot_submission.relay_password is defined and
+      dovecot_submission.relay_password | string | length > 0 %}
+submission_relay_password     = {{ dovecot_submission.relay_password }}
+{% endif %}
+{% if dovecot_submission.relay_ssl is defined and
+      dovecot_submission.relay_ssl | string | length > 0 %}
+  {% set _attr = ['smtps', 'starttls'] %}
+  {% if dovecot_submission.relay_ssl | bodsch.core.type == "bool" %}
+submission_relay_ssl          = {{ dovecot_submission.relay_ssl | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+  {% elif dovecot_submission.relay_ssl in _attr %}
+submission_relay_ssl          = {{ dovecot_submission.relay_ssl }}
+  {% endif %}
+{% endif %}
+{% if dovecot_submission.relay_ssl_verify is defined and
+      dovecot_submission.relay_ssl_verify | string | length > 0 %}
+submission_relay_ssl_verify   = {{ dovecot_submission.relay_ssl_verify | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_submission.relay_rawlog_dir is defined and
+      dovecot_submission.relay_rawlog_dir | string | length > 0 %}
+submission_relay_rawlog_dir   = {{ dovecot_submission.relay_rawlog_dir }}
+{% endif %}
+{% if dovecot_submission.protocols is defined and
+      dovecot_submission.protocols | count > 0 %}
+  {% for pr in dovecot_submission.protocols %}
+    {% set _name = pr.name | default(pr.keys() | first) %}
+    {% set _body = pr[_name] | default({}) if _name in pr else pr %}
+protocol {{ _name }} {
+    {% for k, v in _body.items() if k != 'name' %}
+      {% if k == 'mail_plugins' %}
+{{ mcr.bool_list('mail_plugins', v, '  ') }}
+      {% elif v | bodsch.core.type == "list" %}
+        {% if v | count > 0 %}
+  {{ "%-27s" | format(k) }} = {{ v | join(' ') }}
+        {% endif %}
+      {% elif v | string | length > 0 %}
+  {{ "%-27s" | format(k) }} = {{ v }}
+      {% endif %}
+    {% endfor %}
+}
+  {% endfor %}
+{% endif %}

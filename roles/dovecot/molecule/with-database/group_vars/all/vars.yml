@@ -32,28 +32,39 @@ dovecot_mail:
   last_valid_gid: 1101
 
   namespaces:
-    - type: private
-      name: inbox
+    - name: inbox
+      type: private
       separator: "."
       prefix: INBOX.
       inbox: true
       list: true
       subscriptions: true
-      location: "maildir:%h:INDEX=/srv/mail/INDEX/%d/%n:CONTROL=/srv/mail/CONTROL/%d/%n:LAYOUT=maildir++"
+      location: "maildir:%h:INDEX=/var/mail/INDEX/%d/%n:CONTROL=/var/mail/CONTROL/%d/%n:LAYOUT=maildir++"
 
-    - type: public
+    - name: public
+      type: public
       separator: "."
       prefix: shared.
-      location: "maildir:/srv/mail/PUBLIC:INDEX=/srv/mail/PUBLIC/indexes:CONTROL=/srv/mail/PUBLIC/control:LAYOUT=maildir++"
+      location: "maildir:/var/mail/PUBLIC:INDEX=/var/mail/PUBLIC/indexes:CONTROL=/var/mail/PUBLIC/control:LAYOUT=maildir++"
       list: children
       subscriptions: true
 
-    - type: shared
+    - name: shared
+      type: shared
       seperator: "."
       prefix: "shared.%%u."
       location: "maildir:%%h:INDEX=~/Shared/%%u"
       list: children
       subscriptions: false
+
+    - name: virtual
+      type: private
+      seperator: "."
+      prefix: "virtual.%%u."
+      location: "maildir:/var/mail/virtual"
+      list: children
+      subscriptions: false
+
 
 dovecot_auth:
   disable_plaintext_auth: true
@@ -61,7 +72,7 @@ dovecot_auth:
 dovecot_acl:
   plugins:
     - acl: vfile:/etc/dovecot/global-acls:cache_secs=300
-    - acl_shared_dict: file:/srv/mail/%d/shared-mailboxes.db
+    - acl_shared_dict: file:/var/mail/%d/shared-mailboxes.db
 
 # Database related
 
@@ -89,8 +100,8 @@ dovecot_sql:
       WHERE username = '%u'
   user_query: >
     SELECT
-      '/srv/mail/%d/%n' as home,
-      CONCAT('maildir:/srv/mail/', maildir) AS mail,
+      '/var/mail/%d/%n' as home,
+      CONCAT('maildir:/var/mail/', maildir) AS mail,
       1101 AS uid,
       1101 AS gid
       FROM mailbox

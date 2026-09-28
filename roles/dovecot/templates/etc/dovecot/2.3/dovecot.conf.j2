@@ -1,0 +1,61 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+# {{ ansible_managed }}
+
+# If you're in a hurry, see http://wiki2.dovecot.org/QuickConfiguration
+
+# "doveconf -n" command gives a clean output of the changed settings. Use it
+# instead of copy&pasting files when posting to the Dovecot mailing list.
+
+# Enable installed protocols
+!include_try /usr/share/dovecot/protocols.d/*.protocol
+
+listen                        = {{ dovecot_config.listen | join(', ') }}
+base_dir                      = {{ dovecot_config.base_dir }}
+instance_name                 = {{ dovecot_config.instance_name | default('dovecot') }}
+login_greeting                = {{ dovecot_config.login_greeting }}
+
+{% if dovecot_config.login_trusted_networks is defined and
+      dovecot_config.login_trusted_networks | count > 0 %}
+login_trusted_networks        = {{ dovecot_config.login_trusted_networks | join(' ') }}
+{% endif %}
+{% if dovecot_config.login_access_socket is defined and
+      dovecot_config.login_access_socket | count > 0 %}
+login_access_sockets          = {{ dovecot_config.login_access_sockets | join(' ') }}
+{% endif %}
+{% if dovecot_config.auth_proxy_self is defined and
+      dovecot_config.auth_proxy_self | string | length > 0 %}
+auth_proxy_self               = {{ dovecot_config.auth_proxy_self }}
+{% endif %}
+{% if dovecot_config.verbose_proctitle is defined and
+      dovecot_config.verbose_proctitle | string | length > 0 %}
+verbose_proctitle             = {{ dovecot_config.verbose_proctitle | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_config.shutdown_clients is defined and
+      dovecot_config.shutdown_clients | string | length > 0 %}
+shutdown_clients              = {{ dovecot_config.shutdown_clients | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if dovecot_config.doveadm_worker_count is defined and
+      dovecot_config.doveadm_worker_count | string | length > 0 and
+      dovecot_config.doveadm_worker_count | int >= -1 %}
+doveadm_worker_count          = {{ dovecot_config.doveadm_worker_count }}
+{% endif %}
+{% if dovecot_config.doveadm_socket_path is defined and
+      dovecot_config.doveadm_socket_path | string | length > 0 %}
+doveadm_socket_path           = {{ dovecot_config.doveadm_socket_path | default('doveadm-server') }}
+{% endif %}
+{% if dovecot_config.import_environment is defined and
+      dovecot_config.import_environment | count > 0 %}
+import_environment            = {{ dovecot_config.import_environment | join(' ') }}
+{% endif %}
+
+{% if dovecot_config.dictionaries is defined and
+      dovecot_config.dictionaries | count > 0 %}
+dict {
+{% for k, v in dovecot_config.dictionaries.items() %}
+  {{ k }} = {{ v }}
+{% endfor %}
+}
+{% endif %}
+
+!include conf.d/*.conf
+!include_try local.conf

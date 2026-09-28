@@ -28,32 +28,66 @@ module: postfix_virtual_backends
 author: Bodo 'bodsch' Schulz <bodo@boone-schulz.de>
 version_added: 1.0.0
 
-short_description: TBD
+short_description: Write the postfix lookup table definitions for virtual domains.
 description:
-    - TBD
+    - >-
+      Writes one definition file per backend, grouped by backend type, for
+      example C(<dest>/mysql/virtual_alias_maps).
+    - >-
+      The whole definition is checksummed under C(/var/cache/ansible/postfix),
+      so an unchanged run writes nothing and fires no handler.
+    - Supports check mode - the pending changes are reported but nothing is written.
 
 options:
   backends:
-    description: TBD
+    description:
+      - The backend definitions, keyed by backend type (C(mysql), C(pgsql), C(ldap), ...).
+      - Every definition needs a C(name) plus its database connection details.
     required: true
     type: dict
-
+  dest:
+    description: Directory the definition files are written into.
+    required: true
+    type: str
   force:
-    description: TBD
+    description:
+      - Discard the checksum cache, which makes the next run rewrite every file.
     required: false
     type: bool
     default: false
-
-  dest:
-    description: TBD
-    required: true
-    type: str
+  backup:
+    description: Keep a timestamped copy of a file before overwriting it.
+    required: false
+    type: bool
+    default: false
 """
 
 EXAMPLES = r"""
+- name: write the virtual backend definitions
+  bodsch.email.postfix_virtual_backends:
+    dest: /etc/postfix/virtual.d
+    backends:
+      mysql:
+        - name: virtual_alias_maps
+          username: postfix
+          password: "{{ vault_postfix_db_password }}"
+          hosts:
+            - 127.0.0.1
+          dbname: postfix
+          query: "SELECT goto FROM alias WHERE address='%s'"
+    backup: true
 """
 
 RETURN = r"""
+changed:
+    description: Whether at least one definition file was written.
+    returned: always
+    type: bool
+result:
+    description: Per file state.
+    returned: always
+    type: list
+    elements: dict
 """
 
 # ----------------------------------------------------------------------
@@ -70,10 +104,15 @@ query    =
 
 
 class PostfixVirtualBackends:
-    """ """
+    """
+    Render the lookup table definitions postfix needs for virtual domains,
+    one file per backend, and report per file whether it changed.
+    """
 
     def __init__(self, module):
-        """ """
+        """
+        Initialize all needed Variables
+        """
         self.module = module
         self.module.log("PostfixVirtualBackends::__init__()")
 
@@ -84,7 +123,17 @@ class PostfixVirtualBackends:
         self.backup = module.params.get("backup")
 
     def run(self):
-        """ """
+        """
+        Write one map file per configured backend.
+
+        The whole backend definition is checksummed first, so a run that
+        changes nothing touches no file and fires no handler. With force the
+        checksum cache is discarded, which makes the next run rewrite
+        everything.
+
+        Returns a result mapping with failed, changed and the per file
+        state.
+        """
         self.module.log("PostfixVirtualBackends::run()")
 
         _changed = False
@@ -96,7 +145,7 @@ class PostfixVirtualBackends:
 
         result_state = []
 
-        if self.force:
+        if self.force and not self.module.check_mode:
             if os.path.exists(self.cache_directory):
                 shutil.rmtree(self.cache_directory)
 
@@ -120,7 +169,8 @@ class PostfixVirtualBackends:
 
             self.module.log(f"  - dest: {self.dest},  backend_type: {backend_type}, backend_def: {backend_def}")
 
-            create_directory(os.path.join(self.dest, backend_type))
+            if not self.module.check_mode:
+                create_directory(os.path.join(self.dest, backend_type))
 
             for backend_data in backend_def:
                 file_name = backend_data.get("name", None)
@@ -158,7 +208,7 @@ class PostfixVirtualBackends:
             self.module, result_state
         )
 
-        if not _failed:
+        if not _failed and not self.module.check_mode:
             self.checksum.write_checksum(checksum_file=checksum_file, checksum=checksum)
 
         result = dict(changed=_changed, failed=_failed, result=result_state)
@@ -166,11 +216,19 @@ class PostfixVirtualBackends:
         return result
 
     def _validate_backend(self, backend_data):
-        """ """
+        """
+        Check one backend definition before anything is written.
+
+        A backend needs a name and the database connection details. Missing
+        pieces are collected so the message names every problem of that
+        entry at once, not just the first.
+
+        Returns (valid, msg).
+        """
         self.module.log("PostfixVirtualBackends::_validate_backend(backend_data)")
 
         valid = False
-        msg = "alles ist um seife"
+        msg = "not validated yet"
 
         error_msg = []
 
@@ -210,7 +268,16 @@ class PostfixVirtualBackends:
         return (valid, msg)
 
     def _write_template(self, file_name, data):
-        """ """
+        """
+        Write one backend definition and say whether it changed.
+
+        The rendered content is compared against a checksum kept in the
+        cache directory, so a run that changes nothing reports changed=False
+        and no handler fires. An existing file is backed up with a timestamp
+        suffix when backup is on.
+
+        Returns (changed, failed, msg).
+        """
         self.module.log(f"PostfixVirtualBackends::_write_template(file_name: {file_name}, data)")
 
         if isinstance(data, dict):
@@ -232,6 +299,11 @@ class PostfixVirtualBackends:
         if not changed:
             return False, False, "The configuration file has not been changed."
 
+        if self.module.check_mode:
+            # report the pending change, but write neither the file nor the
+            # checksum - otherwise the next real run would think it is done
+            return False, True, "The configuration file would be written."
+
         if self.backup and os.path.exists(file_name):
             _dir = os.path.dirname(file_name)
             _file = os.path.basename(file_name)
@@ -251,7 +323,9 @@ class PostfixVirtualBackends:
 
 
 def main():
-    """ """
+    """
+    Write the postfix virtual backend map files (mysql, pgsql, ldap, ...).
+    """
     args = dict(
         backends=dict(required=True, type="dict"),
         force=dict(

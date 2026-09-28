@@ -1,0 +1,113 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{% import 'jinja_macros.j2' as mcr with context %}
+# {{ ansible_managed }}
+
+{#
+  2.3 -> 2.4
+    plugin { }                 -> removed, quota settings are global
+    quota / quota_rule         -> "quota <name> { }" block (structural)
+    quota_grace                -> quota_storage_grace
+    quota_max_mail_size        -> quota_mail_size
+    quota_over_flag            -> quota_over_status_current
+    quota_over_flag_value      -> quota_over_status_mask
+    quota_over_flag_lazy_check -> quota_over_status_lazy_check
+    quota_over_script          -> quota_over_status + execute filter
+    quota_warning*             -> "quota_warning <name> { }" block
+
+  Also note: the dict quota driver and dirsize quota were removed in 2.4 -
+  use the count driver together with quota-clone.
+#}
+{% if dovecot_quota.plugins is defined and
+      dovecot_quota.plugins | count > 0 and
+      dovecot_quota.plugins | bodsch.core.type == "list" %}
+  {% for plugin in dovecot_quota.plugins %}
+    {% for key, value in plugin.items() %}
+      {% if value | bodsch.core.type == "dict" %}
+        {% for k, v in value.items() %}
+          {% if v | string | length > 0 %}
+{{ mcr.plugin_setting(k, v) }}
+          {% endif %}
+        {% endfor %}
+      {% elif value | string | length > 0 %}
+{{ mcr.plugin_setting(key, value) }}
+      {% endif %}
+    {% endfor %}
+  {% endfor %}
+{% endif %}
+
+{#
+  A quota root is a named filter in 2.4. Nesting:
+
+    quota <root> {
+      quota_warning <name> {
+        execute <script> { }
+      }
+    }
+#}
+{% if dovecot_quota.quotas is defined and
+      dovecot_quota.quotas | count > 0 %}
+  {% for _root, _settings in dovecot_quota.quotas.items() %}
+quota {{ _root }} {
+    {% for _key, _value in _settings.items() if _key not in ['warnings', 'execute'] %}
+      {% if _value | bodsch.core.type == "bool" %}
+  {{ "%-27s" | format(_key) }} = {{ _value | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+      {% elif _value | bodsch.core.type == "list" %}
+        {% if _value | count > 0 %}
+  {{ "%-27s" | format(_key) }} = {{ _value | join(' ') }}
+        {% endif %}
+      {% elif _value | string | length > 0 %}
+  {{ "%-27s" | format(_key) }} = {{ _value }}
+      {% endif %}
+    {% endfor %}
+    {% for _name, _warning in (_settings.warnings | default({})).items() %}
+{#    dovecot 2.4 refuses a quota_warning without an execute block #}
+      {% if _warning.execute is not defined or _warning.execute | count == 0 %}
+  # UNMAPPED quota_warning {{ _name }}
+  #   dovecot 2.4 requires an execute block inside quota_warning.
+  #   Add: execute: {<script>: {execute_args: "..."}}
+      {% else %}
+  quota_warning {{ _name }} {
+        {% for _key, _value in _warning.items() if _key != 'execute' %}
+          {% if _value | string | length > 0 %}
+    {{ "%-25s" | format(_key) }} = {{ _value }}
+          {% endif %}
+        {% endfor %}
+        {% for _script, _exec in _warning.execute.items() %}
+    execute {{ _script }} {
+          {% for _key, _value in (_exec | default({})).items() %}
+            {% if _value | string | length > 0 %}
+      {{ "%-23s" | format(_key) }} = {{ _value }}
+            {% endif %}
+          {% endfor %}
+    }
+        {% endfor %}
+  }
+      {% endif %}
+    {% endfor %}
+}
+  {% endfor %}
+{% endif %}
+
+{% if dovecot_quota.services is defined and
+      dovecot_quota.services | count > 0 %}
+  {% set _service_renames = {
+    'service_count': 'service_restart_request_count',
+    'idle_kill': 'service_idle_kill_interval',
+  } %}
+  {% for service in dovecot_quota.services %}
+    {% for key, values in service.items() %}
+service {{ key }} {
+      {% for k, v in values.items() %}
+        {% if k == "listeners" and v | bodsch.core.type == "list" %}
+{{ mcr.listeners(v) }}
+        {% else %}
+          {% if v | string | length > 0 and v | bodsch.email.config_value %}
+  {{ "%-27s" | format(_service_renames.get(k, k)) }} = {{ v | bodsch.email.config_value | replace('$default_', '$SET:default_') }}
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+}
+
+    {% endfor %}
+  {% endfor %}
+{% endif %}

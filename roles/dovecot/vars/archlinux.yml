@@ -4,4 +4,13 @@ dovecot_packages:
   - dovecot
   - pigeonhole
 
+# Arch ships dovecot 2.4 with the flatcurve and solr backends built in;
+# flatcurve only needs the xapian library at runtime.
+dovecot_fts_packages:
+  flatcurve:
+    - xapian-core
+  solr: []
+  elastic:
+    - dovecot-fts-elastic
+
 ...

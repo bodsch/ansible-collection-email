@@ -1,26 +1,34 @@
+---
 
 DOCUMENTATION:
   name: valid_list_data
   author: Bodo Schulz (@bodsch)
   version_added: 1.0.0
-  short_description: TBD
+  short_description: Keep only the entries that are also in a list of allowed values.
   description:
-    - TBD
-  positional: _input
+    - Drops every entry that is not in I(valid_entries), so a typo cannot reach the configuration.
+    - The result is sorted and free of duplicates, so the rendered file does not change order between runs.
+    - Both input lists are left untouched.
+  positional: _input, valid_entries
   options:
     _input:
-      description: TBD
+      description: The configured entries.
       required: true
-      type: dict
+      type: list
+      elements: str
     valid_entries:
-      description: TBD
+      description: The values that postfix accepts for this setting.
       required: true
-      type: dict
-  notes:
+      type: list
+      elements: str
 
 EXAMPLES: |
-  security_options = postfix_smtpd.sasl.security_options | bodsch.email.valid_list_data(valid_security_options)
+  # ["noanonymous", "noplaintext"]
+  {% set security_options = _postfix_smtpd.sasl.security_options
+       | bodsch.email.valid_list_data(valid_security_options) %}
 
 RETURN:
   _value:
-    description: TBD
+    description: The accepted entries, sorted and without duplicates.
+    type: list
+    elements: str

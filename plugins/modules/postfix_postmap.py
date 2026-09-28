@@ -16,33 +16,40 @@ module: postfix_postmap
 author: Bodo 'bodsch' Schulz <bodo@boone-schulz.de>
 version_added: 1.0.0
 
-short_description: TBD
+short_description: Build a postfix lookup table with postmap.
 description:
-    - TBD
+    - Runs C(postmap <type>:<file>) to build the lookup database for a map file.
+    - Supports check mode - the command is reported but not executed.
 
 options:
-  map_type:
-    description:
-      - (C(btree))
-      - (C(cdb))
-      - (C(dbm))
-      - (C(fail))
-      - (C(lmdb))
-      - (C(sdbm))
-    required: true
-    default: lmdb
-
   filename:
-    description: TBD
+    description: Path of the map source file.
     required: true
     type: str
-    type: bool
+  map_type:
+    description: The lookup table type postmap should build.
+    required: false
+    type: str
+    default: lmdb
+    choices: [btree, cdb, dbm, fail, lmdb, sdbm]
 """
 
 EXAMPLES = r"""
+- name: build the virtual lookup table
+  bodsch.email.postfix_postmap:
+    filename: /etc/postfix/maps.d/virtual
+    map_type: lmdb
 """
 
 RETURN = r"""
+rc:
+    description: Exit code of postmap.
+    returned: always
+    type: int
+msg:
+    description: Output of postmap, or the command that would have run in check mode.
+    returned: always
+    type: str
 """
 
 # ----------------------------------------------------------------------
@@ -79,12 +86,22 @@ class PostfixPostmap:
             return dict(
                 failed=True,
                 changed=False,
-                msg=f"file {self.file_name} does not exists.",
+                msg=f"file {self.filename} does not exists.",
             )
 
         args = []
         args.append(self._postmap)
         args.append(f"{self.map_type}:{self.filename}")
+
+        if self.module.check_mode:
+            # rebuilding the lookup database is a change; report it but do
+            # not touch anything
+            return dict(
+                rc=0,
+                failed=False,
+                changed=True,
+                msg=f"would run: {' '.join(args)}",
+            )
 
         rc, out, err = self._exec(args)
 
@@ -102,7 +119,9 @@ class PostfixPostmap:
         return result
 
     def _exec(self, cmd):
-        """ """
+        """
+        Run postmap and return (rc, stdout, stderr).
+        """
         rc, out, err = self.module.run_command(cmd, check_rc=True)
 
         return rc, out, err
@@ -114,7 +133,9 @@ class PostfixPostmap:
 
 
 def main():
-    """ """
+    """
+    Build the postfix lookup table for a map file with postmap.
+    """
     module = AnsibleModule(
         argument_spec=dict(
             map_type=dict(

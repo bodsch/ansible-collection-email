@@ -1,0 +1,130 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{% import 'jinja_macros.j2' as mcr with context %}
+# {{ ansible_managed }}
+
+{#
+  Full text search for dovecot >= 2.4.
+  See https://doc.dovecot.org/latest/core/plugins/fts.html
+
+  2.3 -> 2.4
+    plugin { fts = <backend> } -> fts_driver
+    plugin { }                 -> removed, the settings are global
+    fts                        -> "fts <backend> { }" named filter
+    fts_enforced               -> fts_search_add_missing / fts_search_read_fallback
+    fts_decoder                -> fts_decoder_driver + fts_decoder_script_socket_path
+    fts_tika                   -> fts_decoder_driver + fts_decoder_tika_url
+    fts_solr                   -> "fts solr { url = ... }"
+    fts_languages              -> "language <name> { }" blocks
+    fts_filters                -> language_filters
+    fts_tokenizers             -> language_tokenizer_*
+    fts_index_timeout          -> fts_search_timeout
+    fts-lucene / fts-squat     -> removed, use fts-flatcurve or fts-solr
+
+  dovecot_fts.backends and dovecot_fts.language may be written either as a
+  mapping or as a list of single key mappings.
+#}
+{% if dovecot_fts is defined and
+      dovecot_fts | bodsch.core.type == "dict" and
+      dovecot_fts | count > 0 %}
+{#
+  Configuring a backend does NOT switch full text search on - fts_driver
+  selects which one is used. This is what "plugin { fts = ... }" did in 2.3.
+#}
+{% set _backend_names = mcr.named_filter_names(dovecot_fts.backends | default({})) | trim | split(' ') %}
+  {% if dovecot_fts.driver is defined and
+        dovecot_fts.driver | string | length > 0 %}
+    {% if dovecot_fts.driver not in _backend_names %}
+# NOTE fts_driver is "{{ dovecot_fts.driver }}", but no matching
+#   "fts {{ dovecot_fts.driver }} { }" block is configured. Add it to
+#   dovecot_fts.backends, otherwise the backend runs with its defaults.
+    {% endif %}
+fts_driver                    = {{ dovecot_fts.driver }}
+  {% endif %}
+  {% if dovecot_fts.autoindex is defined and
+        dovecot_fts.autoindex | string | length > 0 %}
+fts_autoindex                 = {{ dovecot_fts.autoindex | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+  {% endif %}
+  {% if dovecot_fts.autoindex_max_recent_msgs is defined and
+        dovecot_fts.autoindex_max_recent_msgs | string | length > 0 %}
+fts_autoindex_max_recent_msgs = {{ dovecot_fts.autoindex_max_recent_msgs | int }}
+  {% endif %}
+  {% if dovecot_fts.search_add_missing is defined and
+        dovecot_fts.search_add_missing | string | length > 0 %}
+fts_search_add_missing        = {{ dovecot_fts.search_add_missing | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+  {% endif %}
+  {% if dovecot_fts.search_read_fallback is defined and
+        dovecot_fts.search_read_fallback | string | length > 0 %}
+fts_search_read_fallback      = {{ dovecot_fts.search_read_fallback | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+  {% endif %}
+  {% if dovecot_fts.search_timeout is defined and
+        dovecot_fts.search_timeout | string | length > 0 %}
+fts_search_timeout            = {{ dovecot_fts.search_timeout }}
+  {% endif %}
+  {% if dovecot_fts.message_max_size is defined and
+        dovecot_fts.message_max_size | string | length > 0 %}
+fts_message_max_size          = {{ dovecot_fts.message_max_size }}
+  {% endif %}
+
+  {% if dovecot_fts.decoder_driver is defined and
+        dovecot_fts.decoder_driver | string | length > 0 and
+        dovecot_fts.decoder_driver in ['tika', 'script'] %}
+
+## attachment decoding
+fts_decoder_driver            = {{ dovecot_fts.decoder_driver }}
+    {% if dovecot_fts.decoder_driver == 'tika' and
+          dovecot_fts.decoder_tika_url is defined and
+          dovecot_fts.decoder_tika_url | string | length > 0 %}
+fts_decoder_tika_url          = {{ dovecot_fts.decoder_tika_url }}
+    {% endif %}
+    {% if dovecot_fts.decoder_driver == 'script' and
+          dovecot_fts.decoder_script_socket_path is defined and
+          dovecot_fts.decoder_script_socket_path | string | length > 0 %}
+fts_decoder_script_socket_path = {{ dovecot_fts.decoder_script_socket_path }}
+    {% endif %}
+  {% endif %}
+
+{#
+  Every configured backend is written out; fts_driver above picks the one
+  that is actually used.
+#}
+  {% if dovecot_fts.backends is defined and
+        dovecot_fts.backends | count > 0 %}
+
+## backends
+{{ mcr.named_filters('fts', dovecot_fts.backends) }}
+  {% endif %}
+
+{#
+  These belong to the language framework and apply regardless of the backend,
+  so they are not tied to one of them.
+#}
+  {% set _has_language = (dovecot_fts.language_filters | default([]) | count > 0)
+                      or (dovecot_fts.language_tokenizers | default([]) | count > 0)
+                      or (dovecot_fts.language_tokenizer_generic_algorithm | default('') | string | length > 0)
+                      or (dovecot_fts.language_filter_stopwords_dir | default('') | string | length > 0)
+                      or (dovecot_fts.language | default([]) | count > 0) %}
+  {% if _has_language %}
+
+## language handling
+  {% endif %}
+  {% if dovecot_fts.language_filters is defined and
+        dovecot_fts.language_filters | count > 0 %}
+language_filters              = {{ dovecot_fts.language_filters | join(' ') }}
+  {% endif %}
+  {% if dovecot_fts.language_tokenizers is defined and
+        dovecot_fts.language_tokenizers | count > 0 %}
+language_tokenizers           = {{ dovecot_fts.language_tokenizers | join(' ') }}
+  {% endif %}
+  {% if dovecot_fts.language_tokenizer_generic_algorithm is defined and
+        dovecot_fts.language_tokenizer_generic_algorithm | string | length > 0 %}
+language_tokenizer_generic_algorithm = {{ dovecot_fts.language_tokenizer_generic_algorithm }}
+  {% endif %}
+  {% if dovecot_fts.language_filter_stopwords_dir is defined and
+        dovecot_fts.language_filter_stopwords_dir | string | length > 0 %}
+language_filter_stopwords_dir = {{ dovecot_fts.language_filter_stopwords_dir }}
+  {% endif %}
+  {% if dovecot_fts.language is defined and
+        dovecot_fts.language | count > 0 %}
+{{ mcr.named_filters('language', dovecot_fts.language) }}
+  {% endif %}
+{% endif %}

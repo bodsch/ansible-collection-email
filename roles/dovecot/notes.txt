@@ -1,0 +1,14 @@
+
+# dovecot_version
+
+debian:12   : 2.3.19.1
+debian:13   : 2.4.1-4
+
+ubuntu:22.04: 2.3.16
+ubuntu:24.04: 2.3.21
+
+archlinux   : 2.4.4
+
+https://doc.dovecot.org/2.4.1/installation/upgrade/2.3-to-2.4.html
+
+https://github.com/dovecot/tools/blob/main/dovecot-2.4.0-example-config.tar.gz

@@ -1,0 +1,39 @@
+---
+
+mariadb_use_external_repo: true
+
+mariadb_debian_repo: https://dlm.mariadb.com/repo
+mariadb_version: 12.rolling
+
+#mariadb_root_password: Y5FZfKXzCeOWGf4kBOiFSp6Il
+#mariadb_root_password_update: true
+
+mariadb_system_users:
+  - username: root
+    password: ""
+    home: /root
+    update: true
+    ignore: true
+
+mariadb_databases:
+  - name: postfix
+    collation: utf8mb4_bin
+    encoding: utf8mb4
+
+mariadb_users:
+  - name: postfix
+    host: "%"
+    password: postfix
+    priv: "postfix.*:ALL"
+    encrypted: false
+
+mariadb_config_mysqld:
+  bind_address: 0.0.0.0
+  socket: "{{ mariadb_socket }}"
+  skip_external_locking:
+  skip_name_resolve: 1
+  performance_schema: 1
+  expire_logs_days: 2
+  max_connections: 20
+
+...

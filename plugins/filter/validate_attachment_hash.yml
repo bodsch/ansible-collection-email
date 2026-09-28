@@ -1,25 +1,34 @@
+---
 
 DOCUMENTATION:
   name: validate_attachment_hash
   author: Bodo Schulz (@bodsch)
   version_added: 1.0.0
-  short_description: TBD
+  short_description: Check a dovecot mail_attachment_hash value against the allowed hashes.
   description:
-    - TBD
-  positional: _input
+    - >-
+      A value that carries arguments, recognised by the colon in it, is matched against the
+      allowed patterns without their closing brace, so C(%{sha1}) also covers C(%{sha1:2}).
+    - A value without arguments has to appear in the list verbatim.
+  positional: _input, compare_to_list
   options:
     _input:
-      description: TBD
+      description: The configured C(mail_attachment_hash) value.
       required: true
-      type: dict
+      type: str
     compare_to_list:
-      description: TBD
+      description: The hash patterns dovecot accepts.
       required: true
       type: list
-  notes:
+      elements: str
 
-EXAMPLES: TBD
+EXAMPLES: |
+  {% set _attr = ['%{md4}', '%{md5}', '%{sha1}', '%{sha256}', '%{sha512}', '%{size}'] %}
+  {% if dovecot_mail.mail_attachment_hash | bodsch.email.validate_attachment_hash(_attr) %}
+  mail_ext_attachment_hash = {{ dovecot_mail.mail_attachment_hash }}
+  {% endif %}
 
 RETURN:
   _value:
-    description: TBD
+    description: C(true) when the value is one of the allowed hashes.
+    type: bool

@@ -27,22 +27,63 @@ module: postfix_maps
 author: Bodo 'bodsch' Schulz <bodo@boone-schulz.de>
 version_added: 1.0.0
 
-short_description: TBD
+short_description: Write postfix lookup table files.
 description:
-    - TBD
+    - Writes one file per configured map and optionally runs postmap on it.
+    - >-
+      The content is compared against a checksum kept under
+      C(/var/cache/ansible/postfix), so an unchanged run writes nothing and
+      fires no handler.
+    - >-
+      Every map definition is validated before anything is written, and the
+      message names every problem of an entry at once.
+    - This module does not support check mode.
 
 options:
   maps:
-    description: TBD
+    description:
+      - The lookup tables to write.
+      - >-
+        Every entry needs a C(name) and a C(map) with C(file) and C(vars);
+        C(map.type) defaults to C(lmdb). Set C(postmap) to build the lookup
+        database afterwards.
     required: true
     type: list
-    default: []
+    elements: dict
+  backup:
+    description: Keep a timestamped copy of a file before overwriting it.
+    required: false
+    type: bool
+    default: false
 """
 
 EXAMPLES = r"""
+- name: create postfix maps
+  bodsch.email.postfix_maps:
+    maps:
+      - name: virtual
+        map:
+          file: /etc/postfix/maps.d/virtual
+          vars: "{{ postfix_virtual.aliases }}"
+        postmap: true
+      - name: transport_maps
+        map:
+          file: /etc/postfix/maps.d/transport_maps
+          vars: "{{ postfix_transport.transport_maps }}"
+    backup: true
+  register: postfix_maps
 """
 
 RETURN = r"""
+changed:
+    description: Whether at least one map file was written.
+    returned: always
+    type: bool
+result:
+    description: Per map file state.
+    returned: always
+    type: list
+    elements: dict
 """
 
 # ----------------------------------------------------------------------
@@ -145,11 +186,19 @@ class PostfixMaps:
         return result
 
     def _validate_map(self, map_data):
-        """ """
+        """
+        Check one map definition before anything is written.
+
+        A map needs a name and, when a map section is given, a supported
+        type and a file. Missing pieces are collected so the message names
+        every problem of that entry at once, not just the first.
+
+        Returns (valid, msg).
+        """
         self.module.log("PostfixMaps::_validate_map(map_data)")
 
         valid = False
-        msg = "alles ist um seife"
+        msg = "not validated yet"
 
         error_msg = []
 
@@ -198,7 +247,15 @@ class PostfixMaps:
     # - checksum vergleich
     # - move
     def _write_template(self, file_name, data):
-        """ """
+        """
+        Write one map file and say whether it changed.
+
+        The content is compared against a checksum kept in the cache
+        directory, so an unchanged run reports changed=False and no handler
+        fires.
+
+        Returns (changed, failed, msg).
+        """
         self.module.log(f"PostfixMaps::_write_template(file_name: {file_name}, data)")
 
         if isinstance(data, dict):
@@ -272,7 +329,9 @@ class PostfixMaps:
         return result
 
     def _exec(self, cmd):
-        """ """
+        """
+        Run a command and return (rc, stdout, stderr).
+        """
         rc, out, err = self.module.run_command(cmd, check_rc=True)
 
         if rc != 0:
@@ -292,7 +351,9 @@ class PostfixMaps:
 
 
 def main():
-    """ """
+    """
+    Write the postfix lookup table files and optionally run postmap on them.
+    """
     args = dict(
         maps=dict(
             required=True,

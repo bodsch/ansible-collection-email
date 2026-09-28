@@ -1,0 +1,56 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+# {{ ansible_managed }}
+
+{#
+  New in 2.4: the global "dict { name = uri }" block of dovecot.conf became
+  "dict_server { dict <name> { ... } }", and the referenced
+  dovecot-dict-sql.conf.ext files were folded into that block.
+
+  A 2.3 entry such as
+    quota = mysql:/etc/dovecot/dovecot-dict-sql.conf.ext
+  therefore cannot be converted mechanically - the settings of the external
+  file have to be restated inline. Such entries are written as UNMAPPED
+  comments; configure dovecot_dict_server for the 2.4 form.
+#}
+{% if dovecot_dict_server.dicts is defined and
+      dovecot_dict_server.dicts | count > 0 %}
+dict_server {
+  {% for dict in dovecot_dict_server.dicts %}
+    {% for name, values in dict.items() %}
+  dict {{ name }} {
+      {% for k, v in values.items() %}
+        {% if k == 'maps' and v | bodsch.core.type == "list" %}
+          {% for map in v %}
+            {% for pattern, fields in map.items() %}
+    dict_map {{ pattern }} {
+              {% for fk, fv in fields.items() %}
+                {% if fv | bodsch.core.type == "dict" %}
+      {{ fk }} {
+                  {% for ffk, ffv in fv.items() %}
+        {{ "%-19s" | format(ffk) }} = {{ ffv }}
+                  {% endfor %}
+      }
+                {% else %}
+      {{ "%-21s" | format(fk) }} = {{ fv }}
+                {% endif %}
+              {% endfor %}
+    }
+            {% endfor %}
+          {% endfor %}
+        {% elif v | string | length > 0 %}
+    {{ "%-23s" | format(k) }} = {{ v }}
+        {% endif %}
+      {% endfor %}
+  }
+    {% endfor %}
+  {% endfor %}
+}
+{% endif %}
+{% if dovecot_config.dictionaries is defined and
+      dovecot_config.dictionaries | count > 0 %}
+  {% for name, uri in dovecot_config.dictionaries.items() %}
+# UNMAPPED dict {{ name }} = {{ uri }}
+#   dovecot 2.4: declare it under dovecot_dict_server.dicts and inline the
+#   settings of the referenced .conf.ext file.
+  {% endfor %}
+{% endif %}

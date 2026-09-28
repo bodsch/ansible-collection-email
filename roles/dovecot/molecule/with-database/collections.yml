@@ -1,0 +1,5 @@
+---
+
+collections:
+  - name: bodsch.database
+    version: ">=2.0.2"

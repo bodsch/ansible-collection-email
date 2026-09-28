@@ -3,15 +3,300 @@
 #}
 {% set print = self %}
 
-{% macro include_paramaters(data, include_type="include_try") %}
-  {% set attr_include_type = ["include", "include_try"] %}
-  {% for incl in dovecot_auth.includes %}
-    {% if incl is defined and not incl == None %}
-      {% if incl[0] != "#" %}
-!{{ include_type }} auth.d/{{ incl }}
+{#
+  The 2.3 '%x' variables are translated by the filters
+
+    bodsch.email.dovecot_path_vars     for path-like values
+    bodsch.email.dovecot_prefix_vars   for a namespace prefix
+
+  They used to be macros here. As filters they are unit tested directly
+  (tests/unit/filter/) instead of only through a rendered template.
+#}
+
+{#
+  Render "!include_try auth.d/<file>" lines.
+
+  An entry prefixed with '#' is rendered as a comment, so the generated file
+  documents which auth backends are available but inactive.
+#}
+{#
+  The include lives in conf.d/10-auth.conf, while the files are written to
+  /etc/dovecot/auth.d - a sibling of conf.d. Dovecot resolves an include
+  relative to the FILE doing the including, so the path needs the '../'.
+  Without it every include silently misses, because include_try does not
+  complain about a file that is not there.
+#}
+{% macro include_paramaters(data, include_type="include_try", authentications={}) %}
+{#
+  Every backend configured in dovecot_authentications gets its file enabled,
+  even when the includes list still has it commented out. Otherwise the two
+  have to be kept in sync by hand, and forgetting it produces a dovecot that
+  starts with no passdb at all:
+
+      auth: Fatal: No passdbs specified in configuration file.
+#}
+  {% set active = [] %}
+  {% for backend in authentications | default({}) %}
+    {% set _ = active.append('auth-' ~ backend ~ '.conf.ext') %}
+  {% endfor %}
+  {% set listed = [] %}
+  {% for incl in data %}
+    {% if incl is defined and incl is not none and incl | string | length > 0 %}
+      {% set entry = incl | string | trim %}
+      {% set name = entry | regex_replace('^#\s*', '') %}
+      {% set _ = listed.append(name) %}
+      {% if entry[0] != "#" or name in active %}
+!{{ include_type }} ../auth.d/{{ name }}
       {% else %}
-# !{{ include_type }} auth.d/{{ incl }}
+# !{{ include_type }} ../auth.d/{{ name }}
       {% endif %}
     {% endif %}
+  {% endfor %}
+{#- a configured backend that is not in the list at all still has to be included -#}
+  {% for name in active if name not in listed %}
+!{{ include_type }} ../auth.d/{{ name }}
   {% endfor -%}
+{% endmacro %}
+
+{#
+  Dovecot 2.4 turned several space separated lists into "boolean lists".
+  "name = a b" REPLACES the list, "name { a = yes }" ADDS to it - the latter
+  is what "$name a b" expressed in 2.3.
+
+  Entries starting with '$' (such as the old '$mail_plugins' placeholder) are
+  dropped: 2.4 has no setting variable expansion.
+#}
+{% macro bool_list(name, values, indent='') %}
+{%- set entries = [] -%}
+{%- for value in values | default([]) -%}
+{#- an empty entry has nothing to enable, and "'' | first" would raise.
+    A value split from an empty string is exactly that: "" | split(' ')
+    yields [''], not []. -#}
+  {%- if value | string | length > 0 and not value | string | first == '$' -%}
+    {%- set _ = entries.append(value | string) -%}
+  {%- endif -%}
+{%- endfor -%}
+{%- if entries | count > 0 %}
+{{ indent }}{{ name }} {
+{% for entry in entries %}
+{{ indent }}  {{ "%-25s" | format(entry) }} = yes
+{% endfor %}
+{{ indent }}}
+{%- endif -%}
+{% endmacro %}
+
+{#
+  The "plugin { }" section was removed in dovecot 2.4 - plugin settings are
+  global now. Most old names survived, some were renamed, and a few need a
+  structural change that cannot be derived from a key/value pair.
+
+  What a setting becomes is decided by
+
+    bodsch.email.dovecot_plugin_setting
+
+  which holds the rename table and the list of settings that have no 2.4
+  counterpart. It returns WHAT to write, this macro decides HOW it looks.
+  The tables used to live here; as a filter they are unit tested directly
+  (tests/unit/filter/) instead of only through a rendered template.
+#}
+{% macro plugin_setting(key, value) %}
+{%- set result = key | bodsch.email.dovecot_plugin_setting(value) -%}
+{#- Every branch builds a LIST OF LINES and joins it once. Emitting the lines
+    directly does not work here: with trim_blocks a branch either swallows its
+    last newline or keeps one, depending on whether it ends in a loop - which
+    is how "acl_anyone = authenticated" used to glue the setting onto the end
+    of its own comment, and lose it. -#}
+{%- if result.kind == 'unmapped' -%}
+{#-   dovecot 2.4 refuses to start on an unknown setting, so a setting that
+      needs a structural change is written as a comment, not as an invalid
+      setting. -#}
+{%-   set lines = ['# UNMAPPED ' ~ result.key ~ ' = ' ~ result.value] + result.hints -%}
+{%-   set text = lines | join('\n#   ') -%}
+{%- elif result.kind == 'acl_sharing_map' -%}
+{%-   set text = ['acl_sharing_map {',
+                  '  dict ' ~ result.driver ~ ' {',
+                  '    path                      = ' ~ result.path,
+                  '  }',
+                  '}'] | join('\n') -%}
+{%- else -%}
+{%-   set line = '%-29s' | format(result.key) ~ ' = ' ~ result.value -%}
+{%-   set text = (result.notes + [line]) | join('\n') -%}
+{%- endif -%}
+{{ text -}}
+{% endmacro %}
+
+{#
+  Render a passdb / userdb block for dovecot >= 2.4.
+
+  2.3 -> 2.4
+    passdb { }        -> passdb <name> { }      (naming is mandatory)
+    userdb { }        -> userdb <name> { }
+    args = ...        -> driver specific settings (structural, see below)
+    default_fields    -> fields { }
+    override_fields   -> fields { }
+
+  The block name defaults to the driver, in which case the driver setting
+  itself can be omitted - but writing it is always valid, so it is kept.
+
+  "args" has no generic equivalent: every driver got its own settings in 2.4
+  (passdb_sql_query, passwd_file_path, passdb_pam_service_name, ...). It is
+  written as an UNMAPPED comment rather than an invalid setting.
+#}
+{% set auth_db_args_hint = {
+  'sql': 'use passdb_sql_query / userdb_sql_query and the sql_* connection settings',
+  'ldap': 'use passdb_ldap_filter / userdb_ldap_filter and the ldap_* settings',
+  'passwd-file': 'use passwd_file_path',
+  'pam': 'use passdb_pam_service_name and the other passdb_pam_* settings',
+  'static': 'use fields { } and passdb_static_password',
+} %}
+
+{% macro auth_db(section, name, values) %}
+{%- set driver = values.driver | default(name) -%}
+{{ section }} {{ name }} {
+{% set fields = {} %}
+{% for key, value in values.items() %}
+  {% if key in ['default_fields', 'override_fields'] %}
+    {% if value | bodsch.core.type == "dict" %}
+      {% for fk, fv in value.items() %}
+        {% set _ = fields.update({fk: fv}) %}
+      {% endfor %}
+    {% endif %}
+  {% elif key == 'args' %}
+  # UNMAPPED args = {{ value }}
+  #   dovecot 2.4: {{ auth_db_args_hint.get(driver, 'use the driver specific settings of ' ~ driver) }}
+  {% elif value | bodsch.core.type == "dict" %}
+{#  a nested mapping is a named filter, e.g. the connection block
+    "mysql <name> { host = ... }" a 2.4 sql passdb needs #}
+  {{ key }} {
+    {% for subkey, subvalue in value.items() %}
+      {% if subvalue | string | length > 0 %}
+    {{ "%-23s" | format(subkey) }} = {{ subvalue }}
+      {% endif %}
+    {% endfor %}
+  }
+  {% elif value | bodsch.core.type == "bool" %}
+  {{ "%-27s" | format(key) }} = {{ value | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+  {% elif value | bodsch.core.type == "list" %}
+    {% if value | count > 0 %}
+  {{ "%-27s" | format(key) }} = {{ value | join(' ') }}
+    {% endif %}
+  {% elif value | string | length > 0 %}
+  {{ "%-27s" | format(key) }} = {{ value }}
+  {% endif %}
+{% endfor %}
+{% if fields | count > 0 %}
+  fields {
+  {% for fk, fv in fields.items() %}
+{#- userdb fields are mostly paths (home, mail); translate the legacy
+    '%x' variables so they still expand under 2.4 -#}
+    {{ "%-25s" | format(fk) }} = {{ fv | bodsch.email.dovecot_path_vars }}
+  {% endfor %}
+  }
+{% endif %}
+}
+{% endmacro %}
+
+{#
+  Render dovecot 2.4 named filter blocks:
+
+      fts flatcurve {
+        substring_search = yes
+      }
+
+  Accepts either a mapping
+
+      backends:
+        flatcurve:
+          substring_search: true
+
+  or a list of single key mappings
+
+      backends:
+        - flatcurve:
+            substring_search: true
+
+  so the variable can be written either way. Booleans become yes/no and lists
+  become space separated values, which is what dovecot expects.
+#}
+{% macro named_filters(kind, data) %}
+{%- set blocks = [] -%}
+{%- if data | bodsch.core.type == "dict" -%}
+  {%- for name, values in data.items() -%}
+    {%- set _ = blocks.append([name, values]) -%}
+  {%- endfor -%}
+{%- elif data | bodsch.core.type == "list" -%}
+  {%- for entry in data -%}
+    {%- if entry | bodsch.core.type == "dict" -%}
+      {%- for name, values in entry.items() -%}
+        {%- set _ = blocks.append([name, values]) -%}
+      {%- endfor -%}
+    {%- endif -%}
+  {%- endfor -%}
+{%- endif -%}
+{%- for block in blocks %}
+{{ kind }} {{ block[0] }} {
+{% for key, value in (block[1] | default({})).items() %}
+{% if value | bodsch.core.type == "bool" %}
+  {{ "%-27s" | format(key) }} = {{ value | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% elif value | bodsch.core.type == "list" %}
+{% if value | count > 0 %}
+  {{ "%-27s" | format(key) }} = {{ value | join(' ') }}
+{% endif %}
+{% elif value | string | length > 0 %}
+  {{ "%-27s" | format(key) }} = {{ value }}
+{% endif %}
+{% endfor %}
+}
+{% endfor -%}
+{% endmacro %}
+
+{#
+  Names of the named filters in such a variable, for cross checks.
+  Returns a space separated string, because a jinja macro cannot return a list.
+#}
+{% macro named_filter_names(data) %}
+{%- if data | bodsch.core.type == "dict" -%}
+{{- data.keys() | join(' ') -}}
+{%- elif data | bodsch.core.type == "list" -%}
+{%- set names = [] -%}
+{%- for entry in data -%}
+  {%- if entry | bodsch.core.type == "dict" -%}
+    {%- for name in entry.keys() -%}
+      {%- set _ = names.append(name) -%}
+    {%- endfor -%}
+  {%- endif -%}
+{%- endfor -%}
+{{- names | join(' ') -}}
+{%- endif -%}
+{% endmacro %}
+
+{#
+  Render the listener blocks of a service for dovecot >= 2.4.
+
+      inet_listener sieve {
+        port                      = 4190
+      }
+
+  Settings that 2.4 no longer knows are dropped here, in one place, because
+  the role has a single 2.4 template tree that has to satisfy every 2.4.x:
+
+    address     -> listen
+    reuse_port  -> gone in 2.4.4 (still valid in 2.3 and 2.4.1)
+#}
+{% set listener_renames = {'address': 'listen'} %}
+{% set listener_dropped = ['reuse_port'] %}
+
+{% macro listeners(entries, indent='  ') %}
+{%- for entry in entries %}
+{%- set name = entry.keys() | first %}
+{%- set values = entry.values() | first %}
+{%- set kind = values.type | default('inet') %}
+{{ indent }}{{ kind }}_listener {{ name }} {
+{% for key, value in values.items() if key != 'type' and key not in listener_dropped %}
+{% if value | string | length > 0 and value | bodsch.email.config_value %}
+{{ indent }}  {{ "%-25s" | format(listener_renames.get(key, key)) }} = {{ value | bodsch.email.config_value }}
+{% endif %}
+{% endfor %}
+{{ indent }}}
+{% endfor -%}
 {% endmacro %}

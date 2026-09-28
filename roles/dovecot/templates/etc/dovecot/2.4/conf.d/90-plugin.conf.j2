@@ -1,0 +1,26 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{% import 'jinja_macros.j2' as mcr with context %}
+# {{ ansible_managed }}
+
+{#
+  The plugin { } block was removed in 2.4 - every plugin setting is a global
+  setting now. The dovecot_plugin.plugins variable keeps working, its entries
+  are just written without the surrounding block.
+#}
+{% if dovecot_plugin.plugins is defined and
+      dovecot_plugin.plugins | count > 0 and
+      dovecot_plugin.plugins | bodsch.core.type == "list" %}
+  {% for plugin in dovecot_plugin.plugins %}
+    {% for key, value in plugin.items() %}
+      {% if value | bodsch.core.type == "dict" %}
+        {% for k, v in value.items() %}
+          {% if v | string | length > 0 %}
+{{ mcr.plugin_setting(k, v) }}
+          {% endif %}
+        {% endfor %}
+      {% elif value | string | length > 0 %}
+{{ mcr.plugin_setting(key, value) }}
+      {% endif %}
+    {% endfor %}
+  {% endfor %}
+{% endif %}

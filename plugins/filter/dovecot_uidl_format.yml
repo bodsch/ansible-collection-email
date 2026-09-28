@@ -1,0 +1,44 @@
+---
+
+DOCUMENTATION:
+  name: dovecot_uidl_format
+  author: Bodo Schulz (@bodsch)
+  version_added: 1.0.0
+  short_description: Translate a dovecot 2.3 pop3_uidl_format to the 2.4 syntax.
+  description:
+    - C(pop3_uidl_format) has its own set of variables, separate from the path and prefix
+      ones, so it needs its own translation.
+    - >-
+      Dovecot 2.4 checks this setting: a value without a single C(%{...}) is rejected with
+      "pop3_uidl_format setting doesn't contain any %{variables}". The role has to
+      translate a 2.3 value, it cannot pass it through.
+    - >-
+      C(doveconf -n) accepts the old value - only the service refuses to start on it. A
+      configuration check alone does not catch this.
+    - >-
+      The hexadecimal form carries a width, C(%08Xu) becomes C(%{uid | hex(8)}). Without a
+      digit the value is left alone rather than guessed at.
+    - >-
+      A value that is already written the 2.4 way is left alone, because C(%{) is not one
+      of the patterns this replaces.
+    - The variable names were verified against dovecot 2.4.4 by starting it with each one.
+  positional: _input
+  options:
+    _input:
+      description:
+        - The uidl format to translate.
+        - "Known variables: C(u) uid, C(v) uidvalidity, C(g) guid, C(m) md5, C(f) filename."
+      required: true
+      type: str
+
+EXAMPLES: |
+  # %{uid | hex(8)}%{uidvalidity | hex(8)}
+  pop3_uidl_format: "{{ '%08Xu%08Xv' | bodsch.email.dovecot_uidl_format }}"
+
+  # %{uid}%{uidvalidity}
+  pop3_uidl_format: "{{ '%u%v' | bodsch.email.dovecot_uidl_format }}"
+
+RETURN:
+  _value:
+    description: The uidl format with every variable written the 2.4 way.
+    type: str

@@ -1,0 +1,10 @@
+---
+
+# Version specific default VALUES for dovecot 2.3.
+# The 2.3 defaults already live in vars/main.yml, so there is nothing to
+# override here. The file exists so that every template version has a
+# matching vars file (see tasks/configure.yml: "include version specific defaults").
+
+_dovecot_version_defaults: {}
+
+...

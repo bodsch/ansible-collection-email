@@ -1,21 +1,32 @@
+---
 
 DOCUMENTATION:
   name: database_connection
   author: Bodo Schulz (@bodsch)
   version_added: 1.0.0
-  short_description: TBD
+  short_description: Build a dovecot 2.3 connect string from a mapping.
   description:
-    - TBD
+    - Turns a mapping of connection parameters into the single C(connect) line dovecot 2.3 expects.
+    - Only keys that carry a value are written, always in the same order, so the rendered file is stable between runs.
+    - >-
+      Dovecot 2.4 has no connect string any more. There the connection is expressed as driver
+      specific settings (C(mysql_host), C(mysql_dbname), ...) inside the C(passdb) / C(userdb) block.
   positional: _input
   options:
     _input:
-      description: TBD
-      type: dict
+      description:
+        - The connection parameters.
+        - Recognised keys are C(host), C(port), C(dbname), C(user) and C(password), in that order.
       required: true
-  notes:
+      type: dict
 
-EXAMPLES: TBD
+EXAMPLES: |
+  # connect = host=localhost dbname=mails user=testuser password=pass
+  connect = {{ dovecot_sql.connects | bodsch.email.database_connection }}
 
 RETURN:
   _value:
-    description: TBD
+    description:
+      - The connect string, for example C(host=localhost dbname=mails user=u password=p).
+      - An empty string when the mapping carries no recognised value.
+    type: str

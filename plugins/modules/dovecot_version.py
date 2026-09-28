@@ -16,21 +16,36 @@ module: dovecot_version
 author: Bodo 'bodsch' Schulz <bodo@boone-schulz.de>
 version_added: 1.2.0
 
-short_description: TBD
+short_description: Report the installed dovecot version.
 description:
-    - TBD
-
-options:
-  config_name:
-    description: TBD
-    required: true
-    type: str
+    - Runs C(dovecot --version) and splits the result into its parts.
+    - >-
+      The dovecot role picks its template directory by the short version, so
+      this value decides which configuration format is written.
+    - The module takes no parameters.
 """
 
 EXAMPLES = r"""
+- name: detect installed dovecot version
+  bodsch.email.dovecot_version:
+  register: _dovecot_version
+
+- name: define dovecot_version
+  ansible.builtin.set_fact:
+    dovecot_version: "{{ _dovecot_version.versions.full_version }}"
+    dovecot_short_version: "{{ _dovecot_version.versions.short_version }}"
 """
 
 RETURN = r"""
+versions:
+    description: The installed version, split into its parts.
+    returned: always
+    type: dict
+    sample:
+        full_version: "2.4.1-4"
+        upstream_version: "2.4.1"
+        major_version: "2"
+        short_version: "2.4"
 """
 
 # ----------------------------------------------------------------------
@@ -54,6 +69,22 @@ class DovecotVersion:
 
     def run(self):
         """
+        Read the dovecot version and split it into its parts.
+
+            2.4.1-4 (7d8c0e5759)
+              full_version     = "2.4.1-4"
+              upstream_version = "2.4.1"
+              major_version    = "2"
+              short_version    = "2.4"
+
+        A distribution may append its own package release to the version, the
+        way arch linux prints "2.4.1-4". upstream_version drops it, because
+        dovecot_config_version only accepts a version dovecot itself knows -
+        "2.4.1-4" is rejected with "Currently supported versions are: 2.4.0
+        2.4.1".
+
+        The dovecot role picks its template directory by short_version, so
+        that value decides which configuration format is written.
         """
         dovecot_version = None
         result = dict(
@@ -68,7 +99,7 @@ class DovecotVersion:
 
         rc, out, err = self._exec(args)
 
-        pattern = re.compile(rf"(?P<version>.*)\s+\(.*\)")
+        pattern = re.compile(r"(?P<version>\d+(?:\.\d+)+)")
 
         match = re.search(pattern, out)
 
@@ -78,16 +109,45 @@ class DovecotVersion:
 
         self.module.log(msg=f"value: {dovecot_version}")
 
-        result["rc"] = rc
+        if dovecot_version:
+            major_version = None
+            minor_version = None
+            short_version = None
 
-        if rc == 0:
-            result["failed"] = False
-            result["version"] = dovecot_version
+            version_splitted = dovecot_version.split(".")
+
+            major_version = version_splitted[0]
+
+            if len(version_splitted) > 1:
+                minor_version = version_splitted[1]
+
+            if minor_version:
+                short_version = ".".join([major_version, minor_version])
+            else:
+                short_version = major_version
+
+            # only the leading digits-and-dots part is dovecot's own version,
+            # everything after it belongs to the distribution package
+            upstream = re.match(r"[0-9]+(?:\.[0-9]+)*", dovecot_version)
+
+            version = dict(
+                full_version=dovecot_version,
+                upstream_version=upstream.group(0) if upstream else dovecot_version,
+                major_version=major_version,
+                short_version=short_version,
+            )
+
+        result = dict(
+            failed=(rc != 0),
+            versions=version,
+        )
 
         return result
 
     def _exec(self, cmd):
-        """ """
+        """
+        Run "dovecot --version" and return (rc, stdout, stderr).
+        """
         rc, out, err = self.module.run_command(cmd, check_rc=True)
 
         return rc, out, err
@@ -99,7 +159,10 @@ class DovecotVersion:
 
 
 def main():
-
+    """
+    Report the installed dovecot version, split into full, major and short
+    form.
+    """
     args = dict()
 
     module = AnsibleModule(

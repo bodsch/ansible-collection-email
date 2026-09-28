@@ -1,0 +1,95 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+# {{ ansible_managed }}
+
+{#
+  2.3 -> 2.4 mapping
+    ssl_cert                  -> ssl_server_cert_file            (path, no leading '<')
+    ssl_key                   -> ssl_server_key_file             (path, no leading '<')
+    ssl_key_password          -> ssl_server_key_password
+    ssl_ca                    -> ssl_server_ca_file
+    ssl_require_crl           -> ssl_server_require_crl
+    ssl_verify_client_cert    -> ssl_server_request_client_cert
+    ssl_cert_username_field   -> ssl_server_cert_username_field
+    ssl_dh                    -> ssl_server_dh_file
+    ssl_prefer_server_ciphers -> ssl_server_prefer_ciphers
+    verbose_ssl               -> log_debug = category=ssl        (see 10-logging.conf)
+#}
+{% if dovecot_ssl.enabled is defined and
+      dovecot_ssl.enabled | string | length > 0 %}
+ssl                             = {{ dovecot_ssl.enabled | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+  {% if dovecot_ssl.cert is defined and
+        dovecot_ssl.cert | string | length > 0 %}
+ssl_server_cert_file            = {{ dovecot_ssl.cert | regex_replace('^<', '') }}
+  {% endif %}
+  {% if dovecot_ssl.key is defined and
+        dovecot_ssl.key | string | length > 0 %}
+ssl_server_key_file             = {{ dovecot_ssl.key | regex_replace('^<', '') }}
+  {% endif %}
+  {% if dovecot_ssl.key_password is defined and
+        dovecot_ssl.key_password | string | length > 0 %}
+ssl_server_key_password         = {{ dovecot_ssl.key_password }}
+  {% endif %}
+  {% if dovecot_ssl.ca is defined and
+        dovecot_ssl.ca | string | length > 0 %}
+ssl_server_ca_file              = {{ dovecot_ssl.ca | regex_replace('^<', '') }}
+  {% endif %}
+  {% if dovecot_ssl.require_crl is defined and
+        dovecot_ssl.require_crl | string | length > 0 %}
+ssl_server_require_crl          = {{ dovecot_ssl.require_crl | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+  {% endif %}
+  {% if dovecot_ssl.client_ca_dir is defined and
+        dovecot_ssl.client_ca_dir | string | length > 0 %}
+ssl_client_ca_dir               = {{ dovecot_ssl.client_ca_dir }}
+  {% endif %}
+  {% if dovecot_ssl.client_ca_file is defined and
+        dovecot_ssl.client_ca_file | string | length > 0 %}
+ssl_client_ca_file              = {{ dovecot_ssl.client_ca_file }}
+  {% endif %}
+  {% if dovecot_ssl.verify_client_cert is defined and
+        dovecot_ssl.verify_client_cert | string | length > 0 %}
+ssl_server_request_client_cert  = {{ dovecot_ssl.verify_client_cert | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+    {% if dovecot_ssl.cert_username_field is defined and
+          dovecot_ssl.cert_username_field | string | length > 0 %}
+ssl_server_cert_username_field  = {{ dovecot_ssl.cert_username_field }}
+    {% endif %}
+  {% endif %}
+  {% if dovecot_ssl.dh is defined and
+        dovecot_ssl.dh | string | length > 0 %}
+{#  DH parameters are deprecated in 2.4: they do not work with ECDH(E) and require DH(E) ciphers #}
+ssl_server_dh_file              = {{ dovecot_ssl.dh | regex_replace('^<', '') }}
+  {% endif %}
+{# SSLv3 and 'ANY' are no longer accepted in 2.4 #}
+  {% if dovecot_ssl.min_protocol is defined and
+        dovecot_ssl.min_protocol | length > 0 and
+        dovecot_ssl.min_protocol in ['TLSv1','TLSv1.1','TLSv1.2','TLSv1.3','LATEST'] %}
+ssl_min_protocol                = {{ dovecot_ssl.min_protocol }}
+  {% endif %}
+  {% if dovecot_ssl.cipher_list is defined and
+        dovecot_ssl.cipher_list | count > 0 %}
+ssl_cipher_list                 = {{ dovecot_ssl.cipher_list | join(':') }}
+  {% endif %}
+  {% if dovecot_ssl.min_protocol is defined and
+        dovecot_ssl.min_protocol | length > 0 and
+        dovecot_ssl.min_protocol in ['TLSv1.3','LATEST'] and
+        dovecot_ssl.cipher_suites is defined and
+        dovecot_ssl.cipher_suites | count > 0 %}
+ssl_cipher_suites               = {{ dovecot_ssl.cipher_suites | join(':') }}
+  {% endif %}
+  {% if dovecot_ssl.curve_list is defined and
+        dovecot_ssl.curve_list | count > 0 %}
+ssl_curve_list                  = {{ dovecot_ssl.curve_list | join(':') }}
+  {% endif %}
+  {% if dovecot_ssl.prefer_server_ciphers is defined and
+        dovecot_ssl.prefer_server_ciphers | string | length > 0 %}
+ssl_server_prefer_ciphers       = {{ dovecot_ssl.prefer_server_ciphers | bodsch.core.config_bool(true_as='server', false_as='client') }}
+  {% endif %}
+  {% if dovecot_ssl.crypto_device is defined and
+        dovecot_ssl.crypto_device | string | length > 0 %}
+ssl_crypto_device               = {{ dovecot_ssl.crypto_device }}
+  {% endif %}
+  {% if dovecot_ssl.options is defined and
+        dovecot_ssl.options | string | length > 0 and
+        dovecot_ssl.options in ['compression', 'no_compression', 'no_ticket'] %}
+ssl_options                     = {{ dovecot_ssl.options }}
+  {% endif %}
+{% endif %} {# ssl #}

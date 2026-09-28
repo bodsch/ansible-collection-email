@@ -1,0 +1,49 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{% import 'jinja_macros.j2' as mcr with context %}
+# {{ ansible_managed }}
+
+{#
+  The plugin { } block is gone in 2.4 - the sieve_pipe_* / sieve_filter_* /
+  sieve_execute_* settings are global.
+#}
+{% if dovecot_sieve_extprograms.plugins is defined and
+      dovecot_sieve_extprograms.plugins | count > 0 and
+      dovecot_sieve_extprograms.plugins | bodsch.core.type == "list" %}
+  {% for plugin in dovecot_sieve_extprograms.plugins %}
+    {% for key, value in plugin.items() %}
+      {% if value | bodsch.core.type == "dict" %}
+        {% for k, v in value.items() %}
+          {% if v | string | length > 0 %}
+{{ mcr.plugin_setting(k, v) }}
+          {% endif %}
+        {% endfor %}
+      {% elif value | string | length > 0 %}
+{{ mcr.plugin_setting(key, value) }}
+      {% endif %}
+    {% endfor %}
+  {% endfor %}
+{% endif %}
+
+{% if dovecot_sieve_extprograms.services is defined and
+      dovecot_sieve_extprograms.services | count > 0 %}
+  {% set _service_renames = {
+    'service_count': 'service_restart_request_count',
+    'idle_kill': 'service_idle_kill_interval',
+  } %}
+  {% for service in dovecot_sieve_extprograms.services %}
+    {% for key, values in service.items() %}
+service {{ key }} {
+      {% for k, v in values.items() %}
+        {% if k == "listeners" and v | bodsch.core.type == "list" %}
+{{ mcr.listeners(v) }}
+        {% else %}
+          {% if v | string | length > 0 and v | bodsch.email.config_value %}
+  {{ "%-27s" | format(_service_renames.get(k, k)) }} = {{ v | bodsch.email.config_value | replace('$default_', '$SET:default_') }}
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+}
+
+    {% endfor %}
+  {% endfor %}
+{% endif %}

@@ -1,0 +1,64 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{% import 'jinja_macros.j2' as mcr with context %}
+# {{ ansible_managed }}
+
+{#
+  2.3 -> 2.4 mapping
+    protocols = $protocols sieve      -> protocols { sieve = yes }   (additive)
+    managesieve_sieve_capability      -> boolean list block
+    managesieve_notify_capability     -> boolean list block
+    service { service_count }         -> service_restart_request_count
+    inet_listener { address }         -> listen
+    managesieve_logout_format         -> bytes=%{input}/%{output}
+#}
+{% set _service_renames = {
+  'service_count': 'service_restart_request_count',
+  'idle_kill': 'service_idle_kill_interval',
+} %}
+{% if dovecot_managesieve.enabled_protocols is defined and
+      dovecot_managesieve.enabled_protocols | count > 0 %}
+{{ mcr.bool_list('protocols', dovecot_managesieve.enabled_protocols) }}
+{% endif %}
+{% if dovecot_managesieve.services is defined and
+      dovecot_managesieve.services | count > 0 %}
+
+  {% for service in dovecot_managesieve.services %}
+    {% for key, values in service.items() %}
+service {{ key }} {
+      {% for k, v in values.items() %}
+        {% if k == "listeners" and v | bodsch.core.type == "list" %}
+{{ mcr.listeners(v) }}
+        {% else %}
+          {% if v | string | length > 0 and v | bodsch.email.config_value %}
+  {{ "%-27s" | format(_service_renames.get(k, k)) }} = {{ v | bodsch.email.config_value | replace('$default_', '$SET:default_') }}
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+}
+    {% endfor %}
+  {% endfor %}
+{% endif %}
+{% if dovecot_managesieve.protocols is defined and
+      dovecot_managesieve.protocols | count > 0 %}
+
+  {% set _capability_lists = ['managesieve_sieve_capability', 'managesieve_notify_capability'] %}
+  {% for pr in dovecot_managesieve.protocols %}
+    {% set _name = pr.name | default(pr.keys() | first) %}
+    {% set _body = pr[_name] | default({}) if _name in pr else pr %}
+protocol {{ _name }} {
+    {% for k, v in _body.items() if k != 'name' %}
+      {% if k == 'mail_plugins' %}
+{{ mcr.bool_list('mail_plugins', v, '  ') }}
+      {% elif k in _capability_lists %}
+{{ mcr.bool_list(k, v if v | bodsch.core.type == 'list' else v | string | split(' '), '  ') }}
+      {% elif v | bodsch.core.type == "list" %}
+        {% if v | count > 0 %}
+  {{ "%-27s" | format(k) }} = {{ v | join(' ') }}
+        {% endif %}
+      {% elif v | string | length > 0 %}
+  {{ "%-27s" | format(k) }} = {{ v }}
+      {% endif %}
+    {% endfor %}
+}
+  {% endfor %}
+{% endif %}

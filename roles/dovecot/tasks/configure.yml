@@ -23,10 +23,67 @@
         createhome: true
         home: "{{ dovecot_virtual_user.home }}"
 
-- name: gathering facts now
+# - name: gathering facts now
+#   when:
+#     - not running_in_check_mode
+#   ansible.builtin.setup:
+
+# The template tree carries one directory per dovecot version:
+#
+#   templates/etc/dovecot/2.3/...
+#   templates/etc/dovecot/2.4/...
+#
+# The detected short version ("2.4") picks the directory, which is why no
+# template has to compare versions itself. The filter returns the file names
+# of that version, plus the files of every other version that this one does
+# not have - see "remove configuration files of another dovecot version".
+- name: sort template tree by dovecot version
   when:
     - not running_in_check_mode
-  ansible.builtin.setup:
+  ansible.builtin.set_fact:
+    _dovecot_templates: "{{
+      lookup('community.general.filetree', 'templates/etc/dovecot') |
+      bodsch.email.dovecot_template_versions(version=dovecot_short_version) }}"
+
+- name: fail on unsupported dovecot version
+  when:
+    - not running_in_check_mode
+    - not _dovecot_templates.available | bool
+  ansible.builtin.fail:
+    msg: |
+      Dovecot {{ dovecot_version }} is not supported by this role.
+      There is no templates/etc/dovecot/{{ dovecot_short_version }} directory.
+      Supported versions: {{ _dovecot_templates.versions | join(', ') }}
+
+- name: include version specific defaults
+  when:
+    - not running_in_check_mode
+  ansible.builtin.include_vars: "{{ lookup('first_found', params) }}"
+  vars:
+    params:
+      paths:
+        - "vars"
+      files:
+        - "dovecot-{{ dovecot_short_version }}.yml"
+      skip: true
+
+- name: apply version specific defaults
+  when:
+    - not running_in_check_mode
+    - _dovecot_version_defaults | default({}) | count > 0
+  ansible.builtin.set_fact:
+    dovecot_defaults_config: "{{ dovecot_defaults_config | combine(_dovecot_version_defaults.config | default({}), recursive=True) }}"
+    dovecot_defaults_auth: "{{ dovecot_defaults_auth | combine(_dovecot_version_defaults.auth | default({}), recursive=True) }}"
+    dovecot_defaults_logging: "{{ dovecot_defaults_logging | combine(_dovecot_version_defaults.logging | default({}), recursive=True) }}"
+    dovecot_defaults_mail: "{{ dovecot_defaults_mail | combine(_dovecot_version_defaults.mail | default({}), recursive=True) }}"
+    dovecot_defaults_master: "{{ dovecot_defaults_master | combine(_dovecot_version_defaults.master | default({}), recursive=True) }}"
+    dovecot_defaults_imap: "{{ dovecot_defaults_imap | combine(_dovecot_version_defaults.imap | default({}), recursive=True) }}"
+    dovecot_defaults_lmtp: "{{ dovecot_defaults_lmtp | combine(_dovecot_version_defaults.lmtp | default({}), recursive=True) }}"
+    dovecot_defaults_pop3: "{{ dovecot_defaults_pop3 | combine(_dovecot_version_defaults.pop3 | default({}), recursive=True) }}"
+    dovecot_defaults_submission: "{{ dovecot_defaults_submission | combine(_dovecot_version_defaults.submission | default({}), recursive=True) }}"
+    dovecot_defaults_lda: "{{ dovecot_defaults_lda | combine(_dovecot_version_defaults.lda | default({}), recursive=True) }}"
+    dovecot_defaults_managesieve: "{{ dovecot_defaults_managesieve | combine(_dovecot_version_defaults.managesieve | default({}), recursive=True) }}"
+  no_log: true
 
 - name: merge dovecot configuration between defaults and custom
   when:
@@ -52,6 +109,9 @@
     dovecot_quota: "{{ dovecot_defaults_quota | combine(dovecot_quota, recursive=True) }}"
     dovecot_sieve_extprograms: "{{ dovecot_defaults_sieve_extprograms | combine(dovecot_sieve_extprograms, recursive=True) }}"
     dovecot_sieve: "{{ dovecot_defaults_sieve | combine(dovecot_sieve, recursive=True) }}"
+    dovecot_metrics: "{{ dovecot_defaults_metrics | combine(dovecot_metrics, recursive=True) }}"
+    dovecot_fts: "{{ dovecot_defaults_fts | combine(dovecot_fts, recursive=True) }}"
+    dovecot_dict_server: "{{ dovecot_defaults_dict_server | combine(dovecot_dict_server, recursive=True) }}"
     dovecot_authentications: "{{ dovecot_defaults_authentications | combine(dovecot_authentications, recursive=True) }}"
     dovecot_dict_auth: "{{ dovecot_defaults_dict_auth | combine(dovecot_dict_auth, recursive=True) }}"
     dovecot_dict_sql: "{{ dovecot_defaults_dict_sql | combine(dovecot_dict_sql, recursive=True) }}"
@@ -71,34 +131,11 @@
       - path: auth.d
       - path: sql.d
 
-# - name: create logging directory
-#   when:
-#     - not running_in_check_mode
-#   ansible.builtin.file:
-#     state: directory
-#     path: "{{ dovecot_logging_directory }}"
-#     mode: "0755"
-#
-# - name: create configuration directory
-#   when:
-#     - not running_in_check_mode
-#   ansible.builtin.file:
-#     state: directory
-#     path: "{{ item }}"
-#     mode: "0755"
-#   loop:
-#     - /etc/dovecot
-#     - /etc/dovecot/conf.d
-#     - /etc/dovecot/auth.d
-#     - /etc/dovecot/sql.d
-#   loop_control:
-#     label: "{{ item }}"
-
 - name: create dovecot.conf
   when:
     - not running_in_check_mode
   ansible.builtin.template:
-    src: etc/dovecot/dovecot.conf.j2
+    src: etc/dovecot/{{ dovecot_short_version }}/dovecot.conf.j2
     dest: /etc/dovecot/dovecot.conf
     backup: true
     mode: "0644"
@@ -108,33 +145,13 @@
 - name: create splitted configurations
   when:
     - not running_in_check_mode
+    - _dovecot_templates.files['conf.d'] | count > 0
   ansible.builtin.template:
-    src: etc/dovecot/conf.d/{{ item }}.j2
+    src: etc/dovecot/{{ dovecot_short_version }}/conf.d/{{ item }}.j2
     dest: /etc/dovecot/conf.d/{{ item }}
     backup: true
     mode: "0644"
-  loop:
-    - 10-auth.conf
-    - 10-director.conf
-    - 10-logging.conf
-    - 10-mail.conf
-    - 10-master.conf
-    - 10-metrics.conf
-    - 10-ssl.conf
-    - 10-tcpwrapper.conf
-    - 15-lda.conf
-    - 15-mailboxes.conf
-    - 20-imap.conf
-    - 20-lmtp.conf
-    - 20-managesieve.conf
-    - 20-pop3.conf
-    - 20-submission.conf
-    - 30-dict-server.conf
-    - 90-acl.conf
-    - 90-plugin.conf
-    - 90-quota.conf
-    - 90-sieve-extprograms.conf
-    - 90-sieve.conf
+  loop: "{{ _dovecot_templates.files['conf.d'] }}"
   loop_control:
     label: "{{ item }}"
   notify:
@@ -143,22 +160,13 @@
 - name: create auth configurations
   when:
     - not running_in_check_mode
+    - _dovecot_templates.files['auth.d'] | count > 0
   ansible.builtin.template:
-    src: etc/dovecot/auth.d/{{ item }}.j2
+    src: etc/dovecot/{{ dovecot_short_version }}/auth.d/{{ item }}.j2
     dest: /etc/dovecot/auth.d/{{ item }}
     backup: true
     mode: "0644"
-  loop:
-    - auth-checkpassword.conf.ext
-    - auth-deny.conf.ext
-    - auth-dict.conf.ext
-    - auth-ldap.conf.ext
-    - auth-master.conf.ext
-    - auth-passwdfile.conf.ext
-    - auth-sql.conf.ext
-    - auth-static.conf.ext
-    - auth-system.conf.ext
-    - auth-vpopmail.conf.ext
+  loop: "{{ _dovecot_templates.files['auth.d'] }}"
   loop_control:
     label: "{{ item }}"
   notify:
@@ -167,16 +175,54 @@
 - name: create conf.ext configuration files
   when:
     - not running_in_check_mode
+    - _dovecot_templates.files['root'] | count > 0
   ansible.builtin.template:
-    src: etc/dovecot/{{ item }}.j2
+    src: etc/dovecot/{{ dovecot_short_version }}/{{ item }}.j2
     dest: /etc/dovecot/{{ item }}
     backup: true
     mode: "0644"
-  loop:
-    - dovecot-dict-auth.conf.ext
-    - dovecot-dict-sql.conf.ext
-    - dovecot-ldap.conf.ext
-    - dovecot-sql.conf.ext
+  loop: "{{ _dovecot_templates.files['root'] }}"
+  loop_control:
+    label: "{{ item }}"
+  notify:
+    - restart dovecot
+
+# Dovecot reads every file in conf.d and auth.d, so a file left behind by
+# another version of this role keeps being parsed. The template tree is the
+# only source for these names: everything below templates/etc/dovecot/<version>
+# belongs to exactly that version, so the set difference between the versions
+# is the list of files that have to go.
+#
+# fileglob cannot collect them. It resolves everything up to the last "/" as a
+# literal directory, so a wildcard in the directory part - "*/conf.d/*.j2" -
+# never matches. filetree walks the tree instead.
+- name: determine configuration files left over from another dovecot version
+  when:
+    - not running_in_check_mode
+    - dovecot_remove_stale_configs | bool
+  ansible.builtin.set_fact:
+    _dovecot_stale_configs: "{{
+      (_dovecot_templates.stale['conf.d'] | map('regex_replace', '^', '/etc/dovecot/conf.d/') | list) +
+      (_dovecot_templates.stale['auth.d'] | map('regex_replace', '^', '/etc/dovecot/auth.d/') | list) +
+      (_dovecot_templates.stale['root']   | map('regex_replace', '^', '/etc/dovecot/') | list) }}"
+
+# Dovecot 2.4 refuses to start when it finds a setting it does not know, so a
+# 2.3 -> 2.4 upgrade has to get rid of the configuration files of the old
+# version (10-director.conf, 10-tcpwrapper.conf, auth-checkpassword.conf.ext,
+# dovecot-sql.conf.ext, ...).
+#
+# Only file names that belong to another template version of THIS role are
+# removed. Files shipped by the distribution package and files written by hand
+# are never touched, because the role does not know their names.
+- name: remove configuration files of another dovecot version
+  when:
+    - not running_in_check_mode
+    - dovecot_remove_stale_configs | bool
+    - _dovecot_stale_configs | default([]) | count > 0
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ _dovecot_stale_configs }}"
   loop_control:
     label: "{{ item }}"
   notify:

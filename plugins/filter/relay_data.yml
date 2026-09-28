@@ -1,31 +1,47 @@
+---
 
 DOCUMENTATION:
   name: relay_data
   author: Bodo Schulz (@bodsch)
   version_added: 1.0.0
-  short_description: enhance relay data for valid relay host and port
+  short_description: Build a relay host entry and check that credentials exist for it.
   description:
-    - enhance relay data for valid relay host and port
-  positional: _input
+    - Does what M(bodsch.email.sasl_data) does, and additionally verifies that the username has SASL credentials.
+    - >-
+      A relay without credentials is not an exception but a marked result, so a playbook can
+      report every broken relay at once instead of stopping at the first one.
+    - The input mapping is not modified, a copy is returned.
+  positional: _input, sasl_data, mxlookup
   options:
     _input:
-      description: TBD
-      type: dict
+      description: One relay entry with C(username) and optionally C(host) and C(port).
       required: true
+      type: dict
     sasl_data:
-      description: TBD
+      description: The SASL entries to look the username up in.
       required: true
-      type: dict
+      type: list
+      elements: dict
     mxlookup:
-      description: TBD
+      description:
+        - Whether postfix may do an MX lookup for the host.
+        - C(false) wraps the host in square brackets, which turns the lookup off.
       required: false
       type: bool
       default: false
-  notes:
 
 EXAMPLES: |
-  data = r | bodsch.email.relay_data(sasl_data, mxlookup)
+  {% set data = r | bodsch.email.relay_data(sasl_data, mxlookup) %}
+  {% if data.error %}
+  # {{ data.msg }}
+  {% else %}
+  {{ data.sender }}  {{ data.host }}
+  {% endif %}
 
 RETURN:
   _value:
-    description: TBD
+    description:
+      - A copy of the entry with C(error) and C(msg) added.
+      - On success C(error) is C(false), C(msg) is C(none) and C(host) is rewritten as in M(bodsch.email.sasl_data).
+      - On a missing SASL entry C(error) is C(true) and C(msg) names the username.
+    type: dict

@@ -1,0 +1,34 @@
+---
+
+DOCUMENTATION:
+  name: dovecot_prefix_vars
+  author: Bodo Schulz (@bodsch)
+  version_added: 1.0.0
+  short_description: Translate the dovecot 2.3 variables of a namespace prefix.
+  description:
+    - Same idea as M(bodsch.email.dovecot_path_vars), for the C(prefix) of a namespace.
+    - >-
+      The difference is the owner of a shared mailbox. In a path dovecot 2.4 expands it as
+      C(%{owner_user}), in a prefix as C($user) / C($username) / C($domain) - the
+      C(%{owner_*}) form is not valid there.
+    - >-
+      There is no owner variable for the home directory in a prefix, so C(%%h) is not a
+      token here and dovecot reads it as a literal percent followed by C(%{home}).
+  positional: _input
+  options:
+    _input:
+      description: The namespace prefix to translate.
+      required: true
+      type: str
+
+EXAMPLES: |
+  # shared/$user/
+  prefix: "{{ 'shared/%%u/' | bodsch.email.dovecot_prefix_vars }}"
+
+  # shared/$username@$domain/
+  prefix: "{{ 'shared/%%n@%%d/' | bodsch.email.dovecot_prefix_vars }}"
+
+RETURN:
+  _value:
+    description: The prefix with every variable written the 2.4 way.
+    type: str

@@ -1,0 +1,69 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{% import 'jinja_macros.j2' as mcr with context %}
+# {{ ansible_managed }}
+
+{#
+  2.3 -> 2.4 mapping
+    namespace { location }  -> namespace { mail_driver + mail_path }
+    mailbox { driver }      -> mailbox { mail_driver }
+
+  A namespace prefix expands the shared mailbox owner as $user / $username /
+  $domain in 2.4, where 2.3 used %%u / %%n / %%d.
+#}
+{% if dovecot_mailboxes.namespaces is defined and
+      dovecot_mailboxes.namespaces | count > 0 %}
+{#  'location' is gone in 2.4, mail_driver / mail_path replace it #}
+  {% set _inbox_attr = [
+    'alias_for', 'disabled', 'hidden', 'ignore_on_failure', 'inbox', 'list',
+    'mail_driver', 'mail_path', 'mail_index_path',
+    'order', 'prefix', 'separator', 'subscriptions', 'type'] %}
+  {% set _path_attr = ['mail_path', 'mail_index_path'] %}
+{#  'driver' became 'mail_driver' inside a mailbox block #}
+  {% set _mailbox_attr = [
+    'auto', 'autoexpunge', 'autoexpunge_max_mails', 'comment',
+    'mail_driver', 'special_use'] %}
+
+  {% for ns in dovecot_mailboxes.namespaces %}
+    {% for namespace, boxes in ns.items() %}
+namespace {{ namespace }} {
+      {% for mailbox, values in boxes.items() %}
+        {% if values | bodsch.core.type != "dict" %}
+          {% if values | bodsch.core.type == "bool" and mailbox in _inbox_attr %}
+  {{ mailbox }} = {{ values | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+          {% elif (values | bodsch.core.type == "str" or values | bodsch.core.type == "int") and
+                  values | string | length > 0 %}
+            {% if mailbox == 'location' %}
+{#            split "driver:path" into the separate 2.4 settings #}
+              {% set _loc = values | string | split(':') %}
+  mail_driver = {{ _loc[0] }}
+              {% if _loc | length > 1 and _loc[1] | length > 0 %}
+  mail_path = {{ _loc[1] | bodsch.email.dovecot_path_vars }}
+              {% endif %}
+            {% elif mailbox == 'prefix' %}
+  {{ mailbox }} = {{ values | bodsch.email.dovecot_prefix_vars }}
+            {% elif mailbox in _path_attr %}
+  {{ mailbox }} = {{ values | bodsch.email.dovecot_path_vars }}
+            {% elif mailbox in _inbox_attr %}
+  {{ mailbox }} = {{ values }}
+            {% endif %}
+          {% endif %}
+        {% else %}
+  mailbox "{{ mailbox }}" {
+          {% for k, v in values.items() %}
+{#          'driver' was renamed to 'mail_driver' #}
+            {% set _key = 'mail_driver' if k == 'driver' else k %}
+            {% if _key in _mailbox_attr and v | string | length > 0 %}
+              {% if v | bodsch.core.type == "bool" %}
+    {{ _key }} = {{ v | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+              {% else %}
+    {{ _key }} = {{ v }}
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+  }
+        {% endif %}
+      {% endfor %}
+}
+    {% endfor %}
+  {% endfor %}
+{% endif %}
