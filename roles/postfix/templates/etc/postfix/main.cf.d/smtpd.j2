@@ -468,7 +468,7 @@ smtpd_sasl_tls_security_options           = {{ _postfix_smtpd.sasl.tls_security_
   {% endif %}
   {% if _postfix_smtpd.sasl.type is defined and
         _postfix_smtpd.sasl.type | string | length > 0 %}
-smtpd_sasl_type                         = {{ _postfix_smtpd.sasl.type }}
+smtpd_sasl_type                           = {{ _postfix_smtpd.sasl.type }}
   {% endif %}
 {% endif %}
 {% if _postfix_smtpd.sender is defined and
