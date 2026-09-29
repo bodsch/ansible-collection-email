@@ -13,6 +13,21 @@ dovecot_remove_stale_configs: true
 # Dovecot itself accepts any name and only fails at runtime.
 dovecot_validate_drivers: true
 
+# Create the storage directories that dovecot_mail points at and hand them to
+# the virtual mail user.
+#
+# Dovecot creates the PER USER part of a path itself, but not the static
+# parent above it. With
+#   mail_control_path = /var/mail/CONTROL/%{user|domain}/%{user|username}
+# and /var/mail owned by root, the first subscription fails with
+#   mkdir(/var/mail/CONTROL/example.com) failed: Permission denied
+# and the client reports that it cannot subscribe to a mailbox.
+#
+# Only directories BELOW a top level one are touched; "/", "/var" and the like
+# are never created or chowned. Set this to false to manage them yourself.
+dovecot_manage_mail_directories: true
+dovecot_mail_directories_mode: "0750"
+
 dovecot_service:
   state: started
   enabled: true

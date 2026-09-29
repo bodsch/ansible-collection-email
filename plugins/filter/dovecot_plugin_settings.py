@@ -93,10 +93,66 @@ QUOTA_GRACE_HINT = [
 # belong to the dovecot_path_vars / dovecot_prefix_vars filters.
 LITERAL_PERCENT = re.compile(r"%%(?![A-Za-z])")
 
+# Dovecot 2.3 wrote a user variable as a single letter, 2.4 as "%{name}" with
+# an optional filter. A plugin setting that carries one is NOT translated by
+# dovecot: "acl_user = %u" stays the literal string "%u", never matches the
+# mailbox owner, and every mailbox but the INBOX becomes invisible - the
+# debug log then says
+#
+#   acl: acl username = %u
+#   acl: owner = no
+#
+# This is the same table as PATH_VARS in dovecot_variables.py. It is repeated
+# here because ansible loads every filter plugin by path, so one of them
+# cannot import another.
+USER_VARS = {
+    "%h": "%{home}",
+    "%u": "%{user}",
+    "%n": "%{user|username}",
+    "%d": "%{user|domain}",
+}
+
+# A DOUBLED percent sign is the OWNER of a shared mailbox. Those belong to the
+# dovecot_path_vars / dovecot_prefix_vars filters, which know whether they are
+# translating a path or a namespace prefix - here they are left exactly as they
+# are. They are still MATCHED, so that a single pass does not read the second
+# percent of "%%u" as "%u".
+USER_VARS_KEEP = ("%%h", "%%u", "%%n", "%%d")
+
+USER_VARS_PATTERN = re.compile(
+    "|".join(
+        re.escape(token)
+        for token in sorted(
+            list(USER_VARS) + list(USER_VARS_KEEP), key=len, reverse=True
+        )
+    )
+)
+
+# 2.3 packed driver, global ACL file and cache time into one value:
+#   acl = vfile:/etc/dovecot/global-acls:cache_secs=300
+# 2.4 has a setting per part, and the global ACL FILE is gone entirely.
+ACL_GLOBAL_PATH_HINT = [
+    "# NOTE the global ACL file of the 2.3 acl setting has no 2.4 equivalent;",
+    "#   configure global rights in a \"mailbox <name> { acl <id> { } }\" block.",
+]
+
 # 2.3 numbered its repeatable plugin settings: quota2, quota2_rule,
 # sieve_before2, sieve_before3, autosubscribe4, ... They mean the same as their
 # base name, and 2.4 replaced all of them with named filters.
 DIGITS = re.compile(r"[0-9]+")
+
+
+def _translate_vars(value):
+    """
+    Rewrite the dovecot 2.3 user variables of a value to the 2.4 syntax.
+
+    Everything is replaced in a single pass, which is what makes the result
+    independent of the order of the table. A value that is already written the
+    2.4 way is left alone, because "%{" is not one of the patterns.
+    """
+    return USER_VARS_PATTERN.sub(
+        lambda match: USER_VARS.get(match.group(0), match.group(0)), str(value)
+    )
 
 
 class FilterModule:
@@ -177,7 +233,11 @@ class FilterModule:
             # 2.4: a named filter holding a dict, the driver comes from the
             #      prefix
             driver, _, path = text.partition(":")
-            return {"kind": "acl_sharing_map", "driver": driver, "path": path}
+            return {
+                "kind": "acl_sharing_map",
+                "driver": driver,
+                "path": _translate_vars(path),
+            }
 
         if key == "acl_anyone":
             return self._setting(
@@ -186,10 +246,41 @@ class FilterModule:
                 notes=ACL_ANYONE_NOTE if text.lower() == "authenticated" else [],
             )
 
+        if base == "acl":
+            return self._acl_driver(text)
+
         return self._setting(
             PLUGIN_RENAMES.get(key, PLUGIN_RENAMES.get(base, key)),
-            LITERAL_PERCENT.sub("%", text),
+            _translate_vars(LITERAL_PERCENT.sub("%", text)),
         )
+
+    @staticmethod
+    def _acl_driver(text):
+        """
+        Split a 2.3 "acl" value into the 2.4 settings.
+
+            vfile:/etc/dovecot/global-acls:cache_secs=300
+                -> acl_driver    = vfile
+                   acl_cache_ttl = 300 secs
+                   ... plus a note about the global ACL file
+
+        Dovecot 2.4 takes a plain driver name here. Handing it the whole 2.3
+        string makes 2.4.1 abort with "Unknown ACL backend", while 2.4.4
+        silently keeps only the part before the first colon.
+        """
+        parts = [part for part in text.split(":") if part != ""]
+        settings = [("acl_driver", parts[0] if parts else text)]
+        notes = []
+
+        for part in parts[1:]:
+            name, separator, argument = part.partition("=")
+            if separator and name.strip() == "cache_secs":
+                settings.append(("acl_cache_ttl", f"{argument.strip()} secs"))
+            elif not separator:
+                # the global ACL file
+                notes = ACL_GLOBAL_PATH_HINT
+
+        return {"kind": "settings", "settings": settings, "notes": notes}
 
     @staticmethod
     def _setting(key, value, notes=None):

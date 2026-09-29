@@ -112,6 +112,13 @@
       setting. -#}
 {%-   set lines = ['# UNMAPPED ' ~ result.key ~ ' = ' ~ result.value] + result.hints -%}
 {%-   set text = lines | join('\n#   ') -%}
+{%- elif result.kind == 'settings' -%}
+{#-   one 2.3 setting that became SEVERAL in 2.4, "acl" for instance. -#}
+{%-   set lines = [] -%}
+{%-   for _key, _value in result.settings -%}
+{%-     set _ = lines.append('%-29s' | format(_key) ~ ' = ' ~ _value) -%}
+{%-   endfor -%}
+{%-   set text = (result.notes + lines) | join('\n') -%}
 {%- elif result.kind == 'acl_sharing_map' -%}
 {%-   set text = ['acl_sharing_map {',
                   '  dict ' ~ result.driver ~ ' {',

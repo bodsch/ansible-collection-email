@@ -43,6 +43,18 @@ _dovecot_version_defaults:
       - "# auth-oauth2.conf.ext"
       - "# auth-static.conf.ext"
 
+  mail:
+    # Dovecot 2.4 REMOVED mail location autodetection. 2.3 fell back to
+    # ~/Maildir (or /var/mail/%u for mbox) when nothing was configured; 2.4
+    # resolves mail_driver and mail_path to an empty string instead. The
+    # configuration still passes "doveconf -n" - the server simply has no
+    # INBOX, and every client reports it as unavailable.
+    #
+    # This reproduces what 2.3 autodetected. A mail_location set by the user
+    # takes precedence, see conf.d/10-mail.conf.j2.
+    mail_driver: maildir
+    mail_path: "~/Maildir"
+
   logging:
     # 2.3: "%Us(%u): "
     mail_log_prefix: "%{service}(%{user})<%{process:pid}><%{session}>: "
