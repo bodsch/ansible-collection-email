@@ -29,6 +29,32 @@ dovecot_valid_quota_drivers:
   - imapc
   # dirsize was removed in dovecot 2.4 - use count plus quota-clone
 
+# Full text search. Dovecot accepts any name here too and only fails once a
+# mailbox is indexed - "doveconf -n" reports nothing.
+#
+# The filter and tokenizer names were read out of libdovecot-language.so of
+# dovecot 2.4.4; the backends are the fts plugins it ships.
+dovecot_valid_fts_drivers:
+  - flatcurve
+  - solr
+  # fts-lucene and fts-squat were removed in dovecot 2.4
+
+dovecot_valid_language_filters:
+  - contractions
+  - english-possessive
+  - lowercase
+  - normalizer-icu                                # needs a dovecot built with ICU
+  - snowball                                      # needs libstemmer
+  - stopwords
+
+dovecot_valid_language_tokenizers:
+  - generic
+  - email-address
+
+dovecot_valid_language_tokenizer_algorithms:
+  - simple
+  - tr29
+
 dovecot_dependencies:
   - iproute2
 
@@ -773,13 +799,23 @@ dovecot_defaults_sql: {}
 
 # dovecot >= 2.4 only
 dovecot_defaults_fts:
-  ## Selects the backend. Empty means full text search is off - configuring a
-  ## backend below does NOT switch it on. This is what "plugin { fts = ... }"
-  ## did in 2.3.
-  driver: ""                                        # default: "" | ['flatcurve','solr','xapian','elastic']
+  ## Selects the backend and switches full text search on. Empty means off;
+  ## configuring a backend below does NOT switch it on by itself. This is what
+  ## "plugin { fts = ... }" did in 2.3.
+  ##
+  ## Setting this makes conf.d/90-fts.conf emit three more things that dovecot
+  ## 2.4 needs and does NOT report as a configuration error:
+  ##   mail_plugins { fts = yes  fts_<driver> = yes }
+  ##   fts <driver> { }                 without it: "plugin disabled"
+  ##   language en { default = yes }    without it: "No language { .. } defined"
+  ##   language_tokenizers              without it: "Empty language_tokenizers"
+  ## All four are overridden by configuring them explicitly.
+  driver: ""                                        # default: "" | ['flatcurve','solr']
   autoindex: ""                                     # default: true
   autoindex_max_recent_msgs: ""                     # default: 999
-  search_add_missing: ""                            # default: true
+  ## an ENUM in 2.4, not a boolean: "yes" or "body-search-only". "no" makes
+  ## dovecot refuse to start - leave driver empty to switch fts off.
+  search_add_missing: ""                            # default: body-search-only
   search_read_fallback: ""                          # default: true
   search_timeout: ""                                # default: 30 secs
   message_max_size: ""                              # default: unlimited
@@ -800,11 +836,15 @@ dovecot_defaults_fts:
 
   ## language handling, applies regardless of the backend
   language_filters: []                              # default: normalizer-icu snowball stopwords
-  language_tokenizers: []                           # default: generic email-address
+  ## dovecot's own default is EMPTY, and an empty list makes the backend fail
+  ## at runtime. The role writes "generic email-address" when a driver is set.
+  language_tokenizers: []                           # role default: generic email-address
   language_tokenizer_generic_algorithm: ""          # default: simple
   language_filter_stopwords_dir: ""                 # default: /usr/share/dovecot/stopwords
 
-  ## rendered as "language <name> { ... }"
+  ## rendered as "language <name> { ... }". Exactly ONE entry has to carry
+  ## "default: true" - dovecot refuses to start on anything else. When this is
+  ## empty and a driver is set, the role writes "language en { default = yes }".
   language: []
     # - en:
     #     default: true

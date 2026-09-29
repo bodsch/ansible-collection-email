@@ -33,12 +33,31 @@
 {% set _backend_names = mcr.named_filter_names(dovecot_fts.backends | default({})) | trim | split(' ') %}
   {% if dovecot_fts.driver is defined and
         dovecot_fts.driver | string | length > 0 %}
-    {% if dovecot_fts.driver not in _backend_names %}
-# NOTE fts_driver is "{{ dovecot_fts.driver }}", but no matching
-#   "fts {{ dovecot_fts.driver }} { }" block is configured. Add it to
-#   dovecot_fts.backends, otherwise the backend runs with its defaults.
-    {% endif %}
 fts_driver                    = {{ dovecot_fts.driver }}
+{#
+  Two things besides fts_driver are needed, and dovecot reports neither as a
+  configuration error:
+
+  1. the plugins have to be loaded. In 2.4 mail_plugins is a boolean list and
+     the BLOCK form adds to it, so this composes with the list of 10-mail.conf
+     instead of replacing it.
+  2. an "fts <driver> { }" named list filter has to exist. Without it the
+     debug log says
+
+       fts: No fts { .. } named list filter - plugin disabled
+
+     and full text search is silently off - it does not fall back to defaults.
+     The block is written here when dovecot_fts.backends has no entry for the
+     driver; a configured one is rendered further down.
+#}
+mail_plugins {
+  fts                         = yes
+  {{ "%-27s" | format('fts_' ~ dovecot_fts.driver | replace('-', '_')) }} = yes
+}
+    {% if dovecot_fts.driver not in _backend_names %}
+fts {{ dovecot_fts.driver }} {
+}
+    {% endif %}
   {% endif %}
   {% if dovecot_fts.autoindex is defined and
         dovecot_fts.autoindex | string | length > 0 %}
@@ -48,9 +67,21 @@ fts_autoindex                 = {{ dovecot_fts.autoindex | bodsch.core.config_bo
         dovecot_fts.autoindex_max_recent_msgs | string | length > 0 %}
 fts_autoindex_max_recent_msgs = {{ dovecot_fts.autoindex_max_recent_msgs | int }}
   {% endif %}
+{#
+  fts_search_add_missing is an ENUM in 2.4, not a boolean: "yes" or
+  "body-search-only" (the default). "no" makes dovecot refuse to start with
+  "Invalid value" - which is what config_bool would produce for false. To turn
+  full text searching off, leave dovecot_fts.driver empty.
+#}
   {% if dovecot_fts.search_add_missing is defined and
         dovecot_fts.search_add_missing | string | length > 0 %}
-fts_search_add_missing        = {{ dovecot_fts.search_add_missing | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+    {% set _add_missing = dovecot_fts.search_add_missing | bodsch.core.config_bool(true_as='yes', false_as='no') | string %}
+    {% if _add_missing in ['yes', 'body-search-only'] %}
+fts_search_add_missing        = {{ _add_missing }}
+    {% else %}
+# NOTE fts_search_add_missing = "{{ dovecot_fts.search_add_missing }}" is not a
+#   valid dovecot 2.4 value; it takes "yes" or "body-search-only".
+    {% endif %}
   {% endif %}
   {% if dovecot_fts.search_read_fallback is defined and
         dovecot_fts.search_read_fallback | string | length > 0 %}
@@ -102,7 +133,8 @@ fts_decoder_script_socket_path = {{ dovecot_fts.decoder_script_socket_path }}
                       or (dovecot_fts.language_tokenizers | default([]) | count > 0)
                       or (dovecot_fts.language_tokenizer_generic_algorithm | default('') | string | length > 0)
                       or (dovecot_fts.language_filter_stopwords_dir | default('') | string | length > 0)
-                      or (dovecot_fts.language | default([]) | count > 0) %}
+                      or (dovecot_fts.language | default([]) | count > 0)
+                      or (dovecot_fts.driver | default('') | string | length > 0) %}
   {% if _has_language %}
 
 ## language handling
@@ -111,9 +143,22 @@ fts_decoder_script_socket_path = {{ dovecot_fts.decoder_script_socket_path }}
         dovecot_fts.language_filters | count > 0 %}
 language_filters              = {{ dovecot_fts.language_filters | join(' ') }}
   {% endif %}
+{#
+  A backend with an empty tokenizer list fails at RUNTIME, not while the
+  configuration is parsed:
+
+    fts: Failed to initialize backend 'flatcurve': language data:
+         Empty language_tokenizers { .. } list
+
+  "doveconf -h language_tokenizers" reports an empty default, so a configured
+  driver always gets the pair dovecot 2.3 used (fts_tokenizers).
+#}
   {% if dovecot_fts.language_tokenizers is defined and
         dovecot_fts.language_tokenizers | count > 0 %}
 language_tokenizers           = {{ dovecot_fts.language_tokenizers | join(' ') }}
+  {% elif dovecot_fts.driver is defined and
+          dovecot_fts.driver | string | length > 0 %}
+language_tokenizers           = generic email-address
   {% endif %}
   {% if dovecot_fts.language_tokenizer_generic_algorithm is defined and
         dovecot_fts.language_tokenizer_generic_algorithm | string | length > 0 %}
@@ -126,5 +171,42 @@ language_filter_stopwords_dir = {{ dovecot_fts.language_filter_stopwords_dir }}
   {% if dovecot_fts.language is defined and
         dovecot_fts.language | count > 0 %}
 {{ mcr.named_filters('language', dovecot_fts.language) }}
+{#
+  Exactly one language has to carry "default = yes". Dovecot refuses to start
+  on the others:
+
+    Error in configuration file: No language with { default = yes } found
+
+  This is only reported when at least one language block exists, which is why
+  it is a template comment and not a hard error - tasks/validate.yml checks it
+  before anything is written.
+#}
+    {% set _defaults = [] %}
+    {% for _entry in dovecot_fts.language %}
+      {% for _name, _values in _entry.items() %}
+        {% if (_values | default({})).get('default') | default(false) %}
+          {% set _ = _defaults.append(_name) %}
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+    {% if _defaults | count != 1 %}
+# NOTE {{ _defaults | count }} of the configured languages carry "default: true".
+#   Dovecot needs exactly one and refuses to start otherwise.
+    {% endif %}
+{#
+  A backend without a single language block fails at RUNTIME, not while the
+  configuration is parsed:
+
+    fts: Failed to initialize backend 'flatcurve': languages settings:
+         Invalid settings: No language { .. } defined
+
+  So a configured driver always gets one. The global language_filters and
+  language_tokenizers apply to it.
+#}
+  {% elif dovecot_fts.driver is defined and
+          dovecot_fts.driver | string | length > 0 %}
+language en {
+  default                     = yes
+}
   {% endif %}
 {% endif %}
