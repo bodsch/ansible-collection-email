@@ -38,6 +38,9 @@ smtp_body_checks                          = {{ _postfix_smtp.body_checks }}
 {% endif %}
 {% if _postfix_smtp.cname_overrides_servername is defined and
       _postfix_smtp.cname_overrides_servername | string | length > 0 %}
+    {% if postfix_version is version_compare('3.11',  '>=') %}
+# OBSOLETE see: https://www.postfix.org/DEPRECATION_README.html#cname_overrides_servername
+    {% endif %}
 smtp_cname_overrides_servername           = {{ _postfix_smtp.cname_overrides_servername | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
 {% endif %}
 {% if _postfix_smtp.connect_timeout is defined and
@@ -280,7 +283,15 @@ smtp_never_send_ehlo                      = {{ _postfix_smtp.never_send_ehlo | b
 {% endif %}
 {% if _postfix_smtp.per_record_deadline is defined and
       _postfix_smtp.per_record_deadline | string | length > 0 %}
+    {% if postfix_version is version_compare('3.11',  '>=') %}
+# OBSOLETE see: https://www.postfix.org/DEPRECATION_README.html#renamed
+    {% endif %}
 smtp_per_record_deadline                  = {{ _postfix_smtp.per_record_deadline | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+smtp_per_request_deadline                 = {{ _postfix_smtp.per_request_deadline | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+{% endif %}
+{% if _postfix_smtp.per_request_deadline is defined and
+      _postfix_smtp.per_request_deadline | string | length > 0 %}
+smtp_per_request_deadline                 = {{ _postfix_smtp.per_request_deadline | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
 {% endif %}
 {% if _postfix_smtp.pix is defined %}
   {% if _postfix_smtp.pix.workaround is defined %}
@@ -528,7 +539,15 @@ smtp_tls_eckey_file                       = {{ _postfix_smtp.tls.eckey_file }}
   {% endif %}
   {% if _postfix_smtp.tls.enforce_peername is defined and
         _postfix_smtp.tls.enforce_peername | string | length > 0 %}
+    {% if postfix_version is version_compare('3.11',  '>=') %}
+# OBSOLETE see: https://www.postfix.org/DEPRECATION_README.html#xxx_tls_enforce_peername
+    {% endif %}
 smtp_tls_enforce_peername                 = {{ _postfix_smtp.tls.enforce_peername | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+smtp_tls_security_level                   = {{ _postfix_smtp.tls.enforce_peername | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+  {% endif %}
+  {% if _postfix_smtp.tls.security_level is defined and
+        _postfix_smtp.tls.security_level | string | length > 0 %}
+smtp_tls_security_level                   = {{ _postfix_smtp.tls.security_level | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
   {% endif %}
   {% if _postfix_smtp.tls.exclude_ciphers is defined and
         _postfix_smtp.tls.exclude_ciphers | string | length %}

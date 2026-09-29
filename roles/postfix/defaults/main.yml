@@ -43,6 +43,7 @@ postfix_inet: {}
 postfix_mailbox: {}
 postfix_maillog: {}
 postfix_message: {}
+postfix_non: {}
 postfix_postscreen:
   enable: false
 postfix_proxy: {}

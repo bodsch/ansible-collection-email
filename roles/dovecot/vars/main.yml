@@ -220,7 +220,7 @@ dovecot_defaults_master:
         drop_priv_before_exec: false
         executable: log
         extra_groups:
-        user:
+        user: "dovenull"
         group:
         idle_kill: "4294967295 secs"
         privileged_group:
@@ -236,6 +236,14 @@ dovecot_defaults_master:
               group:
               user:
               mode: "0600"
+
+    - config:
+        listeners:
+          - dict:
+              type: unix_listener
+              mode: "0660"
+              user: root
+              group: vmail
 
     - imap-login:
         service_count: 1

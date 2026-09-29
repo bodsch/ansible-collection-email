@@ -5,6 +5,7 @@ postfix_packages:
   - postfix-pcre
   - postfix-lmdb
   - postfix-cdb
+  - postfix-mysql
   - libsasl
   - cyrus-sasl
 

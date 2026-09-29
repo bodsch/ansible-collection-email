@@ -3,45 +3,40 @@
 
 {% set print = self %}
 {% macro print_param(param) %}
-{% if param is sameas true or param is sameas false %}
+{% if param | bodsch.core.type == "bool" -%}
 {{ param | bool | bodsch.core.config_bool(true_as='y', false_as='n') }}
-{% else %}
-{{ param -}}
-{% endif %}
+{% else -%}
+{{ param }}
+{% endif -%}
 {% endmacro %}
+
 # {{ "%-16s %-15s %-8s %-7s %-8s %-8s %-8s %s" | format(
   "service", "type", "private", "unpriv", "chroot", "wakeup", "maxproc", "command + args") }}
 # {{ "%-16s %-15s %-8s %-7s %-8s %-8s %-8s %s" | format(
   "", "(yes)", "(yes)", "(no)", "(never)", "(100)", "", "") }}
-
+# ------------------------------------------------------------------------------------------------------
 {% for k,v in postfix_master.items() %}
-{%- if v. comment is defined and v.comment | length >0 %}
+  {% if v. comment is defined and v.comment | string | length > 0 %}
 # {{ v.comment -}}
-{% endif -%}
-{% if v.service is defined %}
-{% set service = v.service %}
-{% else %}
-{% set service = k %}
 {% endif %}
-{% if not v.enabled | default('true') %}
+
+{% if v.service is defined and v.service | string | length > 0%}
+  {% set service = v.service %}
+{% else %}
+  {% set service = k %}
+{% endif %}
+{% if not v.enabled | default(True) | bool %}
 # {% endif %}
 {{ "%-15s %-13s %5s %8s %8s %8s %8s  %-8s %s" | format(
-  service,
-  v.type | default('-'),
-  print_param( v.private | default('-')),
-  print_param( v.unpriv  | default('-')),
-  print_param( v.chroot  | default('-')),
-  print_param( v.wakeup  | default('-')),
-  print_param( v.maxproc | default('-')),
-  "",
-  v.command
+  service, v.type | default('-'), print_param( v.private | default('-')).strip(), print_param( v.unpriv  | default('-')).strip(), print_param( v.chroot  | default('-')).strip(),
+  print_param( v.wakeup  | default('-')).strip(), print_param( v.maxproc | default('-')).strip(), "", v.command
 ) }}
 {% if v.args is defined and v.args | count > 0 %}
-{% for a in  v.args %}
-{% if not v.enabled | default('true') %}
+  {% for a in  v.args %}
+    {% if not v.enabled | default(True) | bool %}
 # {% endif %}
-{{- a  | indent(6,true) }}
-{% endfor %}
+{{ a  | indent(6,true) }}
+  {% endfor %}
 {% endif -%}
 
 {% endfor -%}

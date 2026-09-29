@@ -23,7 +23,7 @@ dovecot_config:
 
 dovecot_virtual_user:
   name: vmail
-  home: /var/vmail
+  home: /srv/vmail
   uid: 1101
   gid: 1101
 

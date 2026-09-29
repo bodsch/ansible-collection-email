@@ -19,6 +19,9 @@
           {% endif %}
         {% endfor %}
       {% elif value | string | length > 0 %}
+        {% if value | bodsch.core.type == "bool" %}
+          {% set value = value | bodsch.core.config_bool(true_as='yes', false_as='no') %}
+        {% endif %}
 {{ mcr.plugin_setting(key, value) }}
       {% endif %}
     {% endfor %}
