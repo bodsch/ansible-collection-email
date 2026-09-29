@@ -112,7 +112,7 @@ namespace {{ ns.name | default("") }} {
           ns.list | string | length > 0 %}
       {% if ns.list | bodsch.core.type == "bool" %}
   list                        = {{ ns.list | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
-      {% elif ns.list | bodsch.core.type == "str" and ns.list == "children" %}
+      {% elif ns.list | bodsch.core.type == "string" and ns.list == "children" %}
   list                        = children
       {% endif %}
     {% endif %}

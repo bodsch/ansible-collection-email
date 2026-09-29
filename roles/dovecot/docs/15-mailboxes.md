@@ -3,44 +3,55 @@
 
 ```yaml
 dovecot_defaults_mailboxes:
+  ## Rendered into conf.d/15-mailboxes.conf as "namespace <name> { mailbox ... }".
+  ##
+  ## The namespace name MUST match the one in dovecot_mail.namespaces (default:
+  ## inbox). A second namespace with inbox = yes makes dovecot refuse to start.
+  ##
+  ## "auto" decides whether dovecot creates the mailbox at all:
+  ##   false     - never created automatically  (this is dovecot's default)
+  ##   create    - created, but not subscribed
+  ##   subscribe - created AND subscribed
+  ## Without "auto" a mailbox block only carries metadata (special_use) for a
+  ## folder the user has to create themselves - which is why the special use
+  ## folders appear to be missing.
   namespaces:
     - inbox:
-        disabled: false
-        hidden: false
-        ignore_on_failure: false
         inbox: true
-        list: true
-        location: ""
-        order: 0
-        prefix: ""
-        separator: ""
-        subscriptions: true
         type: private
-        Archive:
-          special_use: \Archive
+        list: true
+        subscriptions: true
         Drafts:
-          # false     - Never created automatically.
-          # create    - Automatically created, but no automatic subscription.
-          # subscribe - Automatically created and subscribed.
           auto: subscribe
-          autoexpunge: 0
-          autoexpunge_max_mails: 0
-          comment: ""
-          driver: ""
           special_use: \Drafts
         Junk:
+          auto: subscribe
           special_use: \Junk
         Sent:
-          special_use: \Sent
-        "Sent Messages":
+          auto: subscribe
           special_use: \Sent
         Trash:
+          auto: subscribe
           special_use: \Trash
-        virtual/All:
-          comment: "All my messages"
-          special_use: \All
-        virtual/Flagged:
-          comment: "All my flagged messages"
-          special_use: \Flagged
+        Archive:
+          auto: subscribe
+          special_use: \Archive
+    ## Further mailbox attributes:
+    #     disabled: false
+    #     hidden: false
+    #     ignore_on_failure: false
+    #     location: ""
+    #     order: 0
+    #     prefix: ""
+    #     separator: ""
+    #     "Sent Messages":
+    #       # legacy alias some clients still use
+    #       special_use: \Sent
+    ## Needs the "virtual" mail plugin, otherwise dovecot fails to open them:
+    #     virtual/All:
+    #       comment: "All my messages"
+    #       special_use: \All
+    #     virtual/Flagged:
+    #       comment: "All my flagged messages"
+    #       special_use: \Flagged
 ```
-

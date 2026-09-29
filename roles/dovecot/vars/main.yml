@@ -239,11 +239,12 @@ dovecot_defaults_master:
 
     - config:
         listeners:
-          - dict:
-              type: unix_listener
-              mode: "0660"
-              user: root
-              group: vmail
+          # "type: unix" renders "unix_listener", the suffix is added by the
+          # template. The socket has to be named "config" - "dict" collided
+          # with the listener of "service dict" below.
+          - config:
+              type: unix
+              mode: "0600"
 
     - imap-login:
         service_count: 1
@@ -361,39 +362,51 @@ dovecot_defaults_lda:
     #       - "$mail_plugins"
 
 dovecot_defaults_mailboxes:
-  namespaces: []
-    # - inbox:
+  ## Rendered into conf.d/15-mailboxes.conf as "namespace <name> { mailbox ... }".
+  ##
+  ## The namespace name MUST match the one in dovecot_mail.namespaces (default:
+  ## inbox). A second namespace with inbox = yes makes dovecot refuse to start.
+  ##
+  ## "auto" decides whether dovecot creates the mailbox at all:
+  ##   false     - never created automatically  (this is dovecot's default)
+  ##   create    - created, but not subscribed
+  ##   subscribe - created AND subscribed
+  ## Without "auto" a mailbox block only carries metadata (special_use) for a
+  ## folder the user has to create themselves - which is why the special use
+  ## folders appear to be missing.
+  namespaces:
+    - inbox:
+        inbox: true
+        type: private
+        list: true
+        subscriptions: true
+        Drafts:
+          auto: subscribe
+          special_use: \Drafts
+        Junk:
+          auto: subscribe
+          special_use: \Junk
+        Sent:
+          auto: subscribe
+          special_use: \Sent
+        Trash:
+          auto: subscribe
+          special_use: \Trash
+        Archive:
+          auto: subscribe
+          special_use: \Archive
+    ## Further mailbox attributes:
     #     disabled: false
     #     hidden: false
     #     ignore_on_failure: false
-    #     inbox: true
-    #     list: true
     #     location: ""
     #     order: 0
     #     prefix: ""
     #     separator: ""
-    #     subscriptions: true
-    #     type: private
-    #     Archive:
-    #       special_use: \Archive
-    #     Drafts:
-    #       # false     - Never created automatically.
-    #       # create    - Automatically created, but no automatic subscription.
-    #       # subscribe - Automatically created and subscribed.
-    #       auto: subscribe
-    #       autoexpunge: 0
-    #       autoexpunge_max_mails: 0
-    #       comment: ""
-    #       driver: ""
-    #       special_use: \Drafts
-    #     Junk:
-    #       special_use: \Junk
-    #     Sent:
-    #       special_use: \Sent
     #     "Sent Messages":
+    #       # legacy alias some clients still use
     #       special_use: \Sent
-    #     Trash:
-    #       special_use: \Trash
+    ## Needs the "virtual" mail plugin, otherwise dovecot fails to open them:
     #     virtual/All:
     #       comment: "All my messages"
     #       special_use: \All

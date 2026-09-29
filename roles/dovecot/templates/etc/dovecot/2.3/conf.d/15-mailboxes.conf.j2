@@ -14,7 +14,7 @@ namespace {{ namespace }} {
           {% if values | bodsch.core.type == "bool" %}
   {{ mailbox }} = {{ values  | bodsch.core.config_bool(true_as='yes', false_as='no') }}
           {% endif %}
-          {% if (values | bodsch.core.type == "str" or values | bodsch.core.type == "int") and
+          {% if (values | bodsch.core.type == "string" or values | bodsch.core.type == "int") and
                 mailbox in _inbox_attr and
                 values | string | length > 0 %}
   {{ mailbox }} = {{ values }}
