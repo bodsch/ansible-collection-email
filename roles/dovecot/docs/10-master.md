@@ -244,3 +244,36 @@ dovecot_master:
               user: ""
               group: ""
 ```
+
+## the SASL socket for postfix
+
+Postfix authenticates against a dovecot socket inside its own chroot. The role
+writes it as its **own** `service auth { }` block, which dovecot merges with the
+one from `dovecot_master.services` — so replacing that list cannot lose the
+socket again.
+
+```yaml
+dovecot_postfix_sasl:
+  enabled: true
+  path: /var/spool/postfix/private/auth
+  user: postfix
+  group: postfix
+  mode: "0660"
+```
+
+The matching postfix side:
+
+```yaml
+postfix_smtpd:
+  sasl:
+    auth_enable: true
+    type: dovecot
+    path: private/auth      # relative - smtpd runs chrooted in /var/spool/postfix
+```
+
+It is **off by default**: `/var/spool/postfix/private` only exists once postfix
+is installed, and dovecot refuses to start when it cannot create the socket.
+Run the postfix role before the dovecot role.
+
+Note that a listener's `type` is `unix` or `inet`; the template appends the
+`_listener` suffix itself.

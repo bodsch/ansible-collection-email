@@ -230,7 +230,86 @@ dovecot_defaults_mail:
 
   mail_attachment_fs: "sis posix"                   # ['posix', 'sis posix', 'sis-queue posix']
 
+  ## the 2.3 spelling, translated by the role - takes precedence over
+  ## mail_driver / mail_path
   mail_location: ""
+
+  ## mail storage. Dovecot 2.4 has no autodetection: without mail_driver and
+  ## mail_path there is no INBOX. vars/dovecot-2.4.yml fills them; a
+  ## mail_location set here takes precedence over that default.
+  mail_driver: ""
+  mail_path: ""
+  mail_home: ""
+  mail_inbox_path: ""
+
+  ## user and group the mail is stored as
+  mail_uid: ""
+  mail_gid: ""
+  mail_privileged_group: ""
+  mail_access_groups: ""
+  first_valid_uid: ""
+  last_valid_uid: ""
+  first_valid_gid: ""
+  last_valid_gid: ""
+
+  ## shared mailboxes and metadata
+  mail_shared_explicit_inbox: ""
+  mail_attribute_dict: ""
+  mail_server_comment: ""
+  mail_server_admin: ""
+  mail_full_filesystem_access: ""
+
+  ## mail processes
+  mmap_disable: ""
+  dotlock_use_excl: ""
+  mail_fsync: ""
+  lock_method: ""
+  mail_temp_dir: ""
+  mail_max_keyword_length: ""
+  mail_chroot: ""
+  auth_socket_path: ""
+  mail_plugin_dir: ""
+  mail_plugins: []
+
+  ## mailbox handling optimizations
+  mailbox_list_index: ""
+  mailbox_list_index_very_dirty_syncs: ""
+  mailbox_list_index_include_inbox: ""
+  mail_cache_min_mail_count: ""
+  mailbox_idle_check_interval: ""
+  mail_save_crlf: ""
+  mail_prefetch_count: ""
+  mail_temp_scan_interval: ""
+  mail_sort_max_read_count: ""
+
+  ## maildir specific
+  maildir_stat_dirs: ""
+  maildir_copy_with_hardlinks: ""
+  maildir_very_dirty_syncs: ""
+  maildir_broken_filename_sizes: ""
+  maildir_empty_new: ""
+
+  ## mbox specific
+  mbox_read_locks: []
+  mbox_write_locks: []
+  mbox_lock_timeout: ""
+  mbox_dotlock_change_timeout: ""
+  mbox_dirty_syncs: ""
+  mbox_very_dirty_syncs: ""
+  mbox_lazy_writes: ""
+  mbox_min_index_size: ""
+  mbox_md5: ""
+
+  ## mdbox specific
+  mdbox_rotate_size: ""
+  mdbox_rotate_interval: ""
+  mdbox_preallocate_space: ""
+
+  ## mail attachments
+  mail_attachment_dir: ""
+  mail_attachment_min_size: ""
+  mail_attachment_hash: ""
+  mail_attachment_detection_options: ""
 
 dovecot_defaults_master:
   default_process_limit: 100
@@ -622,13 +701,53 @@ dovecot_valid_sieve_script_types:
 
 # dovecot >= 2.4 only: statistics are gathered from events, no plugin needed.
 dovecot_defaults_metrics:
+  ## Rendered into conf.d/10-metrics.conf as "metric <name> { }". New in 2.4:
+  ## statistics come from events and need no plugin.
+  ##
+  ## One mapping per metric:
+  ##   type              the metric name (mandatory)
+  ##   filter            the event filter (mandatory - dovecot refuses to start
+  ##                     on a metric block without one)
+  ##   fields            extra event fields, as a string or a list
+  ##   group_by          see below
+  ##   exporter          the name of an event_exporter below
+  ##   exporter_include  which parts of the event the exporter gets
+  ##   description
+  ##
+  ## group_by keeps the compact notation of the dovecot documentation,
+  ## "field[:method[:arg...]]" separated by spaces:
+  ##
+  ##   cmd_name                      discrete (the default), no arguments
+  ##   cmd_name:discrete:lowercase   discrete with a modifier
+  ##   duration:exponential:1:5:10   min_magnitude : max_magnitude : base
+  ##   duration:linear:0:100:10      min : max : step
+  ##
+  ## In 2.4 group_by is a named list filter, not a setting - the role expands
+  ## the notation above into the nested blocks (bodsch.email.dovecot_metrics).
+  ## Writing "group_by = a b" yourself is rejected by dovecot with
+  ## "group_by: Setting is a named list filter".
   metrics: []
-    # - auth_failures:
-    #     filter: "event=auth_request_finished AND NOT success=yes"
+    # - type: auth_failures
+    #   filter: "event=auth_request_finished AND NOT success=yes"
+    #
+    # - type: imap_command
+    #   filter: "event=imap_command_finished"
+    #   fields: "bytes_in bytes_out"
+    #   group_by: "cmd_name tagged_reply_state"
+    #
+    # - type: mail_delivery
+    #   filter: "event=mail_delivery"
+    #   group_by: "duration:exponential:1:5:10"
+
+  ## Rendered as "event_exporter <name> { }". An exporter NOT named after its
+  ## driver needs an explicit driver - event_exporter_driver defaults to "log".
   event_exporters: []
-    # - log:
+    # - log-export:
+    #     driver: log
     #     format: json
     #     time_format: rfc3339
+
+  ## Adds an http listener to "service stats", which serves /metrics.
   prometheus:
     enabled: false
     port: 9900
@@ -649,30 +768,41 @@ dovecot_defaults_dict_server:
     #           value_field bytes:
     #             type: uint
 
-## Authentication backends. Empty by default, like every other group here -
-## a backend configured in here is automatically included from 10-auth.conf,
-## so an active example would enable a passdb nobody asked for.
 ##
 ## checkpassword, dict and vpopmail were removed in dovecot 2.4; oauth2 was
 ## added. See templates/etc/dovecot/<version>/auth.d/ for what exists per
 ## version.
-dovecot_defaults_authentications: []
-  # - system:
-  #     passdb:
-  #       driver: pam
-  #       passdb_pam_service_name: dovecot
-  # - sql:
-  #     passdb:
-  #       driver: sql
-  #       args: /etc/dovecot/dovecot-sql.conf.ext      # 2.3
-  #     userdb:
-  #       driver: sql
-  #       args: /etc/dovecot/dovecot-sql.conf.ext      # 2.3
-  # - deny:
-  #     passdb:
-  #       driver: passwd-file
-  #       deny: true
-  #       args: /etc/dovecot/deny-users
+## Authentication backends, keyed by the name of their auth.d file:
+## "sql" is rendered into auth.d/auth-sql.conf.ext.
+##
+## This variable decides HOW a backend is configured. What is ACTIVE is decided
+## by dovecot_auth.includes alone - a backend configured here but not included
+## there never reaches dovecot, and 10-auth.conf says so as a comment.
+##
+## The role ships the system backend, which matches the auth-system.conf.ext
+## that dovecot_auth.includes has active by default. To replace it, take
+## auth-system.conf.ext out of includes and put your own backend in.
+##
+## checkpassword, dict and vpopmail were removed in dovecot 2.4; oauth2 was
+## added. See templates/etc/dovecot/<version>/auth.d/ for what exists per
+## version.
+##
+## The values here are the 2.3 spelling; vars/dovecot-2.4.yml carries the 2.4
+## one, where "args" was replaced by per driver settings.
+dovecot_defaults_authentications:
+  system:
+    passdb:
+      driver: pam
+      args: dovecot
+    userdb:
+      driver: passwd
+  # sql:
+  #   passdb:
+  #     driver: sql
+  #     args: /etc/dovecot/dovecot-sql.conf.ext
+  #   userdb:
+  #     driver: sql
+  #     args: /etc/dovecot/dovecot-sql.conf.ext
 
 dovecot_defaults_dict_auth:
   # uri: ""

@@ -194,8 +194,9 @@ dovecot_lmtp:
   rcpt_check_quota: false
   hdr_delivery_address: final
   protocols:
-    - lmtp:
-        mail_plugins: $mail_plugins
+    lmtp:
+      mail_plugins: 
+        - $mail_plugins
 
 # TODO
 dovecot_managesieve:
@@ -606,21 +607,24 @@ dovecot_sql:
 
 dovecot_metrics:
   metrics:
-    - auth_success:
-        filter: "event=auth_request_finished AND success=yes"
+    - type: auth_success
+      filter: "event=auth_request_finished AND success=yes"
 
-    - auth_failures:
-        filter: "event=auth_request_finished AND NOT success=yes"
+    - type: auth_failures
+      filter: "event=auth_request_finished AND NOT success=yes"
 
     # In some installations there may be too many slow commands to be worth logging these
-    - imap_commands_slow:
-        filter: "event=imap_command_finished AND (NOT cmd_name=IDLE) AND duration > 1min"
-        exporter: log-export
+    - type: imap_commands_slow
+      filter: "event=imap_command_finished AND (NOT cmd_name=IDLE) AND duration > 1min"
+      exporter: log-export
 
-    # - imap_command:
-    #     filter: "event=imap_command_finished"
-    #     group_by:
-    #       - cmd_name: tagged_reply_state
+    - type: imap_command
+      filter: "event=imap_command_finished"
+      group_by: "cmd_name tagged_reply_state"
+
+    - type: client_disconnected
+      filter: 'event=client_connection_disconnected AND category="service:imap"'
+      fields: "bytes_in bytes_out"
 
     # - smtp_command:
     #     filter: "event=smtp_server_command_finished"
@@ -771,9 +775,9 @@ dovecot_metrics:
     # }
 
   event_exporters:
-    - log-export:
-        format: json
-        time_format: rfc3339
+    - name: log-export
+      format: json
+      time_format: rfc3339
 
   prometheus:
     enabled: true

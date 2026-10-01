@@ -6,7 +6,7 @@ This file is commonly accessed via `passdb {}` or `userdb {}` section in
 `auth.d/auth-dict.conf.ext`
 
 ```yaml
-dovecot_defaults_dict_auth:
+dovecot_dict_auth:
   # uri: ""
   default_pass_scheme: MD5
   iterate_prefix: userdb/

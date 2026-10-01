@@ -43,6 +43,18 @@ _dovecot_version_defaults:
       - "# auth-oauth2.conf.ext"
       - "# auth-static.conf.ext"
 
+  authentications:
+    # 2.3 passed the driver arguments as one "args" string; 2.4 gave every
+    # driver its own settings. "args" would be written as an UNMAPPED comment,
+    # so the system backend is restated here.
+    system:
+      passdb:
+        driver: pam
+        args: ""
+        passdb_pam_service_name: dovecot
+      userdb:
+        driver: passwd
+
   mail:
     # Dovecot 2.4 REMOVED mail location autodetection. 2.3 fell back to
     # ~/Maildir (or /var/mail/%u for mbox) when nothing was configured; 2.4

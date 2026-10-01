@@ -21,7 +21,7 @@
 {#  'driver' became 'mail_driver' inside a mailbox block #}
   {% set _mailbox_attr = [
     'auto', 'autoexpunge', 'autoexpunge_max_mails', 'comment',
-    'mail_driver', 'special_use'] %}
+    'mail_driver', 'notify_status', 'special_use'] %}
 
   {% for ns in dovecot_mailboxes.namespaces %}
     {% for namespace, boxes in ns.items() %}

@@ -66,18 +66,7 @@ dovecot_sieve: {}
 dovecot_metrics: {}
 dovecot_fts: {}
 dovecot_dict_server: {}
-dovecot_authentications: []
-
-dovecot_auth_checkpassword: {}
-dovecot_auth_deny: {}
-dovecot_auth_dict: {}
-dovecot_auth_ldap: {}
-dovecot_auth_master: {}
-dovecot_auth_passwdfile: {}
-dovecot_auth_sql: {}
-dovecot_auth_static: {}
-dovecot_auth_system: {}
-dovecot_auth_vpopmail: {}
+dovecot_authentications: {}
 
 dovecot_dict_auth: {}
 dovecot_dict_sql: {}

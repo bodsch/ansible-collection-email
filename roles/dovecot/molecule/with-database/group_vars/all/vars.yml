@@ -68,6 +68,11 @@ dovecot_mail:
 
 dovecot_auth:
   disable_plaintext_auth: true
+  # includes decides ALONE what is active. The role ships auth-system.conf.ext
+  # active; this host authenticates against SQL instead, so system goes out and
+  # sql comes in.
+  includes:
+    - auth-sql.conf.ext
 
 dovecot_acl:
   plugins:
@@ -76,14 +81,15 @@ dovecot_acl:
 
 # Database related
 
+# keyed by the name of the auth.d file: sql -> auth.d/auth-sql.conf.ext
 dovecot_authentications:
-  - sql:
-      passdb:
-        driver: sql
-        args: /etc/dovecot/dovecot-sql.conf.ext
-      userdb:
-        driver: sql
-        args: /etc/dovecot/dovecot-sql.conf.ext
+  sql:
+    passdb:
+      driver: sql
+      args: /etc/dovecot/dovecot-sql.conf.ext
+    userdb:
+      driver: sql
+      args: /etc/dovecot/dovecot-sql.conf.ext
 
 dovecot_sql:
   driver: mysql

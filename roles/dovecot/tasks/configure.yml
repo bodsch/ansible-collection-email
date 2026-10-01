@@ -83,6 +83,7 @@
     dovecot_defaults_submission: "{{ dovecot_defaults_submission | combine(_dovecot_version_defaults.submission | default({}), recursive=True) }}"
     dovecot_defaults_lda: "{{ dovecot_defaults_lda | combine(_dovecot_version_defaults.lda | default({}), recursive=True) }}"
     dovecot_defaults_managesieve: "{{ dovecot_defaults_managesieve | combine(_dovecot_version_defaults.managesieve | default({}), recursive=True) }}"
+    dovecot_defaults_authentications: "{{ dovecot_defaults_authentications | combine(_dovecot_version_defaults.authentications | default({}), recursive=True) }}"
   no_log: true
 
 - name: merge dovecot configuration between defaults and custom

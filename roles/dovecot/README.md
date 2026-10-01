@@ -29,11 +29,31 @@ Tested on
 
 ## configuration
 
+### role behaviour
+
+These do not belong to a dovecot configuration file; they steer what the role
+itself does.
+
+| variable | default | |
+| --- | --- | --- |
+| `dovecot_service` | `{state: started, enabled: true}` | what to do with the systemd unit |
+| `dovecot_virtual_user` | `vmail`, uid/gid 1101, home `/srv/vmail` | the user mail is stored as |
+| `dovecot_logging_directory` | `/var/log/dovecot` | created by the role |
+| `dovecot_validate_drivers` | `true` | check storage, quota, fts and language names before writing the config. Dovecot accepts any name while parsing and only fails at runtime |
+| `dovecot_remove_stale_configs` | `true` | after an upgrade, delete the files that belong to the other dovecot version of this role. Dovecot 2.4 aborts on unknown settings, so leftovers from 2.3 keep it from starting |
+| `dovecot_manage_mail_directories` | `true` | create the storage directories `dovecot_mail` points at and hand them to the virtual user. Dovecot creates the per user part itself, not the static parent above it - without this, subscribing to a mailbox fails with `mkdir(...) failed: Permission denied` |
+| `dovecot_mail_directories_mode` | `"0750"` | mode for the directories above |
+| `dovecot_postfix_sasl` | disabled | the SASL socket postfix authenticates against, see [10-master.conf](docs/10-master.md) |
+
+### configuration files
+
+
 - [/etc/dovecot/conf.d/10-auth.conf](docs/10-auth.md)
 - [/etc/dovecot/conf.d/10-director.conf](docs/10-director.md)
 - [/etc/dovecot/conf.d/10-logging.conf](docs/10-logging.md)
 - [/etc/dovecot/conf.d/10-mail.conf](docs/10-mail.md)
 - [/etc/dovecot/conf.d/10-master.conf](docs/10-master.md)
+- [/etc/dovecot/conf.d/10-metrics.conf](docs/10-metrics.md)
 - [/etc/dovecot/conf.d/10-ssl.conf](docs/10-ssl.md)
 - [/etc/dovecot/conf.d/10-tcpwrapper.conf](docs/10-tcpwrapper.md)
 - [/etc/dovecot/conf.d/15-lda.conf](docs/15-lda.md)
@@ -43,7 +63,10 @@ Tested on
 - [/etc/dovecot/conf.d/20-managesieve.conf](docs/20-managesieve.md)
 - [/etc/dovecot/conf.d/20-pop3.conf](docs/20-pop3.md)
 - [/etc/dovecot/conf.d/20-submission.conf](docs/20-submission.md)
+- [/etc/dovecot/conf.d/30-dict-server.conf](docs/30-dict-server.md)
+
 - [/etc/dovecot/conf.d/90-acl.conf](docs/90-acl.md)
+- [/etc/dovecot/conf.d/90-fts.conf](docs/90-fts.md)
 - [/etc/dovecot/conf.d/90-plugin.conf](docs/90-plugin.md)
 - [/etc/dovecot/conf.d/90-quota.conf](docs/90-quota.md)
 - [/etc/dovecot/conf.d/90-sieve.conf](docs/90-sieve.md)
