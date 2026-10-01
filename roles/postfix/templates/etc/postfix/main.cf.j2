@@ -40,7 +40,7 @@ compatibility_level                       = {{ postfix_compatibility_level }}
 {%- include('main.cf.d/mailbox.j2') -%}
 {%- include('main.cf.d/maillog.j2') -%}
 {%- include('main.cf.d/message.j2') -%}
-{%- include('main.cf.d/non.j2') -%}
+{#{%- include('main.cf.d/non.j2') -%} #}
 {%- include('main.cf.d/postscreen.j2') -%}
 {%- include('main.cf.d/proxy.j2') -%}
 {%- include('main.cf.d/queue.j2') -%}
