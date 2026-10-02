@@ -34,7 +34,8 @@ dovecot_service:
 
 dovecot_config:
   listen:
-    - "*"
+    - "127.0.0.1"
+    - "{{ ansible_facts.default_ipv4.address }}"
 
 dovecot_virtual_user:
   name: vmail

@@ -18,6 +18,7 @@
   as dovecot_plugin_setting in 90-plugin.conf.
 #}
 {% set _metrics = dovecot_metrics.metrics | default([]) | bodsch.email.dovecot_metrics %}
+
 {% for metric in _metrics %}
 metric {{ metric.name }} {
   {% for key, value in metric.settings %}
@@ -39,12 +40,15 @@ metric {{ metric.name }} {
   }
   {% endfor %}
 }
+
 {% endfor %}
+
 {#
   An exporter named after its driver needs no driver setting; any other name
   does, because event_exporter_driver defaults to "log".
 #}
 {% if dovecot_metrics.event_exporters is defined and
+      dovecot_metrics.event_exporters | bodsch.core.type == "list" and
       dovecot_metrics.event_exporters | count > 0 %}
   {% for exporter in dovecot_metrics.event_exporters %}
     {% for name, values in exporter.items() %}
@@ -55,9 +59,11 @@ event_exporter {{ name }} {
         {% endif %}
       {% endfor %}
 }
+
     {% endfor %}
   {% endfor %}
 {% endif %}
+
 {#
   Prometheus scrapes /metrics from the http listener of the stats service.
 #}
@@ -66,7 +72,7 @@ event_exporter {{ name }} {
       dovecot_metrics.prometheus.enabled | bool %}
 service stats {
   inet_listener http {
-    port                      = {{ dovecot_metrics.prometheus.port | default(9900) | int }}
+    port                      = {{ dovecot_metrics.prometheus.port | default('9900') | string }}
   {% if dovecot_metrics.prometheus.address is defined and
         dovecot_metrics.prometheus.address | string | length > 0 %}
     listen                    = {{ dovecot_metrics.prometheus.address }}

@@ -44,6 +44,7 @@
     _dovecot_templates: "{{
       lookup('community.general.filetree', 'templates/etc/dovecot') |
       bodsch.email.dovecot_template_versions(version=dovecot_short_version) }}"
+  no_log: true
 
 - name: fail on unsupported dovecot version
   when:
@@ -66,6 +67,7 @@
       files:
         - "dovecot-{{ dovecot_short_version }}.yml"
       skip: true
+  no_log: true
 
 - name: apply version specific defaults
   when:
@@ -231,29 +233,6 @@
         success_msg: "mailbox namespace name(s) ok: {{ _dovecot_mailbox_ns_names | join(', ') }}"
         quiet: true
 
-# Dovecot creates the per user part of a storage path itself, but not the
-# static parent above it - see dovecot_manage_mail_directories in defaults.
-# Without this, subscribing to a mailbox fails with
-#   mkdir(/var/mail/CONTROL/<domain>) failed: Permission denied
-# while "doveconf -n" reports nothing at all.
-- name: create mail storage directories
-  when:
-    - not running_in_check_mode
-    - dovecot_manage_mail_directories | bool
-    - _dovecot_mail_directories | count > 0
-  vars:
-    _dovecot_mail_directories: "{{
-      dovecot_mail | bodsch.email.dovecot_storage_directories(dovecot_mailboxes) }}"
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: directory
-    owner: "{{ dovecot_virtual_user.name }}"
-    group: "{{ dovecot_virtual_user.name }}"
-    mode: "{{ dovecot_mail_directories_mode }}"
-  loop: "{{ _dovecot_mail_directories }}"
-  loop_control:
-    label: "{{ item }}"
-
 - name: create dovecot directories
   when:
     - not running_in_check_mode
@@ -265,6 +244,22 @@
       - path: conf.d
       - path: auth.d
       - path: sql.d
+
+# Dovecot creates the per user part of a storage path itself, but not the
+# static parent above it - see dovecot_manage_mail_directories in defaults.
+# Without this, subscribing to a mailbox fails with
+#   mkdir(/var/mail/CONTROL/<domain>) failed: Permission denied
+# while "doveconf -n" reports nothing at all.
+- name: create mail storage directories
+  when:
+    - not running_in_check_mode
+    - dovecot_manage_mail_directories | bool
+  bodsch.core.directories:
+    base_path: /etc/dovecot
+    owner: "{{ dovecot_virtual_user.name }}"
+    group: "{{ dovecot_virtual_user.name }}"
+    mode: "{{ dovecot_mail_directories_mode }}"
+    paths: "{{ dovecot_mail | bodsch.email.dovecot_storage_directories(dovecot_mailboxes) | bodsch.core.directory_path() }}"
 
 - name: create dovecot.conf
   when:
