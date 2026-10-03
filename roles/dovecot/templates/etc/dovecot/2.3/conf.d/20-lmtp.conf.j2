@@ -1,4 +1,5 @@
 #jinja2: trim_blocks: True, lstrip_blocks: True
+{% import 'jinja_macros.j2' as mcr with context %}
 # {{ ansible_managed }}
 
 {% if dovecot_lmtp.proxy is defined and
@@ -18,27 +19,10 @@ lmtp_rcpt_check_quota         = {{ dovecot_lmtp.rcpt_check_quota | bodsch.core.c
       dovecot_lmtp.hdr_delivery_address in ['final','original','none'] %}
 lmtp_hdr_delivery_address     = {{ dovecot_lmtp.hdr_delivery_address }}
 {% endif %}
-{% if dovecot_lmtp.protocols is defined and
-      dovecot_lmtp.protocols | count > 0 %}
-  {% for pr in dovecot_lmtp.protocols %}
-
-    {% if pr.name is defined %}
-      {% set _name = pr. name %}
-    {% else %}
-      {% set _name = pr.keys() | first %}
-    {% endif %}
-protocol {{ _name }} {
-    {% if pr | bodsch.core.type == "dict" %}
-      {% for k, v in pr[_name].items() %}
-        {% if v | bodsch.core.type == "list" %}
-          {% if v | count != 0 %}
-  {{ k }} = {{ v | join(' ') }}
-          {% endif %}
-        {% else %}
-  {{ k }} = {{ v }}
-        {% endif %}
-      {% endfor %}
-    {% endif %}
-}
-  {% endfor %}
-{% endif %}
+{#
+  The sieve interpreter runs inside the delivering process: without the
+  plugin no script runs, and dovecot does not report that. It is loaded as
+  soon as dovecot_sieve names a script location.
+#}
+{% set _sieve_plugins = ['sieve'] if (dovecot_sieve.plugins | default([]) | bodsch.email.dovecot_sieve_scripts).scripts | count > 0 else [] %}
+{{ mcr.legacy_protocols(dovecot_lmtp.protocols, 'lmtp', _sieve_plugins) }}
