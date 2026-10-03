@@ -49,26 +49,52 @@ imap_literal_minus            = {{ dovecot_imap.literal_minus | bodsch.core.conf
 imap_fetch_failure            = {{ dovecot_imap.fetch_failure }}
   {% endif %}
 {% endif %}
-{% if dovecot_imap.protocols is defined and
-      dovecot_imap.protocols | count > 0 %}
-  {% for pr in dovecot_imap.protocols %}
-    {% if pr.name is defined %}
-      {% set _name = pr. name %}
-    {% else %}
-      {% set _name = pr.keys() | first %}
-    {% endif %}
-protocol {{ _name }} {
-    {% if pr | bodsch.core.type == "dict" %}
-      {% for k, v in pr[_name].items() %}
-        {% if v | bodsch.core.type == "list" %}
-          {% if v | count != 0 %}
-  {{ k }} = {{ v | join(' ') }}
-          {% endif %}
-        {% else %}
-  {{ k }} = {{ v }}
-        {% endif %}
-      {% endfor %}
-    {% endif %}
-}
-  {% endfor %}
+{#
+  The imap side of acl and quota lives in imap_acl / imap_quota, which only
+  an imap process can load. They go into THE protocol imap block: in 2.3 a
+  second "protocol imap { mail_plugins = ... }" replaces the first, it does
+  not add to it. Without a configured block, one is written for them.
+#}
+{% set _imap_plugins = [] %}
+{% if dovecot_acl.plugins | default([]) | count > 0 %}
+  {% set _ = _imap_plugins.append('imap_acl') %}
 {% endif %}
+{% if dovecot_quota.plugins | default([]) | count > 0 or
+      dovecot_quota.quotas | default({}) | count > 0 %}
+  {% set _ = _imap_plugins.append('imap_quota') %}
+{% endif %}
+{% set _protocols = [] %}
+{% for pr in dovecot_imap.protocols | default([]) if pr | bodsch.core.type == "dict" %}
+  {% set _name = pr.name | default(pr.keys() | first) %}
+  {% set _body = pr[_name] | default({}) if _name in pr else pr %}
+  {% set _ = _protocols.append([_name, _body]) %}
+{% endfor %}
+{% if _imap_plugins | count > 0 and
+      _protocols | selectattr(0, 'equalto', 'imap') | list | count == 0 %}
+  {% set _ = _protocols.append(['imap', {'mail_plugins': '$mail_plugins'}]) %}
+{% endif %}
+{% for _name, _body in _protocols %}
+  {% set _settings = {} %}
+  {% for k, v in (_body | default({}, true)).items() if k != 'name' %}
+    {% set _ = _settings.update({k: v}) %}
+  {% endfor %}
+  {% if _name == 'imap' and _imap_plugins | count > 0 %}
+    {% set _raw = _settings.mail_plugins | default('$mail_plugins', true) %}
+    {% set _tokens = [] %}
+    {% for _value in ([_raw] if _raw is string else _raw) %}
+      {% set _ = _tokens.extend((_value | string).split()) %}
+    {% endfor %}
+    {% set _ = _settings.update({'mail_plugins': (_tokens + _imap_plugins) | unique | list}) %}
+  {% endif %}
+protocol {{ _name }} {
+  {% for k, v in _settings.items() %}
+    {% if v | bodsch.core.type == "list" %}
+      {% if v | count != 0 %}
+  {{ k }} = {{ v | join(' ') }}
+      {% endif %}
+    {% else %}
+  {{ k }} = {{ v }}
+    {% endif %}
+  {% endfor %}
+}
+{% endfor %}
