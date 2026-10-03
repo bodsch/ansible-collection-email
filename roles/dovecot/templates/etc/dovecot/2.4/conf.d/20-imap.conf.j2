@@ -33,6 +33,11 @@ imap_logout_format            = {{ dovecot_imap.logout_format | join(' ') }}
   {% for _c in _raw %}
     {% if _c | string | length > 0 %}
       {% set _ = _caps.append(_c | string | regex_replace('^\+', '')) %}
+{#    2.3 "+XFOO" added to the default capabilities, a plain list replaced
+      them. bool_list keeps that apart through the '$' self reference. #}
+      {% if _c | string | first == '+' and '$imap_capability' not in _caps %}
+        {% set _ = _caps.insert(0, '$imap_capability') %}
+      {% endif %}
     {% endif %}
   {% endfor %}
 {{ mcr.bool_list('imap_capability', _caps) }}

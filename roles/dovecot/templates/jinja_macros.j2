@@ -58,25 +58,47 @@
   "name = a b" REPLACES the list, "name { a = yes }" ADDS to it - the latter
   is what "$name a b" expressed in 2.3.
 
-  Entries starting with '$' (such as the old '$mail_plugins' placeholder) are
-  dropped: 2.4 has no setting variable expansion.
+  2.4 has no setting variable expansion, so the 2.3 self reference decides
+  the form instead of being written out:
+
+    [ '$mail_plugins', 'imap_quota' ]  -> mail_plugins { imap_quota = yes }
+    [ 'quota' ]                        -> mail_plugins = quota
+
+  exactly what "$mail_plugins imap_quota" and "quota" meant in 2.3. Checked
+  against doveconf 2.4.1 and 2.4.4: inside a protocol { } filter the block
+  adds to the global list, the assignment replaces it.
+
+  'values' may be a list, a space separated string or a mix of both. A plain
+  string used to be iterated CHARACTER BY CHARACTER ("m = yes", "a = yes",
+  ...) - and "doveconf -n" accepts that, only the service fails to start.
 #}
 {% macro bool_list(name, values, indent='') %}
+{%- if values is none -%}
+  {%- set raw = [] -%}
+{%- elif values is string or values is not iterable or values is mapping -%}
+  {%- set raw = [values] -%}
+{%- else -%}
+  {%- set raw = values -%}
+{%- endif -%}
 {%- set entries = [] -%}
-{%- for value in values | default([]) -%}
-{#- an empty entry has nothing to enable, and "'' | first" would raise.
-    A value split from an empty string is exactly that: "" | split(' ')
-    yields [''], not []. -#}
-  {%- if value | string | length > 0 and not value | string | first == '$' -%}
-    {%- set _ = entries.append(value | string) -%}
-  {%- endif -%}
+{%- set additive = [] -%}
+{%- for value in raw -%}
+  {%- for token in (value | string).split() -%}
+    {%- if token | first == '$' -%}
+      {%- set _ = additive.append(token) -%}
+    {%- elif token not in entries -%}
+      {%- set _ = entries.append(token) -%}
+    {%- endif -%}
+  {%- endfor -%}
 {%- endfor -%}
-{%- if entries | count > 0 %}
+{%- if entries | count > 0 and additive | count > 0 %}
 {{ indent }}{{ name }} {
 {% for entry in entries %}
 {{ indent }}  {{ "%-25s" | format(entry) }} = yes
 {% endfor %}
 {{ indent }}}
+{%- elif entries | count > 0 %}
+{{ indent }}{{ "%-*s" | format(29 - indent | length, name) }} = {{ entries | join(' ') }}
 {%- endif -%}
 {% endmacro %}
 

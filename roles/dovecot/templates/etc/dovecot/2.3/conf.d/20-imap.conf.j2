@@ -60,7 +60,13 @@ imap_fetch_failure            = {{ dovecot_imap.fetch_failure }}
 protocol {{ _name }} {
     {% if pr | bodsch.core.type == "dict" %}
       {% for k, v in pr[_name].items() %}
+        {% if v | bodsch.core.type == "list" %}
+          {% if v | count != 0 %}
+  {{ k }} = {{ v | join(' ') }}
+          {% endif %}
+        {% else %}
   {{ k }} = {{ v }}
+        {% endif %}
       {% endfor %}
     {% endif %}
 }
