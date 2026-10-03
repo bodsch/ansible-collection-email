@@ -185,7 +185,10 @@ dovecot_imap:
   fetch_failure: disconnect-immediately
   protocols:
     - imap:
-        mail_plugins: $mail_plugins
+        mail_plugins:
+          - "$mail_plugins"
+          - "imap_quota"
+
         mail_max_userip_connections: 10
 
 dovecot_lmtp:
@@ -774,17 +777,17 @@ dovecot_fts:
     - stopwords
 
   language:
-    - en:
-        filters:
-          - lowercase
-          - snowball
-          - english-possessive
-          - stopwords
     - de:
         default: true
         filters:
           - lowercase
           - snowball
+          - stopwords
+    - en:
+        filters:
+          - lowercase
+          - snowball
+          - english-possessive
           - stopwords
 
 ...
