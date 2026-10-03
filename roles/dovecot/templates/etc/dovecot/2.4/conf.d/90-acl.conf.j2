@@ -27,3 +27,21 @@
     {% endfor %}
   {% endfor %}
 {% endif %}
+{#
+  Writing acl settings does not load the plugin - that is mail_plugins' job,
+  and dovecot reports neither a missing plugin nor settings nobody reads. Like
+  90-fts.conf, the plugins are switched on here as soon as acl is configured.
+  The BLOCK form adds to the list of 10-mail.conf instead of replacing it.
+#}
+{% if dovecot_acl.plugins is defined and
+      dovecot_acl.plugins | count > 0 %}
+
+mail_plugins {
+  acl                         = yes
+}
+protocol imap {
+  mail_plugins {
+    imap_acl                  = yes
+  }
+}
+{% endif %}
