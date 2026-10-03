@@ -29,6 +29,32 @@ dovecot_valid_quota_drivers:
   - imapc
   # dirsize was removed in dovecot 2.4 - use count plus quota-clone
 
+# Full text search. Dovecot accepts any name here too and only fails once a
+# mailbox is indexed - "doveconf -n" reports nothing.
+#
+# The filter and tokenizer names were read out of libdovecot-language.so of
+# dovecot 2.4.4; the backends are the fts plugins it ships.
+dovecot_valid_fts_drivers:
+  - flatcurve
+  - solr
+  # fts-lucene and fts-squat were removed in dovecot 2.4
+
+dovecot_valid_language_filters:
+  - contractions
+  - english-possessive
+  - lowercase
+  - normalizer-icu                                # needs a dovecot built with ICU
+  - snowball                                      # needs libstemmer
+  - stopwords
+
+dovecot_valid_language_tokenizers:
+  - generic
+  - email-address
+
+dovecot_valid_language_tokenizer_algorithms:
+  - simple
+  - tr29
+
 dovecot_dependencies:
   - iproute2
 
@@ -204,7 +230,86 @@ dovecot_defaults_mail:
 
   mail_attachment_fs: "sis posix"                   # ['posix', 'sis posix', 'sis-queue posix']
 
+  ## the 2.3 spelling, translated by the role - takes precedence over
+  ## mail_driver / mail_path
   mail_location: ""
+
+  ## mail storage. Dovecot 2.4 has no autodetection: without mail_driver and
+  ## mail_path there is no INBOX. vars/dovecot-2.4.yml fills them; a
+  ## mail_location set here takes precedence over that default.
+  mail_driver: ""
+  mail_path: ""
+  mail_home: ""
+  mail_inbox_path: ""
+
+  ## user and group the mail is stored as
+  mail_uid: ""
+  mail_gid: ""
+  mail_privileged_group: ""
+  mail_access_groups: ""
+  first_valid_uid: ""
+  last_valid_uid: ""
+  first_valid_gid: ""
+  last_valid_gid: ""
+
+  ## shared mailboxes and metadata
+  mail_shared_explicit_inbox: ""
+  mail_attribute_dict: ""
+  mail_server_comment: ""
+  mail_server_admin: ""
+  mail_full_filesystem_access: ""
+
+  ## mail processes
+  mmap_disable: ""
+  dotlock_use_excl: ""
+  mail_fsync: ""
+  lock_method: ""
+  mail_temp_dir: ""
+  mail_max_keyword_length: ""
+  mail_chroot: ""
+  auth_socket_path: ""
+  mail_plugin_dir: ""
+  mail_plugins: []
+
+  ## mailbox handling optimizations
+  mailbox_list_index: ""
+  mailbox_list_index_very_dirty_syncs: ""
+  mailbox_list_index_include_inbox: ""
+  mail_cache_min_mail_count: ""
+  mailbox_idle_check_interval: ""
+  mail_save_crlf: ""
+  mail_prefetch_count: ""
+  mail_temp_scan_interval: ""
+  mail_sort_max_read_count: ""
+
+  ## maildir specific
+  maildir_stat_dirs: ""
+  maildir_copy_with_hardlinks: ""
+  maildir_very_dirty_syncs: ""
+  maildir_broken_filename_sizes: ""
+  maildir_empty_new: ""
+
+  ## mbox specific
+  mbox_read_locks: []
+  mbox_write_locks: []
+  mbox_lock_timeout: ""
+  mbox_dotlock_change_timeout: ""
+  mbox_dirty_syncs: ""
+  mbox_very_dirty_syncs: ""
+  mbox_lazy_writes: ""
+  mbox_min_index_size: ""
+  mbox_md5: ""
+
+  ## mdbox specific
+  mdbox_rotate_size: ""
+  mdbox_rotate_interval: ""
+  mdbox_preallocate_space: ""
+
+  ## mail attachments
+  mail_attachment_dir: ""
+  mail_attachment_min_size: ""
+  mail_attachment_hash: ""
+  mail_attachment_detection_options: ""
 
 dovecot_defaults_master:
   default_process_limit: 100
@@ -220,7 +325,7 @@ dovecot_defaults_master:
         drop_priv_before_exec: false
         executable: log
         extra_groups:
-        user:
+        user: "dovenull"
         group:
         idle_kill: "4294967295 secs"
         privileged_group:
@@ -235,6 +340,15 @@ dovecot_defaults_master:
               type: unix
               group:
               user:
+              mode: "0600"
+
+    - config:
+        listeners:
+          # "type: unix" renders "unix_listener", the suffix is added by the
+          # template. The socket has to be named "config" - "dict" collided
+          # with the listener of "service dict" below.
+          - config:
+              type: unix
               mode: "0600"
 
     - imap-login:
@@ -274,6 +388,28 @@ dovecot_defaults_master:
 
     - auth-worker:
         user: root
+
+    - auth: {}
+    #     listeners:
+    #       - auth-userdb:
+    #           type: unix
+    #           mode: "0660"
+    #           user: vmail
+    #           group: vmail
+    #       - "/var/spool/postfix/private/auth":
+    #           type: unix
+    #           mode: "0660"
+    #           user: postfix
+    #           group: postfix
+
+    # - auth:
+    #     listeners:
+    #       - config:
+    #           type: unix
+    #           mode: "0600"
+    #           user: "vmail"
+    #           group: "vmail"
+    #       - config:
 
     - dict:
         listeners:
@@ -353,39 +489,51 @@ dovecot_defaults_lda:
     #       - "$mail_plugins"
 
 dovecot_defaults_mailboxes:
-  namespaces: []
-    # - inbox:
+  ## Rendered into conf.d/15-mailboxes.conf as "namespace <name> { mailbox ... }".
+  ##
+  ## The namespace name MUST match the one in dovecot_mail.namespaces (default:
+  ## inbox). A second namespace with inbox = yes makes dovecot refuse to start.
+  ##
+  ## "auto" decides whether dovecot creates the mailbox at all:
+  ##   false     - never created automatically  (this is dovecot's default)
+  ##   create    - created, but not subscribed
+  ##   subscribe - created AND subscribed
+  ## Without "auto" a mailbox block only carries metadata (special_use) for a
+  ## folder the user has to create themselves - which is why the special use
+  ## folders appear to be missing.
+  namespaces:
+    - inbox:
+        inbox: true
+        type: private
+        list: true
+        subscriptions: true
+        Drafts:
+          auto: subscribe
+          special_use: \Drafts
+        Junk:
+          auto: subscribe
+          special_use: \Junk
+        Sent:
+          auto: subscribe
+          special_use: \Sent
+        Trash:
+          auto: subscribe
+          special_use: \Trash
+        Archive:
+          auto: subscribe
+          special_use: \Archive
+    ## Further mailbox attributes:
     #     disabled: false
     #     hidden: false
     #     ignore_on_failure: false
-    #     inbox: true
-    #     list: true
     #     location: ""
     #     order: 0
     #     prefix: ""
     #     separator: ""
-    #     subscriptions: true
-    #     type: private
-    #     Archive:
-    #       special_use: \Archive
-    #     Drafts:
-    #       # false     - Never created automatically.
-    #       # create    - Automatically created, but no automatic subscription.
-    #       # subscribe - Automatically created and subscribed.
-    #       auto: subscribe
-    #       autoexpunge: 0
-    #       autoexpunge_max_mails: 0
-    #       comment: ""
-    #       driver: ""
-    #       special_use: \Drafts
-    #     Junk:
-    #       special_use: \Junk
-    #     Sent:
-    #       special_use: \Sent
     #     "Sent Messages":
+    #       # legacy alias some clients still use
     #       special_use: \Sent
-    #     Trash:
-    #       special_use: \Trash
+    ## Needs the "virtual" mail plugin, otherwise dovecot fails to open them:
     #     virtual/All:
     #       comment: "All my messages"
     #       special_use: \All
@@ -417,7 +565,8 @@ dovecot_defaults_lmtp:
   hdr_delivery_address: ""                          # final | final, original, none
   protocols: []
     # - lmtp:
-    #     mail_plugins: $mail_plugins
+    #     mail_plugins:
+    #       - $mail_plugins
 
 dovecot_defaults_managesieve:
   enabled_protocols:                                #
@@ -575,17 +724,189 @@ dovecot_valid_sieve_script_types:
 
 # dovecot >= 2.4 only: statistics are gathered from events, no plugin needed.
 dovecot_defaults_metrics:
+  ## Rendered into conf.d/10-metrics.conf as "metric <name> { }". New in 2.4:
+  ## statistics come from events and need no plugin.
+  ##
+  ## One mapping per metric:
+  ##   type              the metric name (mandatory)
+  ##   filter            the event filter (mandatory - dovecot refuses to start
+  ##                     on a metric block without one)
+  ##   fields            extra event fields, as a string or a list
+  ##   group_by          see below
+  ##   exporter          the name of an event_exporter below
+  ##   exporter_include  which parts of the event the exporter gets
+  ##   description
+  ##
+  ## group_by keeps the compact notation of the dovecot documentation,
+  ## "field[:method[:arg...]]" separated by spaces:
+  ##
+  ##   cmd_name                      discrete (the default), no arguments
+  ##   cmd_name:discrete:lowercase   discrete with a modifier
+  ##   duration:exponential:1:5:10   min_magnitude : max_magnitude : base
+  ##   duration:linear:0:100:10      min : max : step
+  ##
+  ## In 2.4 group_by is a named list filter, not a setting - the role expands
+  ## the notation above into the nested blocks (bodsch.email.dovecot_metrics).
+  ## Writing "group_by = a b" yourself is rejected by dovecot with
+  ## "group_by: Setting is a named list filter".
   metrics: []
-    # - auth_failures:
-    #     filter: "event=auth_request_finished AND NOT success=yes"
+
+    # - type: auth_success
+    #   filter: "event=auth_request_finished AND success=yes"
+    #
+    # - type: auth_failures
+    #   filter: "event=auth_request_finished AND NOT success=yes"
+    #
+    # # In some installations there may be too many slow commands to be worth logging these
+    # - type: imap_commands_slow
+    #   filter: "event=imap_command_finished AND (NOT cmd_name=IDLE) AND duration > 1min"
+    #   exporter: log-export
+    #
+    # - type: imap_command
+    #   filter: "event=imap_command_finished"
+    #   group_by: "cmd_name tagged_reply_state"
+    #
+    # - type: client_disconnected
+    #   filter: 'event=client_connection_disconnected AND category="service:imap"'
+    #   fields: "bytes_in bytes_out"
+    #
+    # - type: smtp_command
+    #   filter: "event=smtp_server_command_finished"
+    #   group_by: "cmd_name status_code duration:exponential:1:5:10"
+    #
+    # - type: mail_delivery
+    #   filter: "event=mail_delivery"
+    #   group_by: "duration:exponential:1:5:10"
+    #
+    # # IMAP Command Metrics
+    # # - Bytes in/out for compression efficiency analysis
+    # # - Lock wait time for contention debugging
+    # # - Grouped by command name and reply state
+    # - type: imap_command
+    #   filter: event=imap_command_finished
+    #   fields: bytes_in bytes_out lock_wait_usecs running_usecs
+    #   group_by: cmd_name tagged_reply_state
+    #
+    # #
+    # # # Duration buckets for latency histograms (base 10: 10us, 100us, 1ms, 10ms, 100ms, 1s, 10s, 100s)
+    # - type: imap_command_duration
+    #   filter: event=imap_command_finished
+    #   group_by: cmd_name duration:exponential:1:8:10
+    #
+    #
+    # # Slow command outliers (>1 second = 1000000 usecs)
+    # # Useful for alerting without high cardinality
+    # - type: imap_command_slow
+    #   filter: event=imap_command_finished AND duration>1000000 AND NOT cmd_name=IDLE
+    #   group_by: cmd_name
+    #
+    # # IDLE-specific Metrics
+    # - type: imap_idle
+    #   filter: event=imap_command_finished AND cmd_name=IDLE
+    #   fields: bytes_in bytes_out running_usecs
+    #   group_by: tagged_reply_state
+    #
+    # - type: imap_idle_duration
+    #   filter: event=imap_command_finished AND cmd_name=IDLE
+    #   # Base 10: 100ms to 27h (covers short wakeups to long idle sessions)
+    #   group_by: duration:exponential:5:11:10
+    #
+    # - type: imap_idle_commands
+    #   filter: event=imap_command_finished AND cmd_name=IDLE
+    #   group_by: tagged_reply_state
+    #
+    # - type: imap_idle_failed
+    #   filter: event=imap_command_finished AND cmd_name=IDLE AND NOT tagged_reply_state=OK
+    #
+    # # Hibernation Metrics (requires imap_hibernate_timeout)
+    #
+    # - type: imap_hibernated
+    #   filter: event=imap_client_hibernated
+    #
+    # - type: imap_hibernated_failed
+    #   filter: event=imap_client_hibernated AND error=*
+    #
+    # - type: imap_unhibernated
+    #   filter: event=imap_client_unhibernated
+    #   fields: hibernation_usecs
+    #
+    # - type: imap_unhibernated_reason
+    #   filter: event=imap_client_unhibernated
+    #   group_by: reason
+    #   fields: hibernation_usecs
+    #
+    # - type: imap_unhibernated_reason_sleep
+    #   filter: event=imap_client_unhibernated
+    #   group_by: reason hibernation_usecs:exponential:4:8:10
+    #
+    # - type: imap_unhibernated_failed
+    #   filter: event=imap_client_unhibernated AND error=*
+    #
+    # # Hibernation duration buckets (how long clients stayed hibernated)
+    # # Base 10: 100ms to 27h
+    # - type: imap_hibernation_duration
+    #   filter: event=imap_client_unhibernated
+    #   group_by: reason duration:exponential:5:11:10
+    #
+    # # Authentication / Login Metrics
+    #
+    # - type: auth_request
+    #   filter: event=auth_request_finished
+    #   group_by: success
+    #
+    # - type: auth_request_duration
+    #   filter: event=auth_request_finished
+    #   group_by: success duration:exponential:2:6:10
+    #
+    # - type: auth_failed
+    #   filter: event=auth_request_finished AND success=no
+    #
+    # # Passdb cache effectiveness
+    # - type: auth_passdb
+    #   filter: event=auth_passdb_request_finished
+    #   group_by: result cache
+    #
+    # # Master login (post-auth userdb lookup)
+    # - type: auth_master_login
+    #   filter: event=auth_master_client_login_finished
+    #
+    # - type: auth_master_login_failed
+    #   filter: event=auth_master_client_login_finished AND error=*
+    #
+    # # Mail Delivery (LMTP) - affects IDLE wakeup latency
+    #
+    # - type: mail_delivery
+    #   filter: event=mail_delivery_finished
+    #
+    # - type: mail_delivery_duration
+    #   filter: event=mail_delivery_finished
+    #   group_by: duration:exponential:3:7:10
+    #
+    # - type: mail_delivery_failed
+    #   filter: event=mail_delivery_finished AND error=*
+    #
+    # # Connection Events
+    #
+    # - type: client_connected
+    #   filter: event=client_connection_connected AND category="service:imap"
+    #
+    # - type: client_disconnected
+    #   filter: event=client_connection_disconnected AND category="service:imap"
+    #   fields: bytes_in bytes_out
+
+  ## Rendered as "event_exporter <name> { }". An exporter NOT named after its
+  ## driver needs an explicit driver - event_exporter_driver defaults to "log".
   event_exporters: []
-    # - log:
+    # - log-export:
+    #     driver: log
     #     format: json
     #     time_format: rfc3339
+
+  ## Adds an http listener to "service stats", which serves /metrics.
   prometheus:
     enabled: false
     port: 9900
-    address: ""
+    address: "127.0.0.1"
 
 # dovecot >= 2.4 only: replaces the global "dict { }" block plus the
 # dovecot-dict-sql.conf.ext file.
@@ -602,30 +923,41 @@ dovecot_defaults_dict_server:
     #           value_field bytes:
     #             type: uint
 
-## Authentication backends. Empty by default, like every other group here -
-## a backend configured in here is automatically included from 10-auth.conf,
-## so an active example would enable a passdb nobody asked for.
 ##
 ## checkpassword, dict and vpopmail were removed in dovecot 2.4; oauth2 was
 ## added. See templates/etc/dovecot/<version>/auth.d/ for what exists per
 ## version.
-dovecot_defaults_authentications: []
-  # - system:
-  #     passdb:
-  #       driver: pam
-  #       passdb_pam_service_name: dovecot
-  # - sql:
-  #     passdb:
-  #       driver: sql
-  #       args: /etc/dovecot/dovecot-sql.conf.ext      # 2.3
-  #     userdb:
-  #       driver: sql
-  #       args: /etc/dovecot/dovecot-sql.conf.ext      # 2.3
-  # - deny:
-  #     passdb:
-  #       driver: passwd-file
-  #       deny: true
-  #       args: /etc/dovecot/deny-users
+## Authentication backends, keyed by the name of their auth.d file:
+## "sql" is rendered into auth.d/auth-sql.conf.ext.
+##
+## This variable decides HOW a backend is configured. What is ACTIVE is decided
+## by dovecot_auth.includes alone - a backend configured here but not included
+## there never reaches dovecot, and 10-auth.conf says so as a comment.
+##
+## The role ships the system backend, which matches the auth-system.conf.ext
+## that dovecot_auth.includes has active by default. To replace it, take
+## auth-system.conf.ext out of includes and put your own backend in.
+##
+## checkpassword, dict and vpopmail were removed in dovecot 2.4; oauth2 was
+## added. See templates/etc/dovecot/<version>/auth.d/ for what exists per
+## version.
+##
+## The values here are the 2.3 spelling; vars/dovecot-2.4.yml carries the 2.4
+## one, where "args" was replaced by per driver settings.
+dovecot_defaults_authentications:
+  system:
+    passdb:
+      driver: pam
+      args: dovecot
+    userdb:
+      driver: passwd
+  # sql:
+  #   passdb:
+  #     driver: sql
+  #     args: /etc/dovecot/dovecot-sql.conf.ext
+  #   userdb:
+  #     driver: sql
+  #     args: /etc/dovecot/dovecot-sql.conf.ext
 
 dovecot_defaults_dict_auth:
   # uri: ""
@@ -752,13 +1084,23 @@ dovecot_defaults_sql: {}
 
 # dovecot >= 2.4 only
 dovecot_defaults_fts:
-  ## Selects the backend. Empty means full text search is off - configuring a
-  ## backend below does NOT switch it on. This is what "plugin { fts = ... }"
-  ## did in 2.3.
-  driver: ""                                        # default: "" | ['flatcurve','solr','xapian','elastic']
+  ## Selects the backend and switches full text search on. Empty means off;
+  ## configuring a backend below does NOT switch it on by itself. This is what
+  ## "plugin { fts = ... }" did in 2.3.
+  ##
+  ## Setting this makes conf.d/90-fts.conf emit three more things that dovecot
+  ## 2.4 needs and does NOT report as a configuration error:
+  ##   mail_plugins { fts = yes  fts_<driver> = yes }
+  ##   fts <driver> { }                 without it: "plugin disabled"
+  ##   language en { default = yes }    without it: "No language { .. } defined"
+  ##   language_tokenizers              without it: "Empty language_tokenizers"
+  ## All four are overridden by configuring them explicitly.
+  driver: ""                                        # default: "" | ['flatcurve','solr']
   autoindex: ""                                     # default: true
   autoindex_max_recent_msgs: ""                     # default: 999
-  search_add_missing: ""                            # default: true
+  ## an ENUM in 2.4, not a boolean: "yes" or "body-search-only". "no" makes
+  ## dovecot refuse to start - leave driver empty to switch fts off.
+  search_add_missing: ""                            # default: body-search-only
   search_read_fallback: ""                          # default: true
   search_timeout: ""                                # default: 30 secs
   message_max_size: ""                              # default: unlimited
@@ -779,11 +1121,15 @@ dovecot_defaults_fts:
 
   ## language handling, applies regardless of the backend
   language_filters: []                              # default: normalizer-icu snowball stopwords
-  language_tokenizers: []                           # default: generic email-address
+  ## dovecot's own default is EMPTY, and an empty list makes the backend fail
+  ## at runtime. The role writes "generic email-address" when a driver is set.
+  language_tokenizers: []                           # role default: generic email-address
   language_tokenizer_generic_algorithm: ""          # default: simple
   language_filter_stopwords_dir: ""                 # default: /usr/share/dovecot/stopwords
 
-  ## rendered as "language <name> { ... }"
+  ## rendered as "language <name> { ... }". Exactly ONE entry has to carry
+  ## "default: true" - dovecot refuses to start on anything else. When this is
+  ## empty and a driver is set, the role writes "language en { default = yes }".
   language: []
     # - en:
     #     default: true

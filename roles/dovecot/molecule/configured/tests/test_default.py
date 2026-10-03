@@ -4,6 +4,7 @@ from __future__ import annotations, unicode_literals
 import re
 import pytest
 from helper.molecule import get_vars, infra_hosts, local_facts
+from packaging.version import Version
 
 testinfra_hosts = infra_hosts(host_name="instance")
 
@@ -146,6 +147,7 @@ def test_service_running_and_enabled(host, get_vars):
 def test_listening_socket(host, get_vars):
     """ """
     listening = host.socket.get_listening_sockets()
+    version = dovecot_short_version(host)
 
     for i in listening:
         print(i)
@@ -155,6 +157,11 @@ def test_listening_socket(host, get_vars):
     listen.append("tcp://127.0.0.1:143")
     listen.append("tcp://127.0.0.1:993")
     listen.append("tcp://127.0.0.1:995")
+
+    print(version)
+
+    if Version(version) >= Version("2.4"):
+        listen.append("tcp://127.0.0.1:9900")
 
     for spec in listen:
         socket = host.socket(spec)

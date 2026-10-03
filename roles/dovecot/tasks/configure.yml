@@ -44,6 +44,7 @@
     _dovecot_templates: "{{
       lookup('community.general.filetree', 'templates/etc/dovecot') |
       bodsch.email.dovecot_template_versions(version=dovecot_short_version) }}"
+  no_log: true
 
 - name: fail on unsupported dovecot version
   when:
@@ -66,6 +67,7 @@
       files:
         - "dovecot-{{ dovecot_short_version }}.yml"
       skip: true
+  no_log: true
 
 - name: apply version specific defaults
   when:
@@ -83,6 +85,7 @@
     dovecot_defaults_submission: "{{ dovecot_defaults_submission | combine(_dovecot_version_defaults.submission | default({}), recursive=True) }}"
     dovecot_defaults_lda: "{{ dovecot_defaults_lda | combine(_dovecot_version_defaults.lda | default({}), recursive=True) }}"
     dovecot_defaults_managesieve: "{{ dovecot_defaults_managesieve | combine(_dovecot_version_defaults.managesieve | default({}), recursive=True) }}"
+    dovecot_defaults_authentications: "{{ dovecot_defaults_authentications | combine(_dovecot_version_defaults.authentications | default({}), recursive=True) }}"
   no_log: true
 
 - name: merge dovecot configuration between defaults and custom
@@ -119,6 +122,117 @@
     dovecot_sql: "{{ dovecot_defaults_sql | combine(dovecot_sql, recursive=True) }}"
   no_log: true
 
+# These three checks need the MERGED variables and the detected dovecot
+# version, which is why they do not live in validate.yml.
+#
+# All three describe configurations that "doveconf -n" calls valid and that
+# still leave the client without an INBOX.
+- name: validate mail storage and inbox namespace
+  when:
+    - not running_in_check_mode
+    - dovecot_validate_drivers | bool
+  vars:
+    # "mail_driver + mail_path" is the 2.4 spelling, "mail_location" the 2.3
+    # one - the template accepts both.
+    _dovecot_global_location: "{{
+      (dovecot_mail.mail_driver | default('', true)) ~
+      (dovecot_mail.mail_location | default('', true)) }}"
+    # a namespace brings its own storage with mail_driver, location or
+    # mail_location; these are the ones that bring none.
+    _dovecot_ns_without_location: "{{
+      dovecot_mail.namespaces | default([])
+      | rejectattr('mail_driver', 'defined')
+      | rejectattr('location', 'defined')
+      | rejectattr('mail_location', 'defined')
+      | map(attribute='name', default='<unnamed>') | list }}"
+    _dovecot_inbox_namespaces: "{{
+      dovecot_mail.namespaces | default([])
+      | selectattr('inbox', 'defined')
+      | selectattr('inbox')
+      | map(attribute='name', default='<unnamed>') | list }}"
+    # dovecot_mailboxes.namespaces is a list of single key mappings, the key
+    # is the namespace name.
+    _dovecot_mailbox_ns_names: "{{
+      dovecot_mailboxes.namespaces | default([]) | map('list') | map('first') | list }}"
+    _dovecot_mail_ns_names: "{{
+      dovecot_mail.namespaces | default([]) | map(attribute='name', default='') | list }}"
+  block:
+    # Dovecot 2.4 removed mail location autodetection. 2.3 fell back to
+    # ~/Maildir or /var/mail/%u, 2.4 resolves mail_driver and mail_path to an
+    # empty string and the client reports the INBOX as unavailable.
+    - name: validate mail storage location
+      when:
+        - dovecot_short_version is version('2.4', '>=')
+      ansible.builtin.assert:
+        that:
+          - _dovecot_global_location | length > 0 or
+            (dovecot_mail.namespaces | default([]) | count > 0 and
+             _dovecot_ns_without_location | count == 0)
+        fail_msg: |
+          No mail storage is configured for dovecot {{ dovecot_version }}.
+
+          Dovecot 2.4 removed mail location autodetection. Without a storage
+          location "doveconf -n" still passes, but there is no INBOX and every
+          client reports it as unavailable.
+
+          Set either globally
+            dovecot_mail:
+              mail_driver: maildir
+              mail_path: "~/Maildir"
+          or per namespace
+            dovecot_mail:
+              namespaces:
+                - name: inbox
+                  inbox: true
+                  location: "maildir:~/Maildir"
+
+          Namespaces without a location: {{ _dovecot_ns_without_location | join(', ') | default('-', true) }}
+        success_msg: "mail storage ok"
+        quiet: true
+
+    # Exactly one namespace may carry inbox = yes. None means there is no
+    # INBOX at all, more than one makes dovecot refuse to start.
+    - name: validate inbox namespace
+      when:
+        - dovecot_mail.namespaces | default([]) | count > 0
+      ansible.builtin.assert:
+        that:
+          - _dovecot_inbox_namespaces | count == 1
+        fail_msg: |
+          {{ _dovecot_inbox_namespaces | count }} namespaces in dovecot_mail.namespaces
+          carry "inbox: true" - there has to be exactly one.
+
+          Without it dovecot has no INBOX and the client reports it as
+          unavailable; with more than one dovecot refuses to start.
+
+          Namespaces: {{ _dovecot_mail_ns_names | join(', ') }}
+          With inbox: {{ _dovecot_inbox_namespaces | join(', ') | default('-', true) }}
+        success_msg: "inbox namespace ok: {{ _dovecot_inbox_namespaces | join(', ') }}"
+        quiet: true
+
+    # 15-mailboxes.conf adds "mailbox { }" blocks to a namespace BY NAME. A
+    # name that 10-mail.conf does not define opens a second namespace instead,
+    # and the special use folders end up somewhere the client never looks.
+    - name: validate mailbox namespace names
+      when:
+        - _dovecot_mailbox_ns_names | count > 0
+        - _dovecot_mail_ns_names | count > 0
+      ansible.builtin.assert:
+        that:
+          - _dovecot_mailbox_ns_names | difference(_dovecot_mail_ns_names) | count == 0
+        fail_msg: |
+          dovecot_mailboxes.namespaces refers to namespaces that
+          dovecot_mail.namespaces does not define:
+          {{ _dovecot_mailbox_ns_names | difference(_dovecot_mail_ns_names) | join(', ') }}
+
+          The names have to match, otherwise 15-mailboxes.conf opens a SECOND
+          namespace and the special use folders are created there.
+
+          dovecot_mail.namespaces:      {{ _dovecot_mail_ns_names | join(', ') }}
+          dovecot_mailboxes.namespaces: {{ _dovecot_mailbox_ns_names | join(', ') }}
+        success_msg: "mailbox namespace name(s) ok: {{ _dovecot_mailbox_ns_names | join(', ') }}"
+        quiet: true
+
 - name: create dovecot directories
   when:
     - not running_in_check_mode
@@ -130,6 +244,22 @@
       - path: conf.d
       - path: auth.d
       - path: sql.d
+
+# Dovecot creates the per user part of a storage path itself, but not the
+# static parent above it - see dovecot_manage_mail_directories in defaults.
+# Without this, subscribing to a mailbox fails with
+#   mkdir(/var/mail/CONTROL/<domain>) failed: Permission denied
+# while "doveconf -n" reports nothing at all.
+- name: create mail storage directories
+  when:
+    - not running_in_check_mode
+    - dovecot_manage_mail_directories | bool
+  bodsch.core.directories:
+    base_path: /etc/dovecot
+    owner: "{{ dovecot_virtual_user.name }}"
+    group: "{{ dovecot_virtual_user.name }}"
+    mode: "{{ dovecot_mail_directories_mode }}"
+    paths: "{{ dovecot_mail | bodsch.email.dovecot_storage_directories(dovecot_mailboxes) | bodsch.core.directory_path() }}"
 
 - name: create dovecot.conf
   when:

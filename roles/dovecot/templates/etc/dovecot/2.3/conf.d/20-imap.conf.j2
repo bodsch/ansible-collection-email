@@ -1,4 +1,5 @@
 #jinja2: trim_blocks: True, lstrip_blocks: True
+{% import 'jinja_macros.j2' as mcr with context %}
 # {{ ansible_managed }}
 
 {% if dovecot_imap.hibernate_timeout is defined and
@@ -49,20 +50,18 @@ imap_literal_minus            = {{ dovecot_imap.literal_minus | bodsch.core.conf
 imap_fetch_failure            = {{ dovecot_imap.fetch_failure }}
   {% endif %}
 {% endif %}
-{% if dovecot_imap.protocols is defined and
-      dovecot_imap.protocols | count > 0 %}
-  {% for pr in dovecot_imap.protocols %}
-    {% if pr.name is defined %}
-      {% set _name = pr. name %}
-    {% else %}
-      {% set _name = pr.keys() | first %}
-    {% endif %}
-protocol {{ _name }} {
-    {% if pr | bodsch.core.type == "dict" %}
-      {% for k, v in pr[_name].items() %}
-  {{ k }} = {{ v }}
-      {% endfor %}
-    {% endif %}
-}
-  {% endfor %}
+{#
+  The imap side of acl and quota lives in imap_acl / imap_quota, which only
+  an imap process can load. They go into THE protocol imap block: in 2.3 a
+  second "protocol imap { mail_plugins = ... }" replaces the first, it does
+  not add to it. Without a configured block, one is written for them.
+#}
+{% set _imap_plugins = [] %}
+{% if dovecot_acl.plugins | default([]) | count > 0 %}
+  {% set _ = _imap_plugins.append('imap_acl') %}
 {% endif %}
+{% if dovecot_quota.plugins | default([]) | count > 0 or
+      dovecot_quota.quotas | default({}) | count > 0 %}
+  {% set _ = _imap_plugins.append('imap_quota') %}
+{% endif %}
+{{ mcr.legacy_protocols(dovecot_imap.protocols, 'imap', _imap_plugins) }}

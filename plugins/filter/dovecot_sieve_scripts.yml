@@ -1,0 +1,40 @@
+---
+
+DOCUMENTATION:
+  name: dovecot_sieve_scripts
+  author: Bodo Schulz (@bodsch)
+  version_added: 1.0.0
+  short_description: Translate the dovecot 2.3 sieve script locations to 2.4 sieve_script blocks.
+  description:
+    - >-
+      Dovecot 2.3 described every sieve script location with a setting of its own
+      (C(sieve), C(sieve_before), C(sieve_after), C(sieve_default), C(sieve_discard),
+      C(sieve_global), C(sieve_global_dir), C(sieve_dir)) whose value is a location string
+      such as C(file:~/sieve;active=~/.dovecot.sieve).
+    - >-
+      2.4 turned each of them into a C(sieve_script <name> { }) named filter. The driver
+      prefix becomes C(driver), the path C(path), and the options C(active), C(bindir) and
+      C(name) become C(active_path), C(bin_path) and C(name).
+    - >-
+      A numbered variant (C(sieve_before2)) is a block of its own, named after the setting
+      without its C(sieve_) prefix.
+    - Variables are left alone; translate the paths with M(bodsch.email.dovecot_path_vars).
+  positional: _input
+  options:
+    _input:
+      description: The C(dovecot_sieve.plugins) list.
+      required: true
+      type: list
+
+EXAMPLES: |
+  _sieve: "{{ dovecot_sieve.plugins | bodsch.email.dovecot_sieve_scripts }}"
+  # _sieve.scripts:
+  #   personal: {driver: file, path: ~/sieve, active_path: ~/.dovecot.sieve}
+  # _sieve.consumed: [sieve]
+
+RETURN:
+  _value:
+    description: >-
+      C(scripts) (block name to settings), C(consumed) (the 2.3 setting names that went
+      into a block) and C(notes) (comment lines for options without a 2.4 counterpart).
+    type: dict

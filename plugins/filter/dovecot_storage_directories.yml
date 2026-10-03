@@ -1,0 +1,49 @@
+---
+
+DOCUMENTATION:
+  name: dovecot_storage_directories
+  author: Bodo Schulz (@bodsch)
+  version_added: 1.0.0
+  short_description: The static parent directories a dovecot mail configuration needs on disk.
+  description:
+    - >-
+      Dovecot creates the per user part of a storage path itself, but not the static
+      parent above it. With C(mail_control_path = /var/mail/CONTROL/%{user|domain}/%{user|username})
+      and C(/var/mail) owned by root, the first subscription fails with
+      C(mkdir(/var/mail/CONTROL/example.com) failed - Permission denied) and the client
+      reports that it cannot subscribe to a mailbox. The index path behaves the same way.
+    - >-
+      This filter reads the path settings of C(dovecot_mail) - C(mail_home), C(mail_path),
+      C(mail_index_path), C(mail_control_path) and the rest - of every namespace, and of a
+      2.3 style C(driver:path:OPTION=value) location, and returns the directory each of
+      them needs up to its first variable.
+    - >-
+      A path that is not absolute is skipped, because C(~/Maildir) and C(%{home}) live
+      below a home directory that the userdb provides. A path whose static part is a top
+      level directory such as C(/) or C(/var) is skipped as well - those are never the
+      role's to create or to chown.
+  positional: _input
+  options:
+    _input:
+      description: The merged C(dovecot_mail) dictionary.
+      required: true
+      type: dict
+    mailboxes:
+      description: >-
+        The merged C(dovecot_mailboxes) dictionary. Its namespaces are keyed by name and
+        may carry a location of their own.
+      required: false
+      type: dict
+
+EXAMPLES: |
+  # ["/srv/mail/CONTROL", "/srv/mail/INDEX", "/var/vmail"]
+  storage_directories: "{{ dovecot_mail | bodsch.email.dovecot_storage_directories }}"
+
+  # the same, including the namespaces of dovecot_mailboxes
+  storage_directories: "{{ dovecot_mail | bodsch.email.dovecot_storage_directories(dovecot_mailboxes) }}"
+
+RETURN:
+  _value:
+    description: The directories, sorted and without duplicates.
+    type: list
+    elements: str

@@ -133,6 +133,108 @@
       would quietly change what the namespace is.
     quiet: true
 
+# Full text search. None of these are configuration errors for dovecot: the
+# config parses, and the backend then fails when a mailbox is indexed.
+#
+#   fts: Failed to initialize backend 'flatcurve': language data:
+#        Empty language_tokenizers { .. } list
+#
+# The role fills the tokenizers and the default language itself when a driver
+# is configured (see conf.d/90-fts.conf.j2); what it cannot do is guess what a
+# misspelled filter name was meant to be.
+- name: validate fts driver
+  when:
+    - not running_in_check_mode
+    - dovecot_validate_drivers | bool
+    - dovecot_fts.driver | default('') | string | length > 0
+  ansible.builtin.assert:
+    that:
+      - dovecot_fts.driver in dovecot_valid_fts_drivers
+    fail_msg: |
+      Unknown dovecot fts driver: {{ dovecot_fts.driver }}
+      Known drivers: {{ dovecot_valid_fts_drivers | join(', ') }}
+
+      fts-lucene and fts-squat were removed in dovecot 2.4.
+    success_msg: "fts driver ok: {{ dovecot_fts.driver }}"
+    quiet: true
+
+- name: validate language filters and tokenizers
+  when:
+    - not running_in_check_mode
+    - dovecot_validate_drivers | bool
+  vars:
+    # a filter list can also sit inside a "language <name> { filters: [...] }"
+    _dovecot_language_filters: "{{ (
+      dovecot_fts.language_filters | default([]) +
+      (dovecot_fts.language | default([]) | map('dict2items') | flatten |
+       map(attribute='value') | map(attribute='filters', default=[]) | flatten)
+      ) | unique | sort }}"
+  block:
+    - name: validate language filters
+      when:
+        - _dovecot_language_filters | count > 0
+      ansible.builtin.assert:
+        that:
+          - _dovecot_language_filters | difference(dovecot_valid_language_filters) | count == 0
+        fail_msg: |
+          Unknown dovecot language filter: {{ _dovecot_language_filters | difference(dovecot_valid_language_filters) | join(', ') }}
+          Known filters: {{ dovecot_valid_language_filters | join(', ') }}
+
+          Dovecot accepts any name while parsing the configuration; a typo only
+          shows up when a mailbox is indexed.
+        success_msg: "language filter(s) ok: {{ _dovecot_language_filters | join(', ') }}"
+        quiet: true
+
+    - name: validate language tokenizers
+      when:
+        - dovecot_fts.language_tokenizers | default([]) | count > 0
+      ansible.builtin.assert:
+        that:
+          - dovecot_fts.language_tokenizers | difference(dovecot_valid_language_tokenizers) | count == 0
+        fail_msg: |
+          Unknown dovecot language tokenizer: {{ dovecot_fts.language_tokenizers | difference(dovecot_valid_language_tokenizers) | join(', ') }}
+          Known tokenizers: {{ dovecot_valid_language_tokenizers | join(', ') }}
+        success_msg: "language tokenizer(s) ok: {{ dovecot_fts.language_tokenizers | join(', ') }}"
+        quiet: true
+
+    - name: validate language tokenizer algorithm
+      when:
+        - dovecot_fts.language_tokenizer_generic_algorithm | default('') | string | length > 0
+      ansible.builtin.assert:
+        that:
+          - dovecot_fts.language_tokenizer_generic_algorithm in dovecot_valid_language_tokenizer_algorithms
+        fail_msg: |
+          Unknown language_tokenizer_generic_algorithm: {{ dovecot_fts.language_tokenizer_generic_algorithm }}
+          Known algorithms: {{ dovecot_valid_language_tokenizer_algorithms | join(', ') }}
+        quiet: true
+
+# Exactly one language has to carry "default: true". Dovecot refuses to start
+# on anything else:
+#
+#   Error in configuration file: No language with { default = yes } found
+- name: validate the default language
+  when:
+    - not running_in_check_mode
+    - dovecot_validate_drivers | bool
+    - dovecot_fts.language | default([]) | count > 0
+  vars:
+    _dovecot_default_languages: "{{
+      dovecot_fts.language | default([]) | map('dict2items') | flatten
+      | selectattr('value.default', 'defined') | selectattr('value.default')
+      | map(attribute='key') | list }}"
+  ansible.builtin.assert:
+    that:
+      - _dovecot_default_languages | count == 1
+    fail_msg: |
+      {{ _dovecot_default_languages | count }} of the languages in dovecot_fts.language
+      carry "default: true" - dovecot needs exactly one and refuses to start with
+      "No language with { default = yes } found".
+
+      Configured: {{ dovecot_fts.language | map('dict2items') | flatten | map(attribute='key') | join(', ') }}
+      With default: {{ _dovecot_default_languages | join(', ') | default('-', true) }}
+    success_msg: "default language ok: {{ _dovecot_default_languages | join(', ') }}"
+    quiet: true
+
 # sieve_script_type is not validated by dovecot either - "nonsense" is
 # accepted and only fails when a mail is delivered.
 - name: validate sieve script types

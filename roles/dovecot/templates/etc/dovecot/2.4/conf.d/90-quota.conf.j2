@@ -111,3 +111,22 @@ service {{ key }} {
     {% endfor %}
   {% endfor %}
 {% endif %}
+{#
+  Writing quota settings does not load the plugin - that is mail_plugins'
+  job, and dovecot reports neither a missing plugin nor settings nobody
+  reads. Like 90-fts.conf, the plugins are switched on here as soon as quota
+  is configured. The BLOCK form adds to the list of 10-mail.conf instead of
+  replacing it.
+#}
+{% if (dovecot_quota.plugins is defined and dovecot_quota.plugins | count > 0) or
+      (dovecot_quota.quotas is defined and dovecot_quota.quotas | count > 0) %}
+
+mail_plugins {
+  quota                       = yes
+}
+protocol imap {
+  mail_plugins {
+    imap_quota                = yes
+  }
+}
+{% endif %}

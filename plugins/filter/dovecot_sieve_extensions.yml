@@ -1,0 +1,30 @@
+---
+
+DOCUMENTATION:
+  name: dovecot_sieve_extensions
+  author: Bodo Schulz (@bodsch)
+  version_added: 1.0.0
+  short_description: Translate a dovecot 2.3 sieve extension list to a 2.4 boolean list.
+  description:
+    - >-
+      In 2.3 C(+a -b) adjusted the default list and a plain entry replaced it. 2.4 writes
+      the first as a block, C(name { a = yes  b = no }), the second as an assignment.
+    - >-
+      Extensions 2.4 no longer knows (C(notify), C(imapflags), C(vnd.dovecot.duplicate))
+      are returned separately together with their successor. Dovecot only warns about
+      them, it does not refuse to start.
+  positional: _input
+  options:
+    _input:
+      description: The extension list, as a string or a list.
+      required: true
+      type: raw
+
+EXAMPLES: |
+  # {replace: false, enable: [vacation-seconds], disable: [], removed: {notify: enotify}}
+  _ext: "{{ '+notify +vacation-seconds' | bodsch.email.dovecot_sieve_extensions }}"
+
+RETURN:
+  _value:
+    description: C(replace), C(enable), C(disable) and C(removed).
+    type: dict

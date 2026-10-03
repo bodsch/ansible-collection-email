@@ -28,12 +28,24 @@ mariadb_users:
     encrypted: false
 
 mariadb_config_mysqld:
-  bind_address: 0.0.0.0
+  bind-address: "{{ ansible_facts.default_ipv4.address }}"
   socket: "{{ mariadb_socket }}"
-  skip_external_locking:
-  skip_name_resolve: 1
+  skip-external-locking:
+  # Skip reverse DNS lookup of clients
+  skip-name-resolve: 1
+  # enable performance schema
   performance_schema: 1
+  # datadir: /opt/mariadb/data
+  # tmpdir: /opt/mariadb/tmp
+  # log_error: /opt/mariadb/log/error.log
+  # slow_query_log_file: /opt/mariadb/log/mysql-slow.log
+  # log_bin: /opt/mariadb/log/mysql-bin.log
   expire_logs_days: 2
   max_connections: 20
+  # replication
+  server-id: "{{ mariadb_server_id }}"
+  relay_log: "{{ ansible_facts.hostname }}-relay-bin"
+  relay_log_index: "{{ ansible_facts.hostname }}-relay-bin.index"
+  max_binlog_size: 100M
 
 ...

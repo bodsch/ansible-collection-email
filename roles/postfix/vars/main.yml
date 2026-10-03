@@ -117,6 +117,11 @@ postfix_defaults_message:
   size_limit: 10240000
   strip_characters: []
 
+postfix_defaults_non:
+  bdb:
+    custom_mapping: ""
+  milters: []
+
 postfix_defaults_postscreen:
   enable: false
   access_list:

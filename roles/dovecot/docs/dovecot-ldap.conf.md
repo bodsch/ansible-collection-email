@@ -1,7 +1,7 @@
 # dovecot-ldap.conf.ext 
 
 ```yaml
-dovecot_defaults_ldap: {}
+dovecot_ldap: {}
   # hosts: []
   # uris: []
   # dn: ""

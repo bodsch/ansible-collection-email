@@ -1,5 +1,14 @@
 {% set _postfix_postscreen = postfix_postscreen | bodsch.core.remove_empty_values() %}
-# ---------------------------------------------------------
+# --[ postscreen ]-------------------------------------------------------
+
+{#
+/usr/bin/postconf: warning: /etc/postfix/main.cf: support for parameter "postscreen_dnsbl_ttl" will be removed; instead, specify "postscreen_dnsbl_max_ttl"
+/usr/bin/postconf: warning: /etc/postfix/main.cf: support for parameter "postscreen_dnsbl_whitelist_threshold" will be removed; instead, specify "postscreen_dnsbl_allowlist_threshold"
+/usr/bin/postconf: warning: /etc/postfix/main.cf: support for parameter "postscreen_use_tls" will be removed; instead, specify "postscreen_tls_security_level"
+/usr/bin/postconf: warning: /etc/postfix/main.cf: support for parameter "postscreen_whitelist_interfaces" will be removed; instead, specify "postscreen_allowlist_interfaces"
+/usr/bin/postconf: warning: /etc/postfix/main.cf: support for parameter "smtpd_use_tls" will be removed; instead, specify "smtpd_tls_security_level"
+#}
+
 
 {% if _postfix_postscreen.enable %}
   {% if _postfix_postscreen.access_list is defined and
@@ -19,12 +28,21 @@ postscreen_bare_newline_enable            = {{ _postfix_postscreen.bare_newline_
         _postfix_postscreen.bare_newline_ttl | string | length > 0 %}
 postscreen_bare_newline_ttl               = {{ _postfix_postscreen.bare_newline_ttl }}
   {% endif %}
-  {% if postfix_version is version('3.6', '<') %}
+  {% if postfix_version is version_compare('3.6', '<') %}
     {% if _postfix_postscreen.blacklist_action is defined and
           _postfix_postscreen.blacklist_action | string | length > 0 and
           _postfix_postscreen.blacklist_action in ["ignore","enforce", "drop"] %}
-postscreen_blacklist_action               = {{ _postfix_postscreen.blacklist_action }}
+    {% if postfix_version is version_compare('3.11',  '>=') %}
+# OBSOLETE see: https://www.postfix.org/DEPRECATION_README.html#renamed
     {% endif %}
+# postscreen_blacklist_action               = {{ _postfix_postscreen.blacklist_action }}
+postscreen_denylist_action                = {{ _postfix_postscreen.blacklist_action }}
+    {% endif %}
+  {% endif %}
+  {% if _postfix_postscreen.denylist_action is defined and
+        _postfix_postscreen.denylist_action | string | length > 0 and
+        _postfix_postscreen.denylist_action in ["ignore","enforce", "drop"] %}
+postscreen_denylist_action                = {{ _postfix_postscreen.denylist_action }}
   {% endif %}
   {% if _postfix_postscreen.cache_cleanup_interval is defined and
         _postfix_postscreen.cache_cleanup_interval | string | length > 0 %}
@@ -54,7 +72,7 @@ postscreen_command_filter                 = {{ _postfix_postscreen.command_filte
         _postfix_postscreen.command_time_limit | string | length > 0 %}
 postscreen_command_time_limit             = {{ _postfix_postscreen.command_time_limit }}
   {% endif %}
-  {% if postfix_version is version('3.6', '>=') %}
+  {% if postfix_version is version_compare('3.6', '>=') %}
     {% if _postfix_postscreen.denylist_action is defined and
           _postfix_postscreen.denylist_action | string | length > 0 and
           _postfix_postscreen.denylist_action in ["ignore","enforce", "drop"] %}
@@ -105,11 +123,23 @@ postscreen_dnsbl_timeout                  = {{ _postfix_postscreen.dnsbl_timeout
   {% endif %}
   {% if _postfix_postscreen.dnsbl_whitelist_threshold is defined and
         _postfix_postscreen.dnsbl_whitelist_threshold | string | length > 0 %}
-postscreen_dnsbl_whitelist_threshold      = {{ _postfix_postscreen.dnsbl_whitelist_threshold }}
+    {% if postfix_version is version_compare('3.11',  '>=') %}
+# OBSOLETE see: https://www.postfix.org/DEPRECATION_README.html#renamed
+    {% endif %}
+# postscreen_dnsbl_whitelist_threshold      = {{ _postfix_postscreen.dnsbl_whitelist_threshold }}
+postscreen_dnsbl_allowlist_threshold      = {{ _postfix_postscreen.dnsbl_whitelist_threshold }}
+  {% endif %}
+  {% if _postfix_postscreen.dnsbl_allowlist_threshold is defined and
+        _postfix_postscreen.dnsbl_allowlist_threshold | string | length > 0 %}
+postscreen_dnsbl_allowlist_threshold      = {{ _postfix_postscreen.dnsbl_allowlist_threshold }}
   {% endif %}
   {% if _postfix_postscreen.dnsbl_ttl is defined and
         _postfix_postscreen.dnsbl_ttl | string | length > 0 %}
-postscreen_dnsbl_ttl                      = {{ _postfix_postscreen.dnsbl_ttl }}
+    {% if postfix_version is version_compare('3.11',  '>=') %}
+# OBSOLETE see: https://www.postfix.org/DEPRECATION_README.html#renamed
+    {% endif %}
+# postscreen_dnsbl_ttl                      = {{ _postfix_postscreen.dnsbl_ttl }}
+postscreen_dnsbl_max_ttl                  = {{ _postfix_postscreen.dnsbl_ttl }}
   {% endif %}
   {% if _postfix_postscreen.enforce_tls is defined and
         _postfix_postscreen.enforce_tls | string | length > 0 %}
@@ -198,7 +228,11 @@ postscreen_upstream_proxy_timeout         = {{ _postfix_postscreen.upstream_prox
   {% endif %}
   {% if _postfix_postscreen.use_tls is defined and
         _postfix_postscreen.use_tls | string | length > 0 %}
-postscreen_use_tls                        = {{ _postfix_postscreen.use_tls }}
+    {% if postfix_version is version_compare('3.11',  '>=') %}
+# OBSOLETE see: https://www.postfix.org/DEPRECATION_README.html#renamed
+# support for parameter "postscreen_use_tls" will be removed; instead, specify "postscreen_tls_security_level"
+    {% endif %}
+# postscreen_use_tls                        = {{ _postfix_postscreen.use_tls }}
   {% endif %}
   {% if _postfix_postscreen.watchdog_timeout is defined and
         _postfix_postscreen.watchdog_timeout | string | length > 0 %}
@@ -206,6 +240,14 @@ postscreen_watchdog_timeout               = {{ _postfix_postscreen.watchdog_time
   {% endif %}
   {% if _postfix_postscreen.whitelist_interfaces is defined and
         _postfix_postscreen.whitelist_interfaces | string | length > 0 %}
-postscreen_whitelist_interfaces           = {{ _postfix_postscreen.whitelist_interfaces }}
+    {% if postfix_version is version_compare('3.11',  '>=') %}
+# OBSOLETE see: https://www.postfix.org/DEPRECATION_README.html#renamed
+    {% endif %}
+# postscreen_whitelist_interfaces           = {{ _postfix_postscreen.whitelist_interfaces }}
+postscreen_allowlist_interfaces           = {{ _postfix_postscreen.whitelist_interfaces }}
+  {% endif %}
+  {% if _postfix_postscreen.allowlist_interfaces is defined and
+        _postfix_postscreen.allowlist_interfaces | string | length > 0 %}
+postscreen_allowlist_interfaces           = {{ _postfix_postscreen.allowlist_interfaces }}
   {% endif %}
 {% endif %}

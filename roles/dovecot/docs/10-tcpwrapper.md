@@ -2,7 +2,7 @@
 
 
 ```yaml
-dovecot_defaults_tcpwrapper:
+dovecot_tcpwrapper:
   login_access_sockets: tcpwrap
   services:
     - login/tcpwrap:

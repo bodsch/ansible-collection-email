@@ -24,3 +24,25 @@
     {% endfor %}
   {% endfor %}
 {% endif %}
+{#
+  dovecot_plugin.plugins holds settings of arbitrary plugins, so which plugin
+  to load is derived from the setting names. Only plugins whose settings are
+  unambiguous are switched on - mail_log needs notify to be loaded as well.
+  The BLOCK form adds to the list of 10-mail.conf instead of replacing it.
+#}
+{% set _mail_log = [] %}
+{% for plugin in dovecot_plugin.plugins | default([]) if plugin | bodsch.core.type == "dict" %}
+  {% for key, value in plugin.items() %}
+    {% set _keys = [key] + (value.keys() | list if value | bodsch.core.type == "dict" else []) %}
+    {% for _k in _keys if (_k | string).startswith('mail_log_') %}
+      {% set _ = _mail_log.append(_k) %}
+    {% endfor %}
+  {% endfor %}
+{% endfor %}
+{% if _mail_log | count > 0 %}
+
+mail_plugins {
+  notify                      = yes
+  mail_log                    = yes
+}
+{% endif %}

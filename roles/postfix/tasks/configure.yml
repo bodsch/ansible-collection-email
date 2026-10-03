@@ -11,6 +11,7 @@
     postfix_mailbox: "{{ postfix_defaults_mailbox | combine(postfix_mailbox, recursive=True) }}"
     postfix_maillog: "{{ postfix_defaults_maillog | combine(postfix_maillog, recursive=True) }}"
     postfix_message: "{{ postfix_defaults_message | combine(postfix_message, recursive=True) }}"
+    postfix_non: "{{ postfix_defaults_non | combine(postfix_non, recursive=True) }}"
     postfix_postscreen: "{{ postfix_defaults_postscreen | combine(postfix_postscreen, recursive=True) }}"
     postfix_proxy: "{{ postfix_defaults_proxy | combine(postfix_proxy, recursive=True) }}"
     postfix_queue: "{{ postfix_defaults_queue | combine(postfix_queue, recursive=True) }}"
@@ -56,7 +57,7 @@
   when:
     - not running_in_check_mode
   bodsch.core.directories:
-    mode: "0750"
+    mode: "0755"
     paths:
       - path: "{{ postfix_maps_directory }}"
       - path: "{{ postfix_virtual_directory }}"

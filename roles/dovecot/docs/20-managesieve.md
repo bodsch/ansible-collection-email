@@ -2,7 +2,7 @@
 
 
 ```yaml
-dovecot_defaults_managesieve:
+dovecot_managesieve:
   enabled_protocols:
     - "$protocols"
     - sieve

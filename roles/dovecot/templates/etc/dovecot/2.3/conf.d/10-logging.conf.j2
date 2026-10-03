@@ -32,7 +32,7 @@ log_core_filter              = {{ dovecot_logging.log_core_filter }}
 auth_verbose                 = {{ dovecot_logging.auth_verbose | bodsch.core.config_bool(true_as='yes', false_as='no') }}
 {% endif %}
 {% if dovecot_logging.auth_verbose_passwords is defined %}
-  {% if dovecot_logging.auth_verbose_passwords | bodsch.core.type == "str" and
+  {% if dovecot_logging.auth_verbose_passwords | bodsch.core.type == "string" and
         dovecot_logging.auth_verbose_passwords in ['plain', 'sha1'] %}
 auth_verbose_passwords       = {{ dovecot_logging.auth_verbose_passwords }}
   {% elif dovecot_logging.auth_verbose_passwords | bodsch.core.type == "bool" %}

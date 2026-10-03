@@ -7,47 +7,63 @@
   plugin, both of which were removed.
 
   See https://doc.dovecot.org/latest/core/config/statistics.html
+
+  What a metric becomes is decided by
+
+    bodsch.email.dovecot_metrics
+
+  which expands the compact "field:method:args" group_by notation into the
+  nested blocks 2.4 wants, and rejects a metric dovecot would refuse. It
+  returns WHAT to write, this template decides HOW it looks - the same split
+  as dovecot_plugin_setting in 90-plugin.conf.
 #}
-{% if dovecot_metrics.metrics is defined and
-      dovecot_metrics.metrics | count > 0 %}
-  {% for metric in dovecot_metrics.metrics %}
-    {% for name, values in metric.items() %}
-metric {{ name }} {
-      {% for k, v in values.items() %}
-        {% if k == 'group_by' and v | bodsch.core.type == "list" %}
-          {% for group in v %}
-            {% for field, method in group.items() %}
-  group_by {{ field }} {
-    method {{ method.name | default('discrete') }} {
-              {% for mk, mv in method.items() if mk != 'name' %}
-      {{ "%-21s" | format(mk) }} = {{ mv }}
-              {% endfor %}
-    }
-  }
-            {% endfor %}
-          {% endfor %}
-        {% elif v | string | length > 0 %}
-  {{ "%-27s" | format(k) }} = {{ v }}
-        {% endif %}
-      {% endfor %}
-}
-    {% endfor %}
+{% set _metrics = dovecot_metrics.metrics | default([]) | bodsch.email.dovecot_metrics %}
+
+{% for metric in _metrics %}
+metric {{ metric.name }} {
+  {% for key, value in metric.settings %}
+  {{ "%-27s" | format(key) }} = {{ value }}
   {% endfor %}
-{% endif %}
+{#
+  group_by is a named list filter in 2.4, not a setting. A field without a
+  method gets an empty block: discrete is the default.
+#}
+  {% for group in metric.group_by %}
+  group_by {{ group.field }} {
+    {% if group.method %}
+    method {{ group.method }} {
+      {% for key, value in group.arguments %}
+      {{ "%-23s" | format(key) }} = {{ value }}
+      {% endfor %}
+    }
+    {% endif %}
+  }
+  {% endfor %}
+}
+
+{% endfor %}
+
+{#
+  An exporter named after its driver needs no driver setting; any other name
+  does, because event_exporter_driver defaults to "log".
+#}
 {% if dovecot_metrics.event_exporters is defined and
+      dovecot_metrics.event_exporters | bodsch.core.type == "list" and
       dovecot_metrics.event_exporters | count > 0 %}
   {% for exporter in dovecot_metrics.event_exporters %}
     {% for name, values in exporter.items() %}
 event_exporter {{ name }} {
-      {% for k, v in values.items() %}
+      {% for k, v in (values | default({})).items() %}
         {% if v | string | length > 0 %}
   {{ "%-27s" | format(k) }} = {{ v }}
         {% endif %}
       {% endfor %}
 }
+
     {% endfor %}
   {% endfor %}
 {% endif %}
+
 {#
   Prometheus scrapes /metrics from the http listener of the stats service.
 #}
@@ -56,7 +72,7 @@ event_exporter {{ name }} {
       dovecot_metrics.prometheus.enabled | bool %}
 service stats {
   inet_listener http {
-    port                      = {{ dovecot_metrics.prometheus.port | default(9900) | int }}
+    port                      = {{ dovecot_metrics.prometheus.port | default('9900') | string }}
   {% if dovecot_metrics.prometheus.address is defined and
         dovecot_metrics.prometheus.address | string | length > 0 %}
     listen                    = {{ dovecot_metrics.prometheus.address }}

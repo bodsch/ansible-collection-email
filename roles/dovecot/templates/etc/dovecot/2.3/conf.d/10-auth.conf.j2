@@ -88,5 +88,24 @@ auth_mechanisms              = {{ dovecot_auth.mechanisms | bodsch.core.compare_
 {% endif %}
 
 {% if dovecot_auth.includes is defined and dovecot_auth.includes | count > 0 %}
-{{ mcr.include_paramaters(dovecot_auth.includes, authentications=dovecot_authentications | default({})) }}
+{#
+  A backend that is included but NOT configured renders a file without a single
+  passdb, and dovecot does not complain about it - so it is reported here.
+
+  The other direction is not an error: replacing the system backend the role
+  ships means leaving auth-system.conf.ext out of includes, and its unused
+  configuration then stays behind harmlessly.
+#}
+{% set _included = [] %}
+{% for incl in dovecot_auth.includes | default([]) %}
+  {% if incl | string | trim | first != '#' %}
+    {% set _ = _included.append(incl | string | trim | regex_replace('^auth-', '') | regex_replace('\.conf\.ext$', '')) %}
+  {% endif %}
+{% endfor %}
+{% set _configured = (dovecot_authentications | default({})).keys() | list %}
+{% for _name in _included | sort if _name not in _configured %}
+# NOTE auth-{{ _name }}.conf.ext is included but dovecot_authentications.{{ _name }}
+#   is empty - the file renders without a passdb.
+{% endfor %}
+{{ mcr.include_paramaters(dovecot_auth.includes) }}
 {% endif %}

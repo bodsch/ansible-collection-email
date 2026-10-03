@@ -2,7 +2,7 @@
 
 
 ```yaml
-dovecot_defaults_lda:
+dovecot_lda:
   # postmaster_address: ""
   # hostname: ""
   # quota_full_tempfail: false

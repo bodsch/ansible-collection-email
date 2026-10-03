@@ -26,19 +26,14 @@
   'LAYOUT': 'mailbox_list_layout',
 } %}
 {# Mailbox locations and namespaces #}
-{% if dovecot_mail.mail_driver is defined and
-      dovecot_mail.mail_driver | string | length > 0 %}
-mail_driver                   = {{ dovecot_mail.mail_driver }}
-  {% if dovecot_mail.mail_path is defined and
-        dovecot_mail.mail_path | string | length > 0 %}
-mail_path                     = {{ dovecot_mail.mail_path | bodsch.email.dovecot_path_vars }}
-  {% endif %}
-  {% if dovecot_mail.mail_inbox_path is defined and
-        dovecot_mail.mail_inbox_path | string | length > 0 %}
-mail_inbox_path               = {{ dovecot_mail.mail_inbox_path | bodsch.email.dovecot_path_vars }}
-  {% endif %}
-{% elif dovecot_mail.mail_location is defined and
-        dovecot_mail.mail_location | string | length > 0 %}
+{#
+  mail_location is the 2.3 spelling and mail_driver/mail_path the 2.4 one.
+  mail_location is checked FIRST: the role ships a mail_driver default for
+  2.4 (dovecot 2.4 dropped mail location autodetection, see
+  vars/dovecot-2.4.yml), and a mail_location the user set has to win over it.
+#}
+{% if dovecot_mail.mail_location is defined and
+      dovecot_mail.mail_location | string | length > 0 %}
 {#  split "driver:path:OPTION=value:..." into the separate 2.4 settings #}
   {% set _parts = dovecot_mail.mail_location | string | split(':') %}
 mail_driver                   = {{ _parts[0] }}
@@ -55,6 +50,17 @@ mail_path                     = {{ _parts[1] | bodsch.email.dovecot_path_vars }}
 # equivalent. Set the matching mail_* setting explicitly via dovecot_mail.
     {% endif %}
   {% endfor %}
+{% elif dovecot_mail.mail_driver is defined and
+        dovecot_mail.mail_driver | string | length > 0 %}
+mail_driver                   = {{ dovecot_mail.mail_driver }}
+  {% if dovecot_mail.mail_path is defined and
+        dovecot_mail.mail_path | string | length > 0 %}
+mail_path                     = {{ dovecot_mail.mail_path | bodsch.email.dovecot_path_vars }}
+  {% endif %}
+{% endif %}
+{% if dovecot_mail.mail_inbox_path is defined and
+      dovecot_mail.mail_inbox_path | string | length > 0 %}
+mail_inbox_path               = {{ dovecot_mail.mail_inbox_path | bodsch.email.dovecot_path_vars }}
 {% endif %}
 {% if dovecot_mail.mail_home is defined and
       dovecot_mail.mail_home | string | length > 0 %}
@@ -112,7 +118,7 @@ namespace {{ ns.name | default("") }} {
           ns.list | string | length > 0 %}
       {% if ns.list | bodsch.core.type == "bool" %}
   list                        = {{ ns.list | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
-      {% elif ns.list | bodsch.core.type == "str" and ns.list == "children" %}
+      {% elif ns.list | bodsch.core.type == "string" and ns.list == "children" %}
   list                        = children
       {% endif %}
     {% endif %}

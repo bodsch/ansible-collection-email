@@ -51,6 +51,9 @@ smtpd_client_connection_rate_limit        = {{ _postfix_smtpd.client.connection.
   {% endif %}
   {% if _postfix_smtpd.client.event_limit_exceptions is defined and
         _postfix_smtpd.client.event_limit_exceptions | string | length > 0 %}
+    {% if postfix_version is version_compare('3.11',  '>=') %}
+# OBSOLETE see: https://www.postfix.org/DEPRECATION_README.html#renamed
+    {% endif %}
 smtpd_client_event_limit_exceptions       = {{ _postfix_smtpd.client.event_limit_exceptions }}
   {% endif %}
   {% if _postfix_smtpd.client.message_rate_limit is defined and
@@ -272,7 +275,15 @@ smtpd_peername_lookup                     = {{ _postfix_smtpd.peername_lookup | 
 {% endif %}
 {% if _postfix_smtpd.per_record_deadline is defined and
       _postfix_smtpd.per_record_deadline | string | length > 0 %}
+    {% if postfix_version is version_compare('3.11',  '>=') %}
+# OBSOLETE see: https://www.postfix.org/DEPRECATION_README.html#renamed
+    {% endif %}
 smtpd_per_record_deadline                 = {{ _postfix_smtpd.per_record_deadline }}
+smtpd_per_request_deadline                = {{ _postfix_smtpd.per_record_deadline }}
+{% endif %}
+{% if _postfix_smtpd.per_request_deadline is defined and
+      _postfix_smtpd.per_request_deadline | string | length > 0 %}
+smtpd_per_request_deadline                = {{ _postfix_smtpd.per_request_deadline }}
 {% endif %}
 {% if _postfix_smtpd.policy is defined and
       _postfix_smtpd.policy | count > 0 %}
@@ -457,7 +468,7 @@ smtpd_sasl_tls_security_options           = {{ _postfix_smtpd.sasl.tls_security_
   {% endif %}
   {% if _postfix_smtpd.sasl.type is defined and
         _postfix_smtpd.sasl.type | string | length > 0 %}
-smtpd_sasl_type                         = {{ _postfix_smtpd.sasl.type }}
+smtpd_sasl_type                           = {{ _postfix_smtpd.sasl.type }}
   {% endif %}
 {% endif %}
 {% if _postfix_smtpd.sender is defined and
@@ -657,7 +668,11 @@ smtpd_upstream_proxy_timeout              = {{ _postfix_smtpd.upstream_proxy.tim
 {% endif %}
 {% if _postfix_smtpd.use_tls is defined and
       _postfix_smtpd.use_tls | string | length > 0 %}
-smtpd_use_tls                             = {{ _postfix_smtpd.use_tls | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+    {% if postfix_version is version_compare('3.11',  '>=') %}
+# OBSOLETE see: https://www.postfix.org/DEPRECATION_README.html#renamed
+# support for parameter "smtpd_use_tls" will be removed; instead, specify "smtpd_tls_security_level"
+    {% endif %}
+# smtpd_use_tls                             = {{ _postfix_smtpd.use_tls | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
 {% endif %}
 {#
 smtpd_authorized_verp_clients = $authorized_verp_clients

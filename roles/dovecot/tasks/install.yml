@@ -1,5 +1,32 @@
 ---
 
+- name: detect if dovecot installed
+  ansible.builtin.stat:
+    path: /usr/sbin/dovecot
+    get_checksum: false
+    get_mime: false
+  no_log: true
+  register: dovecot_binary_file
+
+- name: define dovecot_installed if mariadb installed
+  ansible.builtin.set_fact:
+    dovecot_installed: "{{ dovecot_binary_file.stat.exists }}"
+  when:
+    - dovecot_binary_file is defined
+    - dovecot_binary_file.stat is defined
+
+- name: create policy-rc.d
+  ansible.builtin.copy:
+    dest: /usr/sbin/policy-rc.d
+    content: |
+      #!/bin/sh
+      exit 101
+    mode: "0755"
+  when:
+    - not running_in_check_mode
+    - not dovecot_installed
+    - ansible_facts.os_family | lower != 'archlinux'
+
 - name: install package
   when:
     - not running_in_check_mode
@@ -51,9 +78,21 @@
   ansible.builtin.set_fact:
     dovecot_version: "{{ _dovecot_version.versions.full_version }}"
     dovecot_short_version: "{{ _dovecot_version.versions.short_version }}"
-    # without the package release - dovecot_config_version only accepts a
-    # version dovecot itself knows, so arch linux' "2.4.1-4" is rejected
-    # dovecot_upstream_version: "{{ _dovecot_version.versions.upstream_version }}"
+
+- name: rename debians 90-fts-flatcurve.conf
+  ansible.builtin.command:
+    mv /etc/dovecot/conf.d/90-fts-flatcurve.conf /etc/dovecot/conf.d/90-fts-flatcurve.dist
+  args:
+    removes: /etc/dovecot/conf.d/90-fts-flatcurve.conf
+    creates: /etc/dovecot/conf.d/90-fts-flatcurve.dist
+
+- name: remove policy-rc.d
+  ansible.builtin.file:
+    path: /usr/sbin/policy-rc.d
+    state: absent
+  when:
+    - not running_in_check_mode
+    - ansible_facts.os_family | lower != 'archlinux'
 
 - name: create custom fact file
   when:

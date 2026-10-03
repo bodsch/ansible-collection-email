@@ -24,6 +24,39 @@
   {% endfor %}
 {% endif %}
 
+{#
+  The settings alone do nothing. sieve_extprograms is a plugin of the sieve
+  interpreter (sieve_plugins, not mail_plugins), and its extensions are only
+  available to global scripts once listed in sieve_global_extensions. Each
+  extension whose bin_dir or socket_dir is configured is switched on.
+
+  The BLOCK form adds to whatever 90-sieve.conf sets for both lists.
+#}
+{% set _programs = [] %}
+{% for plugin in dovecot_sieve_extprograms.plugins | default([]) if plugin | bodsch.core.type == "dict" %}
+  {% for key, value in plugin.items() %}
+    {% set _settings = value if value | bodsch.core.type == "dict" else {key: value} %}
+    {% for k, v in _settings.items() if v | string | length > 0 %}
+      {% for _program in ['pipe', 'filter', 'execute'] %}
+        {% if k in ['sieve_' ~ _program ~ '_bin_dir', 'sieve_' ~ _program ~ '_socket_dir'] and _program not in _programs %}
+          {% set _ = _programs.append(_program) %}
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+  {% endfor %}
+{% endfor %}
+{% if _programs | count > 0 %}
+
+sieve_plugins {
+  sieve_extprograms           = yes
+}
+sieve_global_extensions {
+  {% for _program in _programs %}
+  {{ "%-27s" | format('vnd.dovecot.' ~ _program) }} = yes
+  {% endfor %}
+}
+{% endif %}
+
 {% if dovecot_sieve_extprograms.services is defined and
       dovecot_sieve_extprograms.services | count > 0 %}
   {% set _service_renames = {

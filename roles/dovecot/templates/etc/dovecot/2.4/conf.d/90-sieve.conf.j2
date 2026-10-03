@@ -18,44 +18,102 @@
   The sieve plugin is enabled through mail_plugins { sieve = yes } in 2.4,
   not through "mail_plugins = $mail_plugins sieve".
 #}
-{% if dovecot_sieve.plugins is defined and
-      dovecot_sieve.plugins | count > 0 and
-      dovecot_sieve.plugins | bodsch.core.type == "list" %}
-  {% for plugin in dovecot_sieve.plugins %}
-    {% for key, value in plugin.items() %}
-      {% if value | bodsch.core.type == "dict" %}
-        {% for k, v in value.items() %}
-          {% if v | bodsch.core.type == "bool" %}
-{{ mcr.plugin_setting(k, v | bodsch.core.config_bool(true_as='yes', false_as='no')) }}
-          {% elif v | string | length > 0 %}
-{{ mcr.plugin_setting(k, v) }}
-          {% endif %}
-        {% endfor %}
-      {% elif value | bodsch.core.type == "bool" %}
-{{ mcr.plugin_setting(key, value | bodsch.core.config_bool(true_as='yes', false_as='no')) }}
-      {% elif value | string | length > 0 %}
-{{ mcr.plugin_setting(key, value) }}
-      {% endif %}
-    {% endfor %}
-  {% endfor %}
-{% endif %}
-
 {#
-  Every sieve script location is a named filter in 2.4. The 2.3 settings it
-  replaces (sieve, sieve_before*, sieve_after*, sieve_default, sieve_global*,
-  sieve_dir) are written as UNMAPPED comments by the block above.
+  The 2.3 script locations (sieve, sieve_dir, sieve_before*, sieve_after*,
+  sieve_default, sieve_discard, sieve_global*) are translated into
+  "sieve_script <name> { }" blocks by bodsch.email.dovecot_sieve_scripts.
+  A block in dovecot_sieve.scripts with the same name wins over a translated
+  one, so the 2.4 spelling always has the last word.
+
+  The extension lists keep the 2.3 "+a -b" syntax working: 2.4 made them
+  boolean lists, and dovecot only WARNS about "+a" - it then knows no
+  extension of that name and the script fails to compile at delivery.
 #}
-{% if dovecot_sieve.scripts is defined and
-      dovecot_sieve.scripts | count > 0 %}
-  {% for _name, _settings in dovecot_sieve.scripts.items() %}
-sieve_script {{ _name }} {
-    {% for _key, _value in _settings.items() %}
-      {% if _value | bodsch.core.type == "bool" %}
-  {{ "%-27s" | format(_key) }} = {{ _value | bodsch.core.config_bool(true_as='yes', false_as='no') }}
-      {% elif _value | string | length > 0 %}
-  {{ "%-27s" | format(_key) }} = {{ _value }}
-      {% endif %}
-    {% endfor %}
-}
+{% set _pairs = [] %}
+{% for plugin in dovecot_sieve.plugins | default([]) if plugin | bodsch.core.type == "dict" %}
+  {% for key, value in plugin.items() %}
+    {% if value | bodsch.core.type == "dict" %}
+      {% for k, v in value.items() %}
+        {% set _ = _pairs.append([k, v]) %}
+      {% endfor %}
+    {% else %}
+      {% set _ = _pairs.append([key, value]) %}
+    {% endif %}
   {% endfor %}
+{% endfor %}
+{% set _sieve = dovecot_sieve.plugins | default([]) | bodsch.email.dovecot_sieve_scripts %}
+{#
+  Only sieve_extensions has a non-empty default, so only there does
+  "replace" differ from "add". The other lists are always written as a block:
+  90-sieve-extprograms.conf is read BEFORE this file ("-" sorts before ".")
+  and adds to sieve_plugins and sieve_global_extensions - an assignment here
+  would silently throw that away.
+#}
+{% set _extension_lists = ['sieve_extensions', 'sieve_global_extensions', 'sieve_implicit_extensions', 'sieve_plugins'] %}
+{% for key, value in _pairs if key not in _sieve.consumed %}
+  {% if key in _extension_lists %}
+    {% set _ext = value | bodsch.email.dovecot_sieve_extensions %}
+    {% for _name, _successor in _ext.removed.items() %}
+# NOTE {{ key }}: '{{ _name }}' was removed in dovecot 2.4 - '{{ _successor }}' replaces it and is enabled by default
+    {% endfor %}
+    {% if _ext.replace and key == 'sieve_extensions' and _ext.enable | count > 0 %}
+{{ "%-29s" | format(key) }} = {{ _ext.enable | join(' ') }}
+    {% elif _ext.enable | count > 0 or _ext.disable | count > 0 %}
+{{ key }} {
+      {% for _name in _ext.enable %}
+  {{ "%-27s" | format(_name) }} = yes
+      {% endfor %}
+      {% for _name in _ext.disable %}
+  {{ "%-27s" | format(_name) }} = no
+      {% endfor %}
+}
+    {% endif %}
+  {% elif value | bodsch.core.type == "bool" %}
+{{ mcr.plugin_setting(key, value | bodsch.core.config_bool(true_as='yes', false_as='no')) }}
+  {% elif value | string | length > 0 %}
+{{ mcr.plugin_setting(key, value) }}
+  {% endif %}
+{% endfor %}
+{% for _note in _sieve.notes %}
+{{ _note }}
+{% endfor %}
+
+{% set _scripts = {} %}
+{% for _name, _settings in _sieve.scripts.items() %}
+  {% set _ = _scripts.update({_name: _settings}) %}
+{% endfor %}
+{% for _name, _settings in (dovecot_sieve.scripts | default({})).items() %}
+  {% set _ = _scripts.update({_name: _settings}) %}
+{% endfor %}
+{% for _name, _settings in _scripts.items() %}
+sieve_script {{ _name }} {
+  {% for _key, _value in (_settings | default({}, true)).items() %}
+    {% if _value | bodsch.core.type == "bool" %}
+  {{ "%-27s" | format(_key) }} = {{ _value | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+    {% elif _key in ['path', 'active_path', 'bin_path'] and _value | string | length > 0 %}
+  {{ "%-27s" | format(_key) }} = {{ _value | bodsch.email.dovecot_path_vars }}
+    {% elif _value | string | length > 0 %}
+  {{ "%-27s" | format(_key) }} = {{ _value }}
+    {% endif %}
+  {% endfor %}
+}
+{% endfor %}
+{#
+  Script locations alone do nothing: the sieve plugin runs inside the
+  delivering process and has to be loaded there - as 90-fts.conf does for
+  full text search. The BLOCK form adds to the list of 10-mail.conf and
+  20-lmtp.conf instead of replacing it.
+#}
+{% if _scripts | count > 0 %}
+
+protocol lmtp {
+  mail_plugins {
+    sieve                     = yes
+  }
+}
+protocol lda {
+  mail_plugins {
+    sieve                     = yes
+  }
+}
 {% endif %}

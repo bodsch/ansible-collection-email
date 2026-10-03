@@ -13,17 +13,33 @@ dovecot_remove_stale_configs: true
 # Dovecot itself accepts any name and only fails at runtime.
 dovecot_validate_drivers: true
 
+# Create the storage directories that dovecot_mail points at and hand them to
+# the virtual mail user.
+#
+# Dovecot creates the PER USER part of a path itself, but not the static
+# parent above it. With
+#   mail_control_path = /var/mail/CONTROL/%{user|domain}/%{user|username}
+# and /var/mail owned by root, the first subscription fails with
+#   mkdir(/var/mail/CONTROL/example.com) failed: Permission denied
+# and the client reports that it cannot subscribe to a mailbox.
+#
+# Only directories BELOW a top level one are touched; "/", "/var" and the like
+# are never created or chowned. Set this to false to manage them yourself.
+dovecot_manage_mail_directories: true
+dovecot_mail_directories_mode: "0750"
+
 dovecot_service:
   state: started
   enabled: true
 
 dovecot_config:
   listen:
-    - "*"
+    - "127.0.0.1"
+    # - "{{ ansible_facts.default_ipv4.address }}"
 
 dovecot_virtual_user:
   name: vmail
-  home: /var/vmail
+  home: /srv/vmail
   uid: 1101
   gid: 1101
 
@@ -51,18 +67,7 @@ dovecot_sieve: {}
 dovecot_metrics: {}
 dovecot_fts: {}
 dovecot_dict_server: {}
-dovecot_authentications: []
-
-dovecot_auth_checkpassword: {}
-dovecot_auth_deny: {}
-dovecot_auth_dict: {}
-dovecot_auth_ldap: {}
-dovecot_auth_master: {}
-dovecot_auth_passwdfile: {}
-dovecot_auth_sql: {}
-dovecot_auth_static: {}
-dovecot_auth_system: {}
-dovecot_auth_vpopmail: {}
+dovecot_authentications: {}
 
 dovecot_dict_auth: {}
 dovecot_dict_sql: {}

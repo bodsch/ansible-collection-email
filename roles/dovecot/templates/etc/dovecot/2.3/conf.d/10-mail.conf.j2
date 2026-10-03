@@ -38,7 +38,7 @@ namespace {{ ns.name | default("") }} {
           ns.list | string | length > 0 %}
       {% if ns.list | bodsch.core.type == "bool" %}
   list                        = {{ ns.list | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
-      {% elif ns.list | bodsch.core.type == "str" and ns.list == "children" %}
+      {% elif ns.list | bodsch.core.type == "string" and ns.list == "children" %}
   list                        = children
       {% endif %}
     {% endif %}
@@ -175,9 +175,44 @@ auth_socket_path              = {{ dovecot_mail.auth_socket_path }}
       dovecot_mail.mail_plugin_dir | string | length > 0 %}
 mail_plugin_dir               = {{ dovecot_mail.mail_plugin_dir }}
 {% endif %}
-{% if dovecot_mail.mail_plugins is defined and
-      dovecot_mail.mail_plugins | count > 0 %}
-mail_plugins                  = {{ dovecot_mail.mail_plugins | join(' ') }}
+{#
+  Configuring a plugin (dovecot_acl, dovecot_quota, mail_log_* settings in
+  dovecot_plugin) does not load it - that is mail_plugins' job, and dovecot
+  reports neither a missing plugin nor settings nobody reads. The plugins are
+  added to the global list here, as the 2.4 templates do in 90-*.conf.
+
+  It has to be HERE and not in 90-*.conf: 2.3 expands "$mail_plugins" in a
+  protocol { } block while parsing, so a later "mail_plugins = $mail_plugins
+  acl" would never reach the protocol blocks of 15-lda.conf and 20-*.conf.
+#}
+{% set _plugins = [] %}
+{% set _raw = dovecot_mail.mail_plugins | default([]) %}
+{% for _value in ([_raw] if _raw is string else _raw) %}
+  {% for _p in (_value | string).split() if _p | first != '$' %}
+    {% set _ = _plugins.append(_p) %}
+  {% endfor %}
+{% endfor %}
+{% if dovecot_acl.plugins | default([]) | count > 0 %}
+  {% set _ = _plugins.append('acl') %}
+{% endif %}
+{% if dovecot_quota.plugins | default([]) | count > 0 or
+      dovecot_quota.quotas | default({}) | count > 0 %}
+  {% set _ = _plugins.append('quota') %}
+{% endif %}
+{% set _mail_log = [] %}
+{% for plugin in dovecot_plugin.plugins | default([]) if plugin | bodsch.core.type == "dict" %}
+  {% for key, value in plugin.items() %}
+    {% set _keys = [key] + (value.keys() | list if value | bodsch.core.type == "dict" else []) %}
+    {% for _k in _keys if (_k | string).startswith('mail_log_') %}
+      {% set _ = _mail_log.append(_k) %}
+    {% endfor %}
+  {% endfor %}
+{% endfor %}
+{% if _mail_log | count > 0 %}
+  {% set _ = _plugins.extend(['notify', 'mail_log']) %}
+{% endif %}
+{% if _plugins | count > 0 %}
+mail_plugins                  = {{ _plugins | unique | join(' ') }}
 {% endif %}
 
 {# Mailbox handling optimizations #}
@@ -225,7 +260,14 @@ mail_sort_max_read_count      = {{ dovecot_mail.mail_sort_max_read_count | int }
       {% set _name = pr. name %}
 protocol {{ _name }} {
       {% for k, v in pr.items() if k != 'name' %}
-        {% if v | bodsch.core.type == "list" %}
+{#      "mail_plugins = $mail_plugins" alone inherits nothing new, but it PINS
+        the value: a negated filter such as "protocol !indexer-worker" also
+        matches imap, and dovecot 2.3 then prefers it over "protocol imap" -
+        imap_acl and imap_quota silently stop loading. Leaving it out
+        inherits the same list without that side effect. #}
+        {% if k == 'mail_plugins' and
+              ((v if v is string else v | join(' ')) | string).split() == ['$mail_plugins'] %}
+        {% elif v | bodsch.core.type == "list" %}
           {% if v | count > 0 %}
   {{ k }} = {{ v | join(' ') }}
           {% endif %}

@@ -1,7 +1,7 @@
 # dovecot-dict-sql.conf
 
 ```yaml
-dovecot_defaults_dict_sql:
+dovecot_dict_sql:
   connects:
     host: localhost
     dbname: mails

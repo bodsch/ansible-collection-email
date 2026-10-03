@@ -23,3 +23,21 @@ dovecot_sieve_extprograms:
               mode: "0600"
 ```
 
+
+dovecot 2.3: `sieve_extprograms` and `+vnd.dovecot.*` are added to the `sieve_plugins` /
+`sieve_global_extensions` of [90-sieve.conf](90-sieve.md) - that file is read after this one.
+
+## dovecot 2.4
+
+For every program type whose `*_bin_dir` or `*_socket_dir` is set, the role also writes
+
+```
+sieve_plugins {
+  sieve_extprograms = yes
+}
+sieve_global_extensions {
+  vnd.dovecot.pipe = yes        # filter, execute likewise
+}
+```
+
+Without them the settings above do nothing: `require "vnd.dovecot.pipe"` fails to compile.

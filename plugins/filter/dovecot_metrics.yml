@@ -1,0 +1,73 @@
+---
+
+DOCUMENTATION:
+  name: dovecot_metrics
+  author: Bodo Schulz (@bodsch)
+  version_added: 1.0.0
+  short_description: Expand the compact dovecot metric definitions into what 2.4 renders.
+  description:
+    - >-
+      Dovecot 2.4 gathers statistics from events through C(metric <name> { }) blocks.
+      C(group_by) is not a setting there but a named list filter, so the 2.3 form
+      C(group_by = cmd_name duration:exponential:1:5:10) is rejected with
+      "group_by - Setting is a named list filter".
+    - >-
+      This filter keeps the compact notation from the dovecot documentation and expands
+      it into the nested blocks 2.4 wants. It returns what to write, not the text - the
+      template owns the layout.
+    - >-
+      The method arguments follow the documented order - C(exponential) takes
+      min_magnitude, max_magnitude and base, C(linear) takes min, max and step, and
+      C(discrete) takes an optional modifier. A field without a method gets an empty
+      block, because discrete is dovecot's default.
+    - >-
+      A metric dovecot would refuse is rejected here instead - one without a name, one
+      without a filter (dovecot - "Named filter metric is missing the mandatory setting
+      filter"), one with an unknown setting, and an unknown or incompletely parameterised
+      group_by method.
+  positional: _input
+  options:
+    _input:
+      description: The C(metrics) list of C(dovecot_metrics).
+      required: true
+      type: list
+      elements: dict
+
+EXAMPLES: |
+  dovecot_metrics:
+    metrics:
+      - type: imap_command
+        filter: "event=imap_command_finished"
+        fields: "bytes_in bytes_out"
+        group_by: "cmd_name tagged_reply_state"
+
+      - type: mail_delivery
+        filter: "event=mail_delivery"
+        group_by: "duration:exponential:1:5:10"
+
+  # metric imap_command {
+  #   filter  = event=imap_command_finished
+  #   fields  = bytes_in bytes_out
+  #   group_by cmd_name {
+  #   }
+  #   group_by tagged_reply_state {
+  #   }
+  # }
+  # metric mail_delivery {
+  #   filter  = event=mail_delivery
+  #   group_by duration {
+  #     method exponential {
+  #       min_magnitude = 1
+  #       max_magnitude = 5
+  #       base          = 10
+  #     }
+  #   }
+  # }
+
+RETURN:
+  _value:
+    description: >-
+      One entry per metric, with C(name), C(settings) as (key, value) pairs and
+      C(group_by) as {field, method, arguments} mappings.
+    type: list
+    elements: dict

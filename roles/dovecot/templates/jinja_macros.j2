@@ -26,36 +26,31 @@
   Without it every include silently misses, because include_try does not
   complain about a file that is not there.
 #}
-{% macro include_paramaters(data, include_type="include_try", authentications={}) %}
+{% macro include_paramaters(data, include_type="include_try") %}
 {#
-  Every backend configured in dovecot_authentications gets its file enabled,
-  even when the includes list still has it commented out. Otherwise the two
-  have to be kept in sync by hand, and forgetting it produces a dovecot that
-  starts with no passdb at all:
+  dovecot_auth.includes decides ALONE what is included; dovecot_authentications
+  only decides how a backend is configured. Two variables, two jobs.
 
-      auth: Fatal: No passdbs specified in configuration file.
+  This macro used to switch a backend on as soon as dovecot_authentications had
+  an entry for it, even when the includes list had it commented out. That made a
+  commented line silently come back, and it left no way to drop a backend the
+  role ships a default for.
+
+  The flip side is that the two have to match: a backend configured but not
+  included does nothing, and an included backend with no configuration renders
+  an empty file. 10-auth.conf reports both as a comment.
 #}
-  {% set active = [] %}
-  {% for backend in authentications | default({}) %}
-    {% set _ = active.append('auth-' ~ backend ~ '.conf.ext') %}
-  {% endfor %}
-  {% set listed = [] %}
   {% for incl in data %}
     {% if incl is defined and incl is not none and incl | string | length > 0 %}
       {% set entry = incl | string | trim %}
       {% set name = entry | regex_replace('^#\s*', '') %}
-      {% set _ = listed.append(name) %}
-      {% if entry[0] != "#" or name in active %}
+      {% if entry[0] != "#" %}
 !{{ include_type }} ../auth.d/{{ name }}
       {% else %}
 # !{{ include_type }} ../auth.d/{{ name }}
       {% endif %}
     {% endif %}
   {% endfor %}
-{#- a configured backend that is not in the list at all still has to be included -#}
-  {% for name in active if name not in listed %}
-!{{ include_type }} ../auth.d/{{ name }}
-  {% endfor -%}
 {% endmacro %}
 
 {#
@@ -63,25 +58,47 @@
   "name = a b" REPLACES the list, "name { a = yes }" ADDS to it - the latter
   is what "$name a b" expressed in 2.3.
 
-  Entries starting with '$' (such as the old '$mail_plugins' placeholder) are
-  dropped: 2.4 has no setting variable expansion.
+  2.4 has no setting variable expansion, so the 2.3 self reference decides
+  the form instead of being written out:
+
+    [ '$mail_plugins', 'imap_quota' ]  -> mail_plugins { imap_quota = yes }
+    [ 'quota' ]                        -> mail_plugins = quota
+
+  exactly what "$mail_plugins imap_quota" and "quota" meant in 2.3. Checked
+  against doveconf 2.4.1 and 2.4.4: inside a protocol { } filter the block
+  adds to the global list, the assignment replaces it.
+
+  'values' may be a list, a space separated string or a mix of both. A plain
+  string used to be iterated CHARACTER BY CHARACTER ("m = yes", "a = yes",
+  ...) - and "doveconf -n" accepts that, only the service fails to start.
 #}
 {% macro bool_list(name, values, indent='') %}
+{%- if values is none -%}
+  {%- set raw = [] -%}
+{%- elif values is string or values is not iterable or values is mapping -%}
+  {%- set raw = [values] -%}
+{%- else -%}
+  {%- set raw = values -%}
+{%- endif -%}
 {%- set entries = [] -%}
-{%- for value in values | default([]) -%}
-{#- an empty entry has nothing to enable, and "'' | first" would raise.
-    A value split from an empty string is exactly that: "" | split(' ')
-    yields [''], not []. -#}
-  {%- if value | string | length > 0 and not value | string | first == '$' -%}
-    {%- set _ = entries.append(value | string) -%}
-  {%- endif -%}
+{%- set additive = [] -%}
+{%- for value in raw -%}
+  {%- for token in (value | string).split() -%}
+    {%- if token | first == '$' -%}
+      {%- set _ = additive.append(token) -%}
+    {%- elif token not in entries -%}
+      {%- set _ = entries.append(token) -%}
+    {%- endif -%}
+  {%- endfor -%}
 {%- endfor -%}
-{%- if entries | count > 0 %}
+{%- if entries | count > 0 and additive | count > 0 %}
 {{ indent }}{{ name }} {
 {% for entry in entries %}
 {{ indent }}  {{ "%-25s" | format(entry) }} = yes
 {% endfor %}
 {{ indent }}}
+{%- elif entries | count > 0 %}
+{{ indent }}{{ "%-*s" | format(29 - indent | length, name) }} = {{ entries | join(' ') }}
 {%- endif -%}
 {% endmacro %}
 
@@ -112,6 +129,13 @@
       setting. -#}
 {%-   set lines = ['# UNMAPPED ' ~ result.key ~ ' = ' ~ result.value] + result.hints -%}
 {%-   set text = lines | join('\n#   ') -%}
+{%- elif result.kind == 'settings' -%}
+{#-   one 2.3 setting that became SEVERAL in 2.4, "acl" for instance. -#}
+{%-   set lines = [] -%}
+{%-   for _key, _value in result.settings -%}
+{%-     set _ = lines.append('%-29s' | format(_key) ~ ' = ' ~ _value) -%}
+{%-   endfor -%}
+{%-   set text = (result.notes + lines) | join('\n') -%}
 {%- elif result.kind == 'acl_sharing_map' -%}
 {%-   set text = ['acl_sharing_map {',
                   '  dict ' ~ result.driver ~ ' {',
@@ -162,8 +186,12 @@
       {% endfor %}
     {% endif %}
   {% elif key == 'args' %}
+{#  An empty args is how a 2.4 default switches off the 2.3 spelling it
+    inherits through combine() - it has nothing to report. #}
+    {% if value | string | length > 0 %}
   # UNMAPPED args = {{ value }}
   #   dovecot 2.4: {{ auth_db_args_hint.get(driver, 'use the driver specific settings of ' ~ driver) }}
+    {% endif %}
   {% elif value | bodsch.core.type == "dict" %}
 {#  a nested mapping is a named filter, e.g. the connection block
     "mysql <name> { host = ... }" a 2.4 sql passdb needs #}
@@ -298,5 +326,60 @@
 {% endif %}
 {% endfor %}
 {{ indent }}}
+{% endfor -%}
+{% endmacro %}
+
+{#
+  Render the protocol { } blocks of a dovecot 2.3 template and add plugins
+  the role has to load itself (imap_acl, imap_quota, sieve, ...).
+
+      protocols   the dovecot_<x>.protocols list; an entry is either
+                  "- imap: {settings}" or "- name: imap" plus the settings
+      name        the protocol the plugins belong to
+      plugins     the plugins to add to that protocol's mail_plugins
+
+  The plugins go into THE block of that protocol: in 2.3 a second
+  "protocol lmtp { mail_plugins = ... }" replaces the first instead of adding
+  to it. Without a configured block, one is written for them. Unlike 2.4
+  this has to be decided here, because 2.3 expands "$mail_plugins" while
+  parsing and cannot add to a list later.
+
+  Dovecot 2.4 does not need this: its templates add with a block of their own.
+#}
+{% macro legacy_protocols(protocols, name, plugins=[]) %}
+{%- set _protocols = [] -%}
+{%- for pr in protocols | default([], true) if pr | bodsch.core.type == "dict" -%}
+  {%- set _name = pr.name | default(pr.keys() | first) -%}
+  {%- set _body = pr[_name] | default({}, true) if _name in pr else pr -%}
+  {%- set _ = _protocols.append([_name, _body]) -%}
+{%- endfor -%}
+{%- if plugins | count > 0 and
+      _protocols | selectattr(0, 'equalto', name) | list | count == 0 -%}
+  {%- set _ = _protocols.append([name, {'mail_plugins': '$mail_plugins'}]) -%}
+{%- endif -%}
+{%- for _name, _body in _protocols %}
+{%- set _settings = {} -%}
+{%- for k, v in _body.items() if k != 'name' -%}
+  {%- set _ = _settings.update({k: v}) -%}
+{%- endfor -%}
+{%- if _name == name and plugins | count > 0 -%}
+  {%- set _raw = _settings.mail_plugins | default('$mail_plugins', true) -%}
+  {%- set _tokens = [] -%}
+  {%- for _value in ([_raw] if _raw is string else _raw) -%}
+    {%- set _ = _tokens.extend((_value | string).split()) -%}
+  {%- endfor -%}
+  {%- set _ = _settings.update({'mail_plugins': (_tokens + plugins) | unique | list}) -%}
+{%- endif %}
+protocol {{ _name }} {
+{% for k, v in _settings.items() %}
+{% if v | bodsch.core.type == "list" %}
+{% if v | count != 0 %}
+  {{ k }} = {{ v | join(' ') }}
+{% endif %}
+{% elif v is not none %}
+  {{ k }} = {{ v }}
+{% endif %}
+{% endfor %}
+}
 {% endfor -%}
 {% endmacro %}
