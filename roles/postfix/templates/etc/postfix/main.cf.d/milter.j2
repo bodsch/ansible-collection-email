@@ -1,0 +1,110 @@
+{% set values = postfix_milter | bodsch.core.remove_empty_values() %}
+
+# --[milter]-----------------------------------------------
+{% if values is defined and
+      values | count > 0 %}
+
+  {% if postfix_version is version_compare('2.5',  '<=') %}
+    {% set _milter_protocol = 2 %}
+  {% else %}
+    {% set _milter_protocol = 6 %}
+  {% endif %}
+milter_protocol                           = {{ _milter_protocol }}
+  {% if values.command_timeout is defined and
+        values.command_timeout | length > 0 %}
+milter_command_timeout                    = {{ values.command_timeout }}
+  {% endif %}
+  {% if values.connect_macros is defined  and
+        values.connect_macros | count > 0 %}
+  {# j {daemon_name} {daemon_addr} v _ #}
+    {% if values.connect_macros | bodsch.core.type == "list" %}
+milter_connect_macros                     =
+    {{ values.connect_macros | join("\n") | indent(4) }}
+    {% else %}
+milter_connect_macros                     = {{ values.connect_macros }}
+    {% endif %}
+  {% endif %}
+  {% if values.connect_timeout is defined and
+        values.connect_timeout | length > 0 %}
+milter_connect_timeout                    = {{ values.connect_timeout }}
+  {% endif %}
+  {% if values.content_timeout is defined and
+        values.content_timeout | length > 0 %}
+milter_content_timeout                    = {{ values.content_timeout }}
+  {% endif %}
+  {% if values.data_macros is defined and
+        values.data_macros | length > 0 %}
+milter_data_macros                        = {{ values.data_macros | join(' ') }}
+  {% endif %}
+  {% if values.default_action is defined and
+        values.default_action | length > 0 %}
+milter_default_action                     = {{ values.default_action }}
+  {% endif %}
+  {% if values.end_of_data_macros is defined and
+        values.end_of_data_macros | length > 0 %}
+milter_end_of_data_macros                 = {{ values.end_of_data_macros }}
+  {% endif %}
+  {% if values.end_of_header_macros is defined and
+        values.end_of_header_macros | length > 0 %}
+milter_end_of_header_macros               = {{ values.end_of_header_macros | join(' ') }}
+  {% endif %}
+  {% if values.header_checks is defined and
+        values.header_checks | length > 0 %}
+milter_header_checks                      = {{ values.header_checks }}
+  {% endif %}
+  {% if values.helo_macros is defined  and
+        values.helo_macros | count > 0 %}
+  {# {tls_version} {cipher} {cipher_bits} {cert_subject} {cert_issuer} #}
+    {% if values.helo_macros | bodsch.core.type == "list" %}
+milter_helo_macros                        =
+    {{ values.helo_macros | join("\n") | indent(4) }}
+    {% else %}
+milter_helo_macros                        = {{ values.helo_macros }}
+    {% endif %}
+  {% endif %}
+  {% if values.macro_daemon_name is defined and
+        values.macro_daemon_name | length > 0 %}
+milter_macro_daemon_name                  = {{ values.macro_daemon_name }}
+  {% endif %}
+  {% if values.macro_defaults is defined and
+        values.macro_defaults | length > 0 %}
+milter_macro_defaults                     = {{ values.macro_defaults }}
+  {% endif %}
+  {% if values.macro_v is defined and
+        values.macro_v | length > 0 %}
+  {# $mail_name $mail_version #}
+milter_macro_v                            = {{ values.macro_v | join(' ') }}
+  {% endif %}
+  {% if values.mail_macros is defined  and
+        values.mail_macros | count > 0 %}
+  {# i {auth_type} {auth_authen} {auth_author} {mail_addr} {mail_host} {mail_mailer} #}
+    {% if values.mail_macros | bodsch.core.type == "list" %}
+milter_mail_macros                        =
+    {{ values.mail_macros | join("\n") | indent(4) }}
+    {% else %}
+milter_mail_macros                        = {{ values.mail_macros }}
+    {% endif %}
+  {% endif %}
+  {% if values.rcpt_macros is defined  and
+        values.rcpt_macros | count > 0 %}
+  {# i {rcpt_addr} {rcpt_host} {rcpt_mailer} #}
+    {% if values.rcpt_macros | bodsch.core.type == "list" %}
+milter_rcpt_macros                        =
+    {{ values.rcpt_macros | join("\n") | indent(4) }}
+    {% else %}
+milter_rcpt_macros                        = {{ values.rcpt_macros }}
+    {% endif %}
+  {% endif %}
+  {% if values.unknown_command_macros is defined and
+        values.unknown_command_macros | length > 0 %}
+milter_unknown_command_macros             = {{ values.unknown_command_macros }}
+  {% endif %}
+{% endif %}
+# ---------------------------------------------------------
+{#
+# {auth_authen} lets rspamd recognise SASL-authenticated users
+# (skips greylisting, enables outbound DKIM signing)
+milter_mail_macros = i {mail_addr} {client_addr} {client_name} {auth_authen}
+# If rspamd is unreachable: deliver unfiltered instead of deferring all mail
+milter_default_action = accept
+#}

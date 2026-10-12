@@ -26,7 +26,7 @@
     postfix_virtual_backends: "{{ postfix_defaults_virtual_backends | combine(postfix_virtual_backends, recursive=True) }}"
     postfix_tls: "{{ postfix_defaults_tls | combine(postfix_tls, recursive=True) }}"
     #
-    postfix_master: "{{ postfix_defaults_master | combine(postfix_master, recursive=True) }}"
+    # postfix_master: "{{ postfix_defaults_master | combine(postfix_master, recursive=True) }}"
   no_log: true
 
 - name: handle virtual configs
@@ -281,17 +281,22 @@
     - postfix
     - postfix-configuration
 
+- name: d
+  debug:
+    var: postfix_master
+
 - name: update master configuration file
   when:
     - not running_in_check_mode
     - postfix_handle_mastercf
-  ansible.builtin.template:
-    src: etc/postfix/master.cf.j2
-    dest: "{{ postfix_config_directory }}/master.cf"
-    owner: root
-    group: root
-    mode: "0644"
-    backup: true
+  bodsch.email.postfix_master:
+    services: "{{ postfix_master }}"
+    # src: etc/postfix/master.cf.j2
+    # dest: "{{ postfix_config_directory }}/master.cf"
+    # owner: root
+    # group: root
+    # mode: "0644"
+    # backup: true
   notify:
     - validate config
     - restart postfix
@@ -299,6 +304,25 @@
     - configuration
     - postfix
     - postfix-configuration
+
+# - name: update master configuration file
+#   when:
+#     - not running_in_check_mode
+#     - postfix_handle_mastercf
+#   ansible.builtin.template:
+#     src: etc/postfix/master.cf.j2
+#     dest: "{{ postfix_config_directory }}/master.cf"
+#     owner: root
+#     group: root
+#     mode: "0644"
+#     backup: true
+#   notify:
+#     - validate config
+#     - restart postfix
+#   tags:
+#     - configuration
+#     - postfix
+#     - postfix-configuration
 
 - name: flush handlers at this point to avoid double restart
   when:

@@ -1,253 +1,251 @@
-{% set _postfix_postscreen = postfix_postscreen | bodsch.core.remove_empty_values() %}
+{% set values = postfix_postscreen | bodsch.core.remove_empty_values() %}
+
 # --[ postscreen ]-------------------------------------------------------
+{% if values is defined and
+      values | count > 0 %}
 
-{#
-/usr/bin/postconf: warning: /etc/postfix/main.cf: support for parameter "postscreen_dnsbl_ttl" will be removed; instead, specify "postscreen_dnsbl_max_ttl"
-/usr/bin/postconf: warning: /etc/postfix/main.cf: support for parameter "postscreen_dnsbl_whitelist_threshold" will be removed; instead, specify "postscreen_dnsbl_allowlist_threshold"
-/usr/bin/postconf: warning: /etc/postfix/main.cf: support for parameter "postscreen_use_tls" will be removed; instead, specify "postscreen_tls_security_level"
-/usr/bin/postconf: warning: /etc/postfix/main.cf: support for parameter "postscreen_whitelist_interfaces" will be removed; instead, specify "postscreen_allowlist_interfaces"
-/usr/bin/postconf: warning: /etc/postfix/main.cf: support for parameter "smtpd_use_tls" will be removed; instead, specify "smtpd_tls_security_level"
-#}
-
-
-{% if _postfix_postscreen.enable %}
-  {% if _postfix_postscreen.access_list is defined and
-        _postfix_postscreen.access_list | count > 0 %}
+  {% if values.enable %}
+    {% if values.access_list is defined and
+          values.access_list | count > 0 %}
 postscreen_access_list                    =
-    {{ _postfix_postscreen.access_list | join("\n") | indent(4) }}
-  {% endif  %}
-  {% if _postfix_postscreen.bare_newline_action is defined and
-        _postfix_postscreen.bare_newline_action | string | length > 0 and
-        _postfix_postscreen.bare_newline_action in ["ignore", "enforce", "drop"] %}
-postscreen_bare_newline_action            = {{ _postfix_postscreen.bare_newline_action }}
-  {% endif %}
-  {% if _postfix_postscreen.bare_newline_enable is defined %}
-postscreen_bare_newline_enable            = {{ _postfix_postscreen.bare_newline_enable | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
-  {% endif %}
-  {% if _postfix_postscreen.bare_newline_ttl is defined and
-        _postfix_postscreen.bare_newline_ttl | string | length > 0 %}
-postscreen_bare_newline_ttl               = {{ _postfix_postscreen.bare_newline_ttl }}
-  {% endif %}
-  {% if postfix_version is version_compare('3.6', '<') %}
-    {% if _postfix_postscreen.blacklist_action is defined and
-          _postfix_postscreen.blacklist_action | string | length > 0 and
-          _postfix_postscreen.blacklist_action in ["ignore","enforce", "drop"] %}
-    {% if postfix_version is version_compare('3.11',  '>=') %}
+    {{ values.access_list | join("\n") | indent(4) }}
+    {% endif  %}
+    {% if values.bare_newline_action is defined and
+          values.bare_newline_action | string | length > 0 and
+          values.bare_newline_action in ["ignore", "enforce", "drop"] %}
+postscreen_bare_newline_action            = {{ values.bare_newline_action }}
+    {% endif %}
+    {% if values.bare_newline_enable is defined %}
+postscreen_bare_newline_enable            = {{ values.bare_newline_enable | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+    {% endif %}
+    {% if values.bare_newline_ttl is defined and
+          values.bare_newline_ttl | string | length > 0 %}
+postscreen_bare_newline_ttl               = {{ values.bare_newline_ttl }}
+    {% endif %}
+    {% if postfix_version is version_compare('3.6', '<') %}
+      {% if values.blacklist_action is defined and
+            values.blacklist_action | string | length > 0 and
+            values.blacklist_action in ["ignore","enforce", "drop"] %}
+      {% if postfix_version is version_compare('3.11',  '>=') %}
 # OBSOLETE see: https://www.postfix.org/DEPRECATION_README.html#renamed
+      {% endif %}
+# postscreen_blacklist_action               = {{ values.blacklist_action }}
+postscreen_denylist_action                = {{ values.blacklist_action }}
+      {% endif %}
     {% endif %}
-# postscreen_blacklist_action               = {{ _postfix_postscreen.blacklist_action }}
-postscreen_denylist_action                = {{ _postfix_postscreen.blacklist_action }}
+    {% if values.denylist_action is defined and
+          values.denylist_action | string | length > 0 and
+          values.denylist_action in ["ignore","enforce", "drop"] %}
+postscreen_denylist_action                = {{ values.denylist_action }}
     {% endif %}
-  {% endif %}
-  {% if _postfix_postscreen.denylist_action is defined and
-        _postfix_postscreen.denylist_action | string | length > 0 and
-        _postfix_postscreen.denylist_action in ["ignore","enforce", "drop"] %}
-postscreen_denylist_action                = {{ _postfix_postscreen.denylist_action }}
-  {% endif %}
-  {% if _postfix_postscreen.cache_cleanup_interval is defined and
-        _postfix_postscreen.cache_cleanup_interval | string | length > 0 %}
-postscreen_cache_cleanup_interval         = {{ _postfix_postscreen.cache_cleanup_interval }}
-  {% endif %}
-  {% if _postfix_postscreen.cache_map is defined and
-        _postfix_postscreen.cache_map | string | length > 0 %}
-postscreen_cache_map                      = {{ _postfix_postscreen.cache_map }}
-  {% endif %}
-  {% if _postfix_postscreen.cache_retention_time is defined and
-        _postfix_postscreen.cache_retention_time | string | length > 0 %}
-postscreen_cache_retention_time           = {{ _postfix_postscreen.cache_retention_time }}
-  {% endif %}
-  {% if _postfix_postscreen.client_connection_count_limit is defined and
-        _postfix_postscreen.client_connection_count_limit | string | length > 0 %}
-postscreen_client_connection_count_limit  = {{ _postfix_postscreen.client_connection_count_limit }}
-  {% endif %}
-  {% if _postfix_postscreen.command_count_limit is defined and
-        _postfix_postscreen.command_count_limit | string | length > 0 %}
-postscreen_command_count_limit            = {{ _postfix_postscreen.command_count_limit }}
-  {% endif %}
-  {% if _postfix_postscreen.command_filter is defined and
-        _postfix_postscreen.command_filter | string | length > 0 %}
-postscreen_command_filter                 = {{ _postfix_postscreen.command_filter }}
-  {% endif %}
-  {% if _postfix_postscreen.command_time_limit is defined and
-        _postfix_postscreen.command_time_limit | string | length > 0 %}
-postscreen_command_time_limit             = {{ _postfix_postscreen.command_time_limit }}
-  {% endif %}
-  {% if postfix_version is version_compare('3.6', '>=') %}
-    {% if _postfix_postscreen.denylist_action is defined and
-          _postfix_postscreen.denylist_action | string | length > 0 and
-          _postfix_postscreen.denylist_action in ["ignore","enforce", "drop"] %}
-postscreen_denylist_action                = {{ _postfix_postscreen.denylist_action }}
+    {% if values.cache_cleanup_interval is defined and
+          values.cache_cleanup_interval | string | length > 0 %}
+postscreen_cache_cleanup_interval         = {{ values.cache_cleanup_interval }}
     {% endif %}
-  {% endif %}
-  {% if _postfix_postscreen.disable_vrfy_command is defined and
-        _postfix_postscreen.disable_vrfy_command | string | length > 0 %}
-postscreen_disable_vrfy_command           = {{ _postfix_postscreen.disable_vrfy_command }}
-  {% endif %}
-  {% if _postfix_postscreen.discard_ehlo_keyword_address_maps is defined and
-        _postfix_postscreen.discard_ehlo_keyword_address_maps | string | length > 0 %}
-postscreen_discard_ehlo_keyword_address_maps = {{ _postfix_postscreen.discard_ehlo_keyword_address_maps }}
-  {% endif %}
-  {% if _postfix_postscreen.discard_ehlo_keywords is defined and
-        _postfix_postscreen.discard_ehlo_keywords | string | length > 0 %}
-postscreen_discard_ehlo_keywords          = {{ _postfix_postscreen.discard_ehlo_keywords }}
-  {% endif %}
-  {% if _postfix_postscreen.dnsbl_action is defined and
-        _postfix_postscreen.dnsbl_action | string | length > 0 and
-        _postfix_postscreen.dnsbl_action in ["ignore","enforce", "drop"] %}
-postscreen_dnsbl_action                   = {{ _postfix_postscreen.dnsbl_action }}
-  {% endif %}
-  {% if _postfix_postscreen.dnsbl_max_ttl is defined and
-        _postfix_postscreen.dnsbl_max_ttl | string | length > 0 %}
-postscreen_dnsbl_max_ttl                  = {{ _postfix_postscreen.dnsbl_max_ttl }}
-  {% endif %}
-  {% if _postfix_postscreen.dnsbl_min_ttl is defined and
-        _postfix_postscreen.dnsbl_min_ttl | string | length > 0 %}
-postscreen_dnsbl_min_ttl                  = {{ _postfix_postscreen.dnsbl_min_ttl }}
-  {% endif %}
-  {% if _postfix_postscreen.dnsbl_reply_map is defined and
-        _postfix_postscreen.dnsbl_reply_map | string | length > 0 %}
-postscreen_dnsbl_reply_map                = {{ _postfix_postscreen.dnsbl_reply_map }}
-  {% endif %}
-  {% if _postfix_postscreen.dnsbl_sites is defined and
-        _postfix_postscreen.dnsbl_sites | count > 0 %}
+    {% if values.cache_map is defined and
+          values.cache_map | string | length > 0 %}
+postscreen_cache_map                      = {{ values.cache_map }}
+    {% endif %}
+    {% if values.cache_retention_time is defined and
+          values.cache_retention_time | string | length > 0 %}
+postscreen_cache_retention_time           = {{ values.cache_retention_time }}
+    {% endif %}
+    {% if values.client_connection_count_limit is defined and
+          values.client_connection_count_limit | string | length > 0 %}
+postscreen_client_connection_count_limit  = {{ values.client_connection_count_limit }}
+    {% endif %}
+    {% if values.command_count_limit is defined and
+          values.command_count_limit | string | length > 0 %}
+postscreen_command_count_limit            = {{ values.command_count_limit }}
+    {% endif %}
+    {% if values.command_filter is defined and
+          values.command_filter | string | length > 0 %}
+postscreen_command_filter                 = {{ values.command_filter }}
+    {% endif %}
+    {% if values.command_time_limit is defined and
+          values.command_time_limit | string | length > 0 %}
+postscreen_command_time_limit             = {{ values.command_time_limit }}
+    {% endif %}
+    {% if postfix_version is version_compare('3.6', '>=') %}
+      {% if values.denylist_action is defined and
+            values.denylist_action | string | length > 0 and
+            values.denylist_action in ["ignore","enforce", "drop"] %}
+postscreen_denylist_action                = {{ values.denylist_action }}
+      {% endif %}
+    {% endif %}
+    {% if values.disable_vrfy_command is defined and
+          values.disable_vrfy_command | string | length > 0 %}
+postscreen_disable_vrfy_command           = {{ values.disable_vrfy_command }}
+    {% endif %}
+    {% if values.discard_ehlo_keyword_address_maps is defined and
+          values.discard_ehlo_keyword_address_maps | string | length > 0 %}
+postscreen_discard_ehlo_keyword_address_maps = {{ values.discard_ehlo_keyword_address_maps }}
+    {% endif %}
+    {% if values.discard_ehlo_keywords is defined and
+          values.discard_ehlo_keywords | string | length > 0 %}
+postscreen_discard_ehlo_keywords          = {{ values.discard_ehlo_keywords }}
+    {% endif %}
+    {% if values.dnsbl_action is defined and
+          values.dnsbl_action | string | length > 0 and
+          values.dnsbl_action in ["ignore","enforce", "drop"] %}
+postscreen_dnsbl_action                   = {{ values.dnsbl_action }}
+    {% endif %}
+    {% if values.dnsbl_max_ttl is defined and
+          values.dnsbl_max_ttl | string | length > 0 %}
+postscreen_dnsbl_max_ttl                  = {{ values.dnsbl_max_ttl }}
+    {% endif %}
+    {% if values.dnsbl_min_ttl is defined and
+          values.dnsbl_min_ttl | string | length > 0 %}
+postscreen_dnsbl_min_ttl                  = {{ values.dnsbl_min_ttl }}
+    {% endif %}
+    {% if values.dnsbl_reply_map is defined and
+          values.dnsbl_reply_map | string | length > 0 %}
+postscreen_dnsbl_reply_map                = {{ values.dnsbl_reply_map }}
+    {% endif %}
+    {% if values.dnsbl_sites is defined and
+          values.dnsbl_sites | count > 0 %}
 postscreen_dnsbl_sites                    =
-    {{ _postfix_postscreen.dnsbl_sites | join("\n") | indent(4) }}
-  {% endif %}
-  {% if _postfix_postscreen.dnsbl_threshold is defined and
-        _postfix_postscreen.dnsbl_threshold | string | length > 0 %}
-postscreen_dnsbl_threshold                = {{ _postfix_postscreen.dnsbl_threshold }}
-  {% endif %}
-  {% if _postfix_postscreen.dnsbl_timeout is defined and
-        _postfix_postscreen.dnsbl_timeout | string | length > 0 %}
-postscreen_dnsbl_timeout                  = {{ _postfix_postscreen.dnsbl_timeout }}
-  {% endif %}
-  {% if _postfix_postscreen.dnsbl_whitelist_threshold is defined and
-        _postfix_postscreen.dnsbl_whitelist_threshold | string | length > 0 %}
-    {% if postfix_version is version_compare('3.11',  '>=') %}
-# OBSOLETE see: https://www.postfix.org/DEPRECATION_README.html#renamed
+    {{ values.dnsbl_sites | join("\n") | indent(4) }}
     {% endif %}
-# postscreen_dnsbl_whitelist_threshold      = {{ _postfix_postscreen.dnsbl_whitelist_threshold }}
-postscreen_dnsbl_allowlist_threshold      = {{ _postfix_postscreen.dnsbl_whitelist_threshold }}
-  {% endif %}
-  {% if _postfix_postscreen.dnsbl_allowlist_threshold is defined and
-        _postfix_postscreen.dnsbl_allowlist_threshold | string | length > 0 %}
-postscreen_dnsbl_allowlist_threshold      = {{ _postfix_postscreen.dnsbl_allowlist_threshold }}
-  {% endif %}
-  {% if _postfix_postscreen.dnsbl_ttl is defined and
-        _postfix_postscreen.dnsbl_ttl | string | length > 0 %}
-    {% if postfix_version is version_compare('3.11',  '>=') %}
-# OBSOLETE see: https://www.postfix.org/DEPRECATION_README.html#renamed
+    {% if values.dnsbl_threshold is defined and
+          values.dnsbl_threshold | string | length > 0 %}
+postscreen_dnsbl_threshold                = {{ values.dnsbl_threshold }}
     {% endif %}
-# postscreen_dnsbl_ttl                      = {{ _postfix_postscreen.dnsbl_ttl }}
-postscreen_dnsbl_max_ttl                  = {{ _postfix_postscreen.dnsbl_ttl }}
-  {% endif %}
-  {% if _postfix_postscreen.enforce_tls is defined and
-        _postfix_postscreen.enforce_tls | string | length > 0 %}
-postscreen_enforce_tls                    = {{ _postfix_postscreen.enforce_tls }}
-  {% endif %}
-  {% if _postfix_postscreen.expansion_filter is defined and
-        _postfix_postscreen.expansion_filter | string | length > 0 %}
-postscreen_expansion_filter               = {{ _postfix_postscreen.expansion_filter }}
-  {% endif %}
-  {% if _postfix_postscreen.forbidden_commands is defined and
-        _postfix_postscreen.forbidden_commands | string | length > 0 %}
-postscreen_forbidden_commands             = {{ _postfix_postscreen.forbidden_commands }}
-  {% endif %}
-  {% if _postfix_postscreen.greet_action is defined and
-        _postfix_postscreen.greet_action | string | length > 0 and
-        _postfix_postscreen.greet_action in ["ignore","enforce", "drop"] %}
-postscreen_greet_action                   = {{ _postfix_postscreen.greet_action }}
-  {% endif %}
-  {% if _postfix_postscreen.greet_banner is defined and
-        _postfix_postscreen.greet_banner | string | length > 0 %}
-postscreen_greet_banner                   = {{ _postfix_postscreen.greet_banner }}
-  {% endif %}
-  {% if _postfix_postscreen.greet_ttl is defined and
-        _postfix_postscreen.greet_ttl | string | length > 0 %}
-postscreen_greet_ttl                      = {{ _postfix_postscreen.greet_ttl }}
-  {% endif %}
-  {% if _postfix_postscreen.greet_wait is defined and
-        _postfix_postscreen.greet_wait | string | length > 0 %}
-postscreen_greet_wait                     = {{ _postfix_postscreen.greet_wait }}
-  {% endif %}
-  {% if _postfix_postscreen.helo_required is defined and
-        _postfix_postscreen.helo_required | string | length > 0 %}
-postscreen_helo_required                  = {{ _postfix_postscreen.helo_required }}
-  {% endif %}
-  {% if _postfix_postscreen.non_smtp_command_action is defined and
-        _postfix_postscreen.non_smtp_command_action | string | length > 0 and
-        _postfix_postscreen.non_smtp_command_action in ["ignore","enforce", "drop"] %}
-postscreen_non_smtp_command_action        = {{ _postfix_postscreen.non_smtp_command_action }}
-  {% endif %}
-  {% if _postfix_postscreen.non_smtp_command_enable is defined %}
-postscreen_non_smtp_command_enable        = {{ _postfix_postscreen.non_smtp_command_enable | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
-  {% endif %}
-  {% if _postfix_postscreen.non_smtp_command_ttl is defined and
-        _postfix_postscreen.non_smtp_command_ttl | string | length > 0 %}
-postscreen_non_smtp_command_ttl           = {{ _postfix_postscreen.non_smtp_command_ttl }}
-  {% endif %}
-  {% if _postfix_postscreen.pipelining_action is defined and
-        _postfix_postscreen.pipelining_action | string | length > 0 and
-        _postfix_postscreen.pipelining_action in ["ignore","enforce", "drop"] %}
-postscreen_pipelining_action              = {{ _postfix_postscreen.pipelining_action }}
-  {% endif %}
-  {% if _postfix_postscreen.pipelining_enable is defined %}
-postscreen_pipelining_enable              = {{ _postfix_postscreen.pipelining_enable | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
-  {% endif %}
-  {% if _postfix_postscreen.pipelining_ttl is defined and
-        _postfix_postscreen.pipelining_ttl | string | length > 0 %}
-postscreen_pipelining_ttl                 = {{ _postfix_postscreen.pipelining_ttl }}
-  {% endif %}
-  {% if _postfix_postscreen.post_queue_limit is defined and
-        _postfix_postscreen.post_queue_limit | string | length > 0 %}
-postscreen_post_queue_limit               = {{ _postfix_postscreen.post_queue_limit }}
-  {% endif %}
-  {% if _postfix_postscreen.pre_queue_limit is defined and
-        _postfix_postscreen.pre_queue_limit | string | length > 0 %}
-postscreen_pre_queue_limit                = {{ _postfix_postscreen.pre_queue_limit }}
-  {% endif %}
-  {% if _postfix_postscreen.reject_footer is defined and
-        _postfix_postscreen.reject_footer | string | length > 0 %}
-postscreen_reject_footer                  = {{ _postfix_postscreen.reject_footer }}
-  {% endif %}
-  {% if _postfix_postscreen.reject_footer_maps is defined and
-        _postfix_postscreen.reject_footer_maps | string | length > 0 %}
-postscreen_reject_footer_maps             = {{ _postfix_postscreen.reject_footer_maps }}
-  {% endif %}
-  {% if _postfix_postscreen.tls_security_level is defined and
-        _postfix_postscreen.tls_security_level | string | length > 0 %}
-postscreen_tls_security_level             = {{ _postfix_postscreen.tls_security_level }}
-  {% endif %}
-  {% if _postfix_postscreen.upstream_proxy_protocol is defined and
-        _postfix_postscreen.upstream_proxy_protocol | string | length > 0 %}
-postscreen_upstream_proxy_protocol        = {{ _postfix_postscreen.upstream_proxy_protocol }}
-  {% endif %}
-  {% if _postfix_postscreen.upstream_proxy_timeout is defined and
-        _postfix_postscreen.upstream_proxy_timeout | string | length > 0 %}
-postscreen_upstream_proxy_timeout         = {{ _postfix_postscreen.upstream_proxy_timeout }}
-  {% endif %}
-  {% if _postfix_postscreen.use_tls is defined and
-        _postfix_postscreen.use_tls | string | length > 0 %}
-    {% if postfix_version is version_compare('3.11',  '>=') %}
+    {% if values.dnsbl_timeout is defined and
+          values.dnsbl_timeout | string | length > 0 %}
+postscreen_dnsbl_timeout                  = {{ values.dnsbl_timeout }}
+    {% endif %}
+    {% if values.dnsbl_whitelist_threshold is defined and
+          values.dnsbl_whitelist_threshold | string | length > 0 %}
+      {% if postfix_version is version_compare('3.11',  '>=') %}
+# OBSOLETE see: https://www.postfix.org/DEPRECATION_README.html#renamed
+      {% endif %}
+# postscreen_dnsbl_whitelist_threshold      = {{ values.dnsbl_whitelist_threshold }}
+postscreen_dnsbl_allowlist_threshold      = {{ values.dnsbl_whitelist_threshold }}
+    {% endif %}
+    {% if values.dnsbl_allowlist_threshold is defined and
+          values.dnsbl_allowlist_threshold | string | length > 0 %}
+postscreen_dnsbl_allowlist_threshold      = {{ values.dnsbl_allowlist_threshold }}
+    {% endif %}
+    {% if values.dnsbl_ttl is defined and
+          values.dnsbl_ttl | string | length > 0 %}
+      {% if postfix_version is version_compare('3.11',  '>=') %}
+# OBSOLETE see: https://www.postfix.org/DEPRECATION_README.html#renamed
+      {% endif %}
+# postscreen_dnsbl_ttl                      = {{ values.dnsbl_ttl }}
+postscreen_dnsbl_max_ttl                  = {{ values.dnsbl_ttl }}
+    {% endif %}
+    {% if values.enforce_tls is defined and
+          values.enforce_tls | string | length > 0 %}
+postscreen_enforce_tls                    = {{ values.enforce_tls }}
+    {% endif %}
+    {% if values.expansion_filter is defined and
+          values.expansion_filter | string | length > 0 %}
+postscreen_expansion_filter               = {{ values.expansion_filter }}
+    {% endif %}
+    {% if values.forbidden_commands is defined and
+          values.forbidden_commands | string | length > 0 %}
+postscreen_forbidden_commands             = {{ values.forbidden_commands }}
+    {% endif %}
+    {% if values.greet_action is defined and
+          values.greet_action | string | length > 0 and
+          values.greet_action in ["ignore","enforce", "drop"] %}
+postscreen_greet_action                   = {{ values.greet_action }}
+    {% endif %}
+    {% if values.greet_banner is defined and
+          values.greet_banner | string | length > 0 %}
+postscreen_greet_banner                   = {{ values.greet_banner }}
+    {% endif %}
+    {% if values.greet_ttl is defined and
+          values.greet_ttl | string | length > 0 %}
+postscreen_greet_ttl                      = {{ values.greet_ttl }}
+    {% endif %}
+    {% if values.greet_wait is defined and
+          values.greet_wait | string | length > 0 %}
+postscreen_greet_wait                     = {{ values.greet_wait }}
+    {% endif %}
+    {% if values.helo_required is defined and
+          values.helo_required | string | length > 0 %}
+postscreen_helo_required                  = {{ values.helo_required }}
+    {% endif %}
+    {% if values.non_smtp_command_action is defined and
+          values.non_smtp_command_action | string | length > 0 and
+          values.non_smtp_command_action in ["ignore","enforce", "drop"] %}
+postscreen_non_smtp_command_action        = {{ values.non_smtp_command_action }}
+    {% endif %}
+    {% if values.non_smtp_command_enable is defined %}
+postscreen_non_smtp_command_enable        = {{ values.non_smtp_command_enable | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+    {% endif %}
+    {% if values.non_smtp_command_ttl is defined and
+          values.non_smtp_command_ttl | string | length > 0 %}
+postscreen_non_smtp_command_ttl           = {{ values.non_smtp_command_ttl }}
+    {% endif %}
+    {% if values.pipelining_action is defined and
+          values.pipelining_action | string | length > 0 and
+          values.pipelining_action in ["ignore","enforce", "drop"] %}
+postscreen_pipelining_action              = {{ values.pipelining_action }}
+    {% endif %}
+    {% if values.pipelining_enable is defined %}
+postscreen_pipelining_enable              = {{ values.pipelining_enable | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+    {% endif %}
+    {% if values.pipelining_ttl is defined and
+          values.pipelining_ttl | string | length > 0 %}
+postscreen_pipelining_ttl                 = {{ values.pipelining_ttl }}
+    {% endif %}
+    {% if values.post_queue_limit is defined and
+          values.post_queue_limit | string | length > 0 %}
+postscreen_post_queue_limit               = {{ values.post_queue_limit }}
+    {% endif %}
+    {% if values.pre_queue_limit is defined and
+          values.pre_queue_limit | string | length > 0 %}
+postscreen_pre_queue_limit                = {{ values.pre_queue_limit }}
+    {% endif %}
+    {% if values.reject_footer is defined and
+          values.reject_footer | string | length > 0 %}
+postscreen_reject_footer                  = {{ values.reject_footer }}
+    {% endif %}
+    {% if values.reject_footer_maps is defined and
+          values.reject_footer_maps | string | length > 0 %}
+postscreen_reject_footer_maps             = {{ values.reject_footer_maps }}
+    {% endif %}
+    {% if values.tls_security_level is defined and
+          values.tls_security_level | string | length > 0 %}
+postscreen_tls_security_level             = {{ values.tls_security_level }}
+    {% endif %}
+    {% if values.upstream_proxy_protocol is defined and
+          values.upstream_proxy_protocol | string | length > 0 %}
+postscreen_upstream_proxy_protocol        = {{ values.upstream_proxy_protocol }}
+    {% endif %}
+    {% if values.upstream_proxy_timeout is defined and
+          values.upstream_proxy_timeout | string | length > 0 %}
+postscreen_upstream_proxy_timeout         = {{ values.upstream_proxy_timeout }}
+    {% endif %}
+    {% if values.use_tls is defined and
+          values.use_tls | string | length > 0 %}
+      {% if postfix_version is version_compare('3.11',  '>=') %}
 # OBSOLETE see: https://www.postfix.org/DEPRECATION_README.html#renamed
 # support for parameter "postscreen_use_tls" will be removed; instead, specify "postscreen_tls_security_level"
+      {% endif %}
+# postscreen_use_tls                        = {{ values.use_tls }}
     {% endif %}
-# postscreen_use_tls                        = {{ _postfix_postscreen.use_tls }}
-  {% endif %}
-  {% if _postfix_postscreen.watchdog_timeout is defined and
-        _postfix_postscreen.watchdog_timeout | string | length > 0 %}
-postscreen_watchdog_timeout               = {{ _postfix_postscreen.watchdog_timeout }}
-  {% endif %}
-  {% if _postfix_postscreen.whitelist_interfaces is defined and
-        _postfix_postscreen.whitelist_interfaces | string | length > 0 %}
-    {% if postfix_version is version_compare('3.11',  '>=') %}
+    {% if values.watchdog_timeout is defined and
+          values.watchdog_timeout | string | length > 0 %}
+postscreen_watchdog_timeout               = {{ values.watchdog_timeout }}
+    {% endif %}
+    {% if values.whitelist_interfaces is defined and
+          values.whitelist_interfaces | string | length > 0 %}
+      {% if postfix_version is version_compare('3.11',  '>=') %}
 # OBSOLETE see: https://www.postfix.org/DEPRECATION_README.html#renamed
+      {% endif %}
+# postscreen_whitelist_interfaces           = {{ values.whitelist_interfaces }}
+postscreen_allowlist_interfaces           = {{ values.whitelist_interfaces }}
     {% endif %}
-# postscreen_whitelist_interfaces           = {{ _postfix_postscreen.whitelist_interfaces }}
-postscreen_allowlist_interfaces           = {{ _postfix_postscreen.whitelist_interfaces }}
-  {% endif %}
-  {% if _postfix_postscreen.allowlist_interfaces is defined and
-        _postfix_postscreen.allowlist_interfaces | string | length > 0 %}
-postscreen_allowlist_interfaces           = {{ _postfix_postscreen.allowlist_interfaces }}
+    {% if values.allowlist_interfaces is defined and
+          values.allowlist_interfaces | string | length > 0 %}
+postscreen_allowlist_interfaces           = {{ values.allowlist_interfaces }}
+    {% endif %}
   {% endif %}
 {% endif %}
+# ---------------------------------------------------------
+{#
+#}

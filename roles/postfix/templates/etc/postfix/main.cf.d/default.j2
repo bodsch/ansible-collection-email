@@ -1,6 +1,15 @@
+{% set values = postfix_default | bodsch.core.remove_empty_values() %}
 
-default_database_type                     = {{ postfix_default.database_type }}
+# --[default]----------------------------------------------
+{% if values is defined and
+      values | count > 0 %}
 
+  {% if values.database_type is defined and
+        values.database_type | string | length > 0 %}
+default_database_type                     = {{ values.database_type }}
+  {% endif %}
+{% endif %}
+# ---------------------------------------------------------
 {#
 default_database_type = hash
 default_delivery_slot_cost = 5

@@ -55,6 +55,8 @@ postfix_smtpd:
     - permit_sasl_authenticated
     - defer_unauth_destination
     - reject_unauth_destination
+  milters:
+    - inet:127.0.0.1:11332
 
 postfix_smtp:
   use_tls: true
@@ -78,9 +80,11 @@ postfix_relay:
 postfix_header:
   checks:
     - pattern: "/^Message-ID:.*"
-      action: "<!&!/ DUNNO"
+      action: "DUNNO"
     - pattern: /^Message-ID:.*@(porcupine\.org)/"
-      action: "reject forged domain name in Message-ID: header: $1"
+      action: "reject"
+      text: "forged domain name in Message-ID: header: $1"
+  checks_file: ""
 
 postfix_virtual:
   aliases:
@@ -109,6 +113,24 @@ postfix_sender:
       result: 'DUNNO'
     - pattern: '*'
       result: "smtp:{{ ansible_facts.lo['ipv4']['address'] }}:1025"
+
+postfix_non:
+  bdb:
+    custom_mapping: ""
+    migration_allow_root_prefixes: []                                     # [ /etc /usr/local/etc ]
+    migration_allow_user_prefixes: []                                     # [$data_directory /var/lib/mailman /var/lib/mailman3]
+    migration_level: ""                                                   # disable
+    migration_log_redirect: ""                                            # yes
+    migration_service_name: ""                                            # nbdb_reindex
+  empty_end_of_header_action: ""                                          # fix_quietly
+  fqdn_reject_code: ""                                                    # 504
+  smtpd_milters:
+    - inet:127.0.0.1:11332
+
+postfix_milter:
+  connect_macros: "j {daemon_name} {daemon_addr} v _"
+  mail_macros: "i {mail_addr} {client_addr} {client_name} {auth_authen}"
+  default_action: accept
 
 postfix_recipient:
   canonical_maps_files: ""
@@ -139,6 +161,8 @@ postfix_postscreen:
     # - hostkarma.junkemailfilter.com=127.0.0.2*3
     # - hostkarma.junkemailfilter.com=127.0.0.4*2
     # - hostkarma.junkemailfilter.com=127.0.1.2*1
+
+
 
 # postfix_proxy:
 #   read_maps:
@@ -185,5 +209,40 @@ postfix_mynetworks:
 # #     smtpd_milters = unix:opendkim/opendkim.sock unix:opendmarc/opendmarc.sock unix:spamass/spamass.sock unix:clamav/clamav-milter.ctl
 # #     milter_connect_macros = "i j {daemon_name} v {if_name} _"
 # #     policyd-spf_time_limit = 3600
+
+postfix_handle_mastercf: true
+
+postfix_master:
+
+  - name: submission
+    type: inet
+    # enabled: false
+    private: false
+    chroot: false
+    command: smtpd
+    options:
+      syslog_name: postfix/submission
+      smtpd_tls_security_level: encrypt
+      smtpd_sasl_auth_enable: true
+      smtpd_tls_auth_only: true
+      smtpd_relay_restrictions:
+        - permit_sasl_authenticated
+        - reject
+  - name: smtps
+    type: inet
+    private: false
+    chroot: false
+    command: postscreen
+  - name: smtp
+    type: inet
+    state: disabled
+
+      # smtpd_reject_unlisted_recipient: no
+      # smtpd_client_restrictions: "$mua_client_restrictions"
+      # smtpd_helo_restrictions: "$mua_helo_restrictions"
+      # smtpd_sender_restrictions: "$mua_sender_restrictions"
+      # smtpd_recipient_restrictions: ""
+      # smtpd_relay_restrictions: permit_sasl_authenticated,reject
+      # milter_macro_daemon_name: ORIGINATING
 
 ...

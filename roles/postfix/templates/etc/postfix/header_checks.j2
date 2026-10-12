@@ -1,5 +1,6 @@
 #jinja2: trim_blocks: True, lstrip_blocks: True
 # {{ ansible_managed }}
+
 {% set valid_actions = [
     "BCC", "DISCARD", "DUNNO", "FILTER", "HOLD",
     "IGNORE", "INFO", "PASS", "PREPEND", "REDIRECT",
@@ -12,5 +13,7 @@
 {{ "{:<40}".format(rule.pattern) }}  {{ "{:<10}".format(rule.action.upper()) }}
     {%- if rule.text is defined %}{{ rule.text }}{% endif %}
 
+  {% else %}
+# unknown action: {{ rule.action }} for pattern: {{ rule.pattern }}
   {% endif %}
 {% endfor %}

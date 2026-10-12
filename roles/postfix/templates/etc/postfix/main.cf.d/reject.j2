@@ -1,11 +1,20 @@
-{% set _postfix_reject = postfix_reject | bodsch.core.remove_empty_values() %}
-# ---------------------------------------------------------
+{% set values = postfix_reject | bodsch.core.remove_empty_values() %}
 
-{% if _postfix_reject.code is defined and
-      _postfix_reject.code | string | length > 0 %}
-reject_code                               = {{ _postfix_reject.code }}
+# --[reject]-----------------------------------------------
+{% if values is defined and
+      values | count > 0 %}
+# {{ values }}
+# {{ values | count }}
+
+  {% if values.code is defined and
+        values.code | string | length > 0 %}
+reject_code                               = {{ values.code }}
+  {% endif %}
+  {% if values.tempfail_action is defined and
+        values.tempfail_action | string | length > 0 %}
+reject_tempfail_action                    = {{ values.tempfail_action }}
+  {% endif %}
 {% endif %}
-{% if _postfix_reject.tempfail_action is defined and
-      _postfix_reject.tempfail_action | string | length > 0 %}
-reject_tempfail_action                    = {{ _postfix_reject.tempfail_action }}
-{% endif %}
+# ---------------------------------------------------------
+{#
+#}

@@ -1,29 +1,35 @@
-{% set _postfix_header = postfix_header | bodsch.core.remove_empty_values() %}
-# ---------------------------------------------------------
+{% set values = postfix_header | bodsch.core.remove_empty_values() %}
 
-{% if _postfix_header.address_token_limit is defined and
-      _postfix_header.address_token_limit | string | length > 0 %}
-header_address_token_limit                = {{ _postfix_header.address_token_limit }}
-{% endif %}
-{% if _postfix_header.checks_file is defined  and
-      _postfix_header.checks_file | count > 0 %}
-  {% if _postfix_header.checks_file | bodsch.core.type == "list" %}
+# --[header]-----------------------------------------------
+{% if values is defined and
+      values | count > 0 %}
+
+  {% if values.address_token_limit is defined and
+        values.address_token_limit | string | length > 0 %}
+header_address_token_limit                = {{ values.address_token_limit }}
+  {% endif %}
+  {% if values.checks_file is defined  and
+        values.checks_file | count > 0 %}
+    {% if values.checks_file | bodsch.core.type == "list" %}
 header_checks                             =
-    {{ _postfix_header.checks_file | join("\n") | indent(4) }}
-  {% else %}
-header_checks                             = {{ _postfix_header.checks_file }}
+    {{ values.checks_file | join("\n") | indent(4) }}
+    {% else %}
+header_checks                             = {{ values.checks_file }}
+    {% endif %}
+  {% endif %}
+  {% if values.from_format is defined and
+        values.from_format | string | length > 0 and
+        values.from_format in ["standard","obsolete"] %}
+header_from_format                        = {{ values.from_format }}
+  {% endif %}
+  {% if values.size_limit is defined and
+        values.size_limit | string | length > 0 %}
+header_size_limit                         = {{ values.size_limit }}
   {% endif %}
 {% endif %}
-{% if _postfix_header.from_format is defined and
-      _postfix_header.from_format | string | length > 0 and
-      _postfix_header.from_format in ["standard","obsolete"] %}
-header_from_format                        = {{ _postfix_header.from_format }}
-{% endif %}
-{% if _postfix_header.size_limit is defined and
-      _postfix_header.size_limit | string | length > 0 %}
-header_size_limit                         = {{ _postfix_header.size_limit }}
-{% endif %}
+# ---------------------------------------------------------
 {#
+# postconf | grep -E "^header_"
 header_address_token_limit = 10240
 header_checks =
 header_from_format = standard

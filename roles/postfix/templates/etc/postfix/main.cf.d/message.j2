@@ -1,23 +1,30 @@
-{% set _postfix_message = postfix_message | bodsch.core.remove_empty_values() %}
-# ---------------------------------------------------------
+{% set values = postfix_message | bodsch.core.remove_empty_values() %}
 
-{% if _postfix_message.drop_headers is defined and
-      _postfix_message.drop_headers | length > 0 %}
-message_drop_headers                      = {{ _postfix_message.drop_headers | join(", ") }}
+# --[message]----------------------------------------------
+{% if values is defined and
+      values | count > 0 %}
+
+  {% if values.drop_headers is defined and
+        values.drop_headers | length > 0 %}
+message_drop_headers                      = {{ values.drop_headers | join(", ") }}
+  {% endif %}
+  {% if values.reject_characters is defined and
+        values.reject_characters | length > 0 %}
+message_reject_characters                 = {{ values.reject_characters | join(", ") }}
+  {% endif %}
+  {% if values.size_limit is defined and
+        values.size_limit | string | length > 0 %}
+    {#
+      default: 10240000
+      The maximal size in bytes of a message, including envelope information
+    #}
+message_size_limit                        = {{ values.size_limit }}
+  {% endif %}
+  {% if values.strip_characters is defined and
+        values.strip_characters | length > 0 %}
+message_strip_characters                  = {{ values.strip_characters | join(", ") }}
+  {% endif %}
 {% endif %}
-{% if _postfix_message.reject_characters is defined and
-      _postfix_message.reject_characters | length > 0 %}
-message_reject_characters                 = {{ _postfix_message.reject_characters | join(", ") }}
-{% endif %}
-{% if _postfix_message.size_limit is defined and
-      _postfix_message.size_limit | string | length > 0 %}
-  {#
-    default: 10240000
-    The maximal size in bytes of a message, including envelope information
-  #}
-message_size_limit                        = {{ _postfix_message.size_limit }}
-{% endif %}
-{% if _postfix_message.strip_characters is defined and
-      _postfix_message.strip_characters | length > 0 %}
-message_strip_characters                  = {{ _postfix_message.strip_characters | join(", ") }}
-{% endif %}
+# ---------------------------------------------------------
+{#
+#}

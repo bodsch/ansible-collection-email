@@ -25,56 +25,28 @@ postfix_handle_mastercf: true
 
 ```yaml
 postfix_master:
-  # service   type  private unpriv  chroot  wakeup  maxproc command + args
-  # smtp      inet  n       -       n       -       1       postscreen
-  smtp:
-    comment: >
-       standard smtp service
-    enabled: false
-    type: inet
-    private: false
-    unpriv: ''
-    chroot: false
-    wakeup: ''
-    maxproc: 1
-    command: postscreen
-    args: []
-```
-
-for more examples, see [vars/main.yml](vars/mail.yml)
-
-For multiple services that only require different parameters, e.g. use a different `type` or `command`,
-the servicename can be **overwritten** via `service`:
-
-```yaml
-postfix_master:
-  smtp:
-    comment: >
-       standard smtp service
+  #
+  - name: submission
     type: inet
     private: false
     chroot: false
     command: smtpd
-    args: []
-  # smtp      inet  n       -       n       -       1       postscreen
-  smtp_with_postscreen:
-    comment: >
-      smtp service with postscreen backend.
-      currently disabled
-    service: smtp
-    enabled: false
+    options:
+      syslog_name: postfix/submission
+      smtpd_tls_security_level: encrypt
+      smtpd_sasl_auth_enable: true
+      smtpd_tls_auth_only: true
+      smtpd_relay_restrictions:
+        - permit_sasl_authenticated
+        - reject
+  #      
+  - name: smtps
     type: inet
     private: false
     chroot: false
-    maxproc: 1
     command: postscreen
-```
-
-This Part generates following lines in the `master.cf`:
-
-```bash
-# standard smtp service
-smtp            inet              n        -        n        -        -           smtpd
-# smtp service with postscreen backend.  currently disabled
-# smtp            inet              n        -        n        -        1           postscreen
+  #
+  - name: smtp
+    type: inet
+    state: disabled
 ```

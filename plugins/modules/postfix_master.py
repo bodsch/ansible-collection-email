@@ -317,15 +317,19 @@ class PostfixMaster:
         Initialize all needed Variables
         """
         self.module = module
+        self.module.log("PostfixMaster::__init__()")
 
         self._postconf = module.get_bin_path("postconf", True)
         self.services = module.params.get("services") or []
         self.config_directory = module.params.get("config_directory")
+        self.backup = module.params.get("backup")
 
     def run(self) -> dict[str, Any]:
         """
         runner
         """
+        self.module.log("PostfixMaster::run()")
+
         error = self._validate()
         if error:
             return dict(failed=True, changed=False, msg=error)
@@ -383,6 +387,8 @@ class PostfixMaster:
         """
         Reject duplicate services and present services without a command.
         """
+        self.module.log("PostfixMaster::_validate()")
+
         seen: set[str] = set()
         problems: list[str] = []
 
@@ -403,6 +409,8 @@ class PostfixMaster:
         """
         Return the active master.cf line of a service, or None.
         """
+        self.module.log(f"PostfixMaster::_current(key: {key})")
+
         _rc, out, _err = self._exec(self._base_cmd() + ["-M", key])
         for line in out.splitlines():
             tokens = tokenize(line)
@@ -415,6 +423,8 @@ class PostfixMaster:
         """
         Run a changing postconf call, unless in check mode.
         """
+        self.module.log(f"PostfixMaster::_postconf_cmd(args: {args})")
+
         if self.module.check_mode:
             return
 
@@ -448,7 +458,7 @@ class PostfixMaster:
 
 def main() -> None:
     """Run the module."""
-    specs = dict(
+    args = dict(
         services=dict(
             required=True,
             type="list",
@@ -475,11 +485,16 @@ def main() -> None:
                 args=dict(type="raw"),
             ),
         ),
+        backup=dict(
+            required=False,
+            type="bool",
+            default=False
+        ),
         config_directory=dict(required=False, type="path"),
     )
 
     module = AnsibleModule(
-        argument_spec=specs,
+        argument_spec=args,
         supports_check_mode=True,
     )
 
