@@ -1,53 +1,60 @@
-{% set _postfix_mailbox = postfix_mailbox | bodsch.core.remove_empty_values() %}
-# ---------------------------------------------------------
+{% set values = postfix_mailbox | bodsch.core.remove_empty_values() %}
 
-{% if _postfix_mailbox.command is defined and
-      _postfix_mailbox.command | length > 0 %}
-  {% if _postfix_mailbox.command is string %}
-mailbox_command                           = {{ _postfix_mailbox.command }}
-  {% else %}
+# --[mailbox]----------------------------------------------
+{% if values is defined and
+      values | count > 0 %}
+
+  {% if values.command is defined and
+        values.command | length > 0 %}
+    {% if values.command is string %}
+mailbox_command                           = {{ values.command }}
+    {% else %}
 mailbox_command                           =
-    {{ _postfix_mailbox.command | join("\n") | indent(4) }}
+    {{ values.command | join("\n") | indent(4) }}
+    {% endif %}
   {% endif %}
-{% endif %}
-{% if _postfix_mailbox.command_maps is defined and
-      _postfix_mailbox.command_maps | length > 0 %}
-  {% if _postfix_mailbox.command_maps is string %}
-mailbox_command_maps                      = {{ _postfix_mailbox.command_maps }}
-  {% else %}
+  {% if values.command_maps is defined and
+        values.command_maps | length > 0 %}
+    {% if values.command_maps is string %}
+mailbox_command_maps                      = {{ values.command_maps }}
+    {% else %}
 mailbox_command_maps                      =
-    {{ _postfix_mailbox.command_maps | join("\n") | indent(4) }}
+    {{ values.command_maps | join("\n") | indent(4) }}
+    {% endif %}
   {% endif %}
-{% endif %}
-{% if _postfix_mailbox.delivery_lock is defined and
-      _postfix_mailbox.delivery_lock | length > 0 %}
-  {# For a list of available file locking methods, use the "postconf -l" command. #}
-mailbox_delivery_lock                     = {{ _postfix_mailbox.delivery_lock | join(", ") }}
-{% endif %}
-{% if _postfix_mailbox.size_limit is defined and
-      _postfix_mailbox.size_limit | string | length > 0 %}
-  {#
-    default: 51200000
-    The maximal size of any local(8) individual mailbox or maildir file, or zero (no limit)
-    This limit must not be smaller than the message size limit.
-  #}
-mailbox_size_limit                        = {{ _postfix_mailbox.size_limit }}
-{% endif %}
-{% if _postfix_mailbox.transport is defined and
-      _postfix_mailbox.transport | length > 0 %}
-  {% if _postfix_mailbox.transport is string %}
-transport_command                         = {{ _postfix_mailbox.transport }}
-  {% else %}
+  {% if values.delivery_lock is defined and
+        values.delivery_lock | length > 0 %}
+    {# For a list of available file locking methods, use the "postconf -l" command. #}
+mailbox_delivery_lock                     = {{ values.delivery_lock | join(", ") }}
+  {% endif %}
+  {% if values.size_limit is defined and
+        values.size_limit | string | length > 0 %}
+    {#
+      default: 51200000
+      The maximal size of any local(8) individual mailbox or maildir file, or zero (no limit)
+      This limit must not be smaller than the message size limit.
+    #}
+mailbox_size_limit                        = {{ values.size_limit }}
+  {% endif %}
+  {% if values.transport is defined and
+        values.transport | length > 0 %}
+    {% if values.transport is string %}
+transport_command                         = {{ values.transport }}
+    {% else %}
 transport_command                         =
-    {{ _postfix_mailbox.transport | join("\n") | indent(4) }}
+    {{ values.transport | join("\n") | indent(4) }}
+    {% endif %}
   {% endif %}
-{% endif %}
-{% if _postfix_mailbox.transport_maps is defined and
-      _postfix_mailbox.transport_maps | length > 0 %}
-  {% if _postfix_mailbox.transport_maps is string %}
-mailbox_transport_maps                    = {{ _postfix_mailbox.transport_maps }}
-  {% else %}
+  {% if values.transport_maps is defined and
+        values.transport_maps | length > 0 %}
+    {% if values.transport_maps is string %}
+mailbox_transport_maps                    = {{ values.transport_maps }}
+    {% else %}
 mailbox_transport_maps                    =
-    {{ _postfix_mailbox.transport_maps | join("\n") | indent(4) }}
+    {{ values.transport_maps | join("\n") | indent(4) }}
+    {% endif %}
   {% endif %}
 {% endif %}
+# ---------------------------------------------------------
+{#
+#}

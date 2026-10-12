@@ -1,679 +1,684 @@
-{% set _postfix_smtpd = postfix_smtpd | bodsch.core.remove_empty_values() %}
-# ---------------------------------------------------------
+{% set values = postfix_smtpd | bodsch.core.remove_empty_values() %}
 
-{% if _postfix_smtpd.authorized is defined and
-      _postfix_smtpd.authorized | count > 0 %}
-  {% if _postfix_smtpd.authorized.verp_clients is defined and
-        _postfix_smtpd.authorized.verp_clients | count > 0 %}
-    {% if _postfix_smtpd.authorized.verp_clients | bodsch.core.type == "list" %}
+# --[smtpd]------------------------------------------------
+{% if values is defined and
+      values | count > 0 %}
+
+  {% if values.authorized is defined and
+        values.authorized | count > 0 %}
+    {% if values.authorized.verp_clients is defined and
+          values.authorized.verp_clients | count > 0 %}
+      {% if values.authorized.verp_clients | bodsch.core.type == "list" %}
 smtpd_authorized_verp_clients             =
-    {{ _postfix_smtpd.authorized.verp_clients | join("\n") | indent(4) }}
-    {% else %}
-smtpd_authorized_verp_clients             = {{ _postfix_smtpd.authorized.verp_clients }}
+    {{ values.authorized.verp_clients | join("\n") | indent(4) }}
+      {% else %}
+smtpd_authorized_verp_clients             = {{ values.authorized.verp_clients }}
+      {% endif %}
     {% endif %}
-  {% endif %}
-  {% if _postfix_smtpd.authorized.xclient_hosts is defined and
-        _postfix_smtpd.authorized.xclient_hosts | count > 0 %}
-    {% if _postfix_smtpd.authorized.xclient_hosts | bodsch.core.type == "list" %}
+    {% if values.authorized.xclient_hosts is defined and
+          values.authorized.xclient_hosts | count > 0 %}
+      {% if values.authorized.xclient_hosts | bodsch.core.type == "list" %}
 smtpd_authorized_xclient_hosts            =
-    {{ _postfix_smtpd.authorized.xclient_hosts | join("\n") | indent(4) }}
-    {% else %}
-smtpd_authorized_xclient_hosts            = {{ _postfix_smtpd.authorized.xclient_hosts }}
+    {{ values.authorized.xclient_hosts | join("\n") | indent(4) }}
+      {% else %}
+smtpd_authorized_xclient_hosts            = {{ values.authorized.xclient_hosts }}
+      {% endif %}
     {% endif %}
-  {% endif %}
-  {% if _postfix_smtpd.authorized.xforward_hosts is defined and
-        _postfix_smtpd.authorized.xforward_hosts | count > 0 %}
-    {% if _postfix_smtpd.authorized.xforward_hosts | bodsch.core.type == "list" %}
+    {% if values.authorized.xforward_hosts is defined and
+          values.authorized.xforward_hosts | count > 0 %}
+      {% if values.authorized.xforward_hosts | bodsch.core.type == "list" %}
 smtpd_authorized_xforward_hosts           =
-    {{ _postfix_smtpd.authorized.xforward_hosts | join("\n") | indent(4) }}
-    {% else %}
-smtpd_authorized_xforward_hosts           = {{ _postfix_smtpd.authorized.xforward_hosts }}
+    {{ values.authorized.xforward_hosts | join("\n") | indent(4) }}
+      {% else %}
+smtpd_authorized_xforward_hosts           = {{ values.authorized.xforward_hosts }}
+      {% endif %}
     {% endif %}
   {% endif %}
-{% endif %}
-smtpd_banner                              = {{ _postfix_smtpd.banner }}
-{% if _postfix_smtpd.client is defined and
-      _postfix_smtpd.client | count > 0 %}
-  {% if _postfix_smtpd.client.auth_rate_limit is defined and
-        _postfix_smtpd.client.auth_rate_limit | string | length > 0 %}
-smtpd_client_auth_rate_limit              = {{ _postfix_smtpd.client.auth_rate_limit }}
-  {% endif %}
-  {% if _postfix_smtpd.client.connection is defined and
-        _postfix_smtpd.client.connection | count > 0 %}
-    {% if _postfix_smtpd.client.connection.count_limit is defined and
-          _postfix_smtpd.client.connection.count_limit | string | length > 0 %}
-smtpd_client_connection_count_limit       = {{ _postfix_smtpd.client.connection.count_limit }}
+smtpd_banner                              = {{ values.banner }}
+  {% if values.client is defined and
+        values.client | count > 0 %}
+    {% if values.client.auth_rate_limit is defined and
+          values.client.auth_rate_limit | string | length > 0 %}
+smtpd_client_auth_rate_limit              = {{ values.client.auth_rate_limit }}
     {% endif %}
-    {% if _postfix_smtpd.client.connection.rate_limit is defined and
-          _postfix_smtpd.client.connection.rate_limit | string | length > 0 %}
-smtpd_client_connection_rate_limit        = {{ _postfix_smtpd.client.connection.rate_limit }}
+    {% if values.client.connection is defined and
+          values.client.connection | count > 0 %}
+      {% if values.client.connection.count_limit is defined and
+            values.client.connection.count_limit | string | length > 0 %}
+smtpd_client_connection_count_limit       = {{ values.client.connection.count_limit }}
+      {% endif %}
+      {% if values.client.connection.rate_limit is defined and
+            values.client.connection.rate_limit | string | length > 0 %}
+smtpd_client_connection_rate_limit        = {{ values.client.connection.rate_limit }}
+      {% endif %}
     {% endif %}
-  {% endif %}
-  {% if _postfix_smtpd.client.event_limit_exceptions is defined and
-        _postfix_smtpd.client.event_limit_exceptions | string | length > 0 %}
-    {% if postfix_version is version_compare('3.11',  '>=') %}
+    {% if values.client.event_limit_exceptions is defined and
+          values.client.event_limit_exceptions | string | length > 0 %}
+      {% if postfix_version is version_compare('3.11',  '>=') %}
 # OBSOLETE see: https://www.postfix.org/DEPRECATION_README.html#renamed
+      {% endif %}
+smtpd_client_event_limit_exceptions       = {{ values.client.event_limit_exceptions }}
     {% endif %}
-smtpd_client_event_limit_exceptions       = {{ _postfix_smtpd.client.event_limit_exceptions }}
-  {% endif %}
-  {% if _postfix_smtpd.client.message_rate_limit is defined and
-        _postfix_smtpd.client.message_rate_limit | string | length > 0 %}
-smtpd_client_message_rate_limit           = {{ _postfix_smtpd.client.message_rate_limit }}
-  {% endif %}
-  {% if _postfix_smtpd.client.new_tls_session_rate_limit is defined and
-        _postfix_smtpd.client.new_tls_session_rate_limit | string | length > 0 %}
-smtpd_client_new_tls_session_rate_limit   = {{ _postfix_smtpd.client.new_tls_session_rate_limit }}
-  {% endif %}
-  {% if _postfix_smtpd.client.port_logging is defined and
-        _postfix_smtpd.client.port_logging | string | length > 0 %}
-smtpd_client_port_logging                 = {{ _postfix_smtpd.client.port_logging | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
-  {% endif %}
-  {% if _postfix_smtpd.client.recipient_rate_limit is defined and
-        _postfix_smtpd.client.recipient_rate_limit | string | length > 0 %}
-smtpd_client_recipient_rate_limit         = {{ _postfix_smtpd.client.recipient_rate_limit }}
-  {% endif %}
-  {% if _postfix_smtpd.client.restrictions is defined and
-        _postfix_smtpd.client.restrictions | count > 0 %}
-    {# TODO #}
-    {% set attr = [
-      "check_ccert_access","check_client_access","check_client_a_access","check_client_mx_access",
-      "check_client_ns_access","check_reverse_client_hostname_access","check_reverse_client_hostname_a_access",
-      "check_reverse_client_hostname_mx_access","check_reverse_client_hostname_ns_access","check_sasl_access",
-      "permit_inet_interfaces","permit_mynetworks",
-      "permit_sasl_authenticated","permit_tls_all_clientcerts","permit_tls_clientcerts","reject_rbl_client",
-      "permit_dnswl_client","reject_rhsbl_client","permit_rhswl_client","reject_rhsbl_reverse_client",
-      "reject_unknown_client_hostname","reject_unknown_reverse_client_hostname",
-      "check_policy_service",
-      "defer",
-      "defer_if_permit","defer_if_reject","permit","reject_multi_recipient_bounce","reject_plaintext_session",
-      "reject_unauth_pipelining","reject","sleep","warn_if_reject"
-    ] %}
-    {% if _postfix_smtpd.client.restrictions | bodsch.core.type == "list" %}
+    {% if values.client.message_rate_limit is defined and
+          values.client.message_rate_limit | string | length > 0 %}
+smtpd_client_message_rate_limit           = {{ values.client.message_rate_limit }}
+    {% endif %}
+    {% if values.client.new_tls_session_rate_limit is defined and
+          values.client.new_tls_session_rate_limit | string | length > 0 %}
+smtpd_client_new_tls_session_rate_limit   = {{ values.client.new_tls_session_rate_limit }}
+    {% endif %}
+    {% if values.client.port_logging is defined and
+          values.client.port_logging | string | length > 0 %}
+smtpd_client_port_logging                 = {{ values.client.port_logging | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+    {% endif %}
+    {% if values.client.recipient_rate_limit is defined and
+          values.client.recipient_rate_limit | string | length > 0 %}
+smtpd_client_recipient_rate_limit         = {{ values.client.recipient_rate_limit }}
+    {% endif %}
+    {% if values.client.restrictions is defined and
+          values.client.restrictions | count > 0 %}
+      {# TODO #}
+      {% set attr = [
+        "check_ccert_access","check_client_access","check_client_a_access","check_client_mx_access",
+        "check_client_ns_access","check_reverse_client_hostname_access","check_reverse_client_hostname_a_access",
+        "check_reverse_client_hostname_mx_access","check_reverse_client_hostname_ns_access","check_sasl_access",
+        "permit_inet_interfaces","permit_mynetworks",
+        "permit_sasl_authenticated","permit_tls_all_clientcerts","permit_tls_clientcerts","reject_rbl_client",
+        "permit_dnswl_client","reject_rhsbl_client","permit_rhswl_client","reject_rhsbl_reverse_client",
+        "reject_unknown_client_hostname","reject_unknown_reverse_client_hostname",
+        "check_policy_service",
+        "defer",
+        "defer_if_permit","defer_if_reject","permit","reject_multi_recipient_bounce","reject_plaintext_session",
+        "reject_unauth_pipelining","reject","sleep","warn_if_reject"
+      ] %}
+      {% if values.client.restrictions | bodsch.core.type == "list" %}
 smtpd_client_restrictions                 =
-    {{ _postfix_smtpd.client.restrictions | join("\n") | indent(4) }}
-    {% else %}
-smtpd_client_restrictions                 = {{ _postfix_smtpd.client.restrictions }}
+    {{ values.client.restrictions | join("\n") | indent(4) }}
+      {% else %}
+smtpd_client_restrictions                 = {{ values.client.restrictions }}
+      {% endif %}
     {% endif %}
   {% endif %}
-{% endif %}
-{% if _postfix_smtpd.command_filter is defined and
-      _postfix_smtpd.command_filter | count > 0 %}
-  {% if _postfix_smtpd.command_filter | bodsch.core.type == "list" %}
+  {% if values.command_filter is defined and
+        values.command_filter | count > 0 %}
+    {% if values.command_filter | bodsch.core.type == "list" %}
 smtpd_command_filter                      =
-    {{ _postfix_smtpd.command_filter | join("\n") | indent(4) }}
-  {% else %}
-smtpd_command_filter                      = {{ _postfix_smtpd.command_filter }}
-  {% endif %}
-{% endif %}
-{% if _postfix_smtpd.data_restrictions is defined and
-      _postfix_smtpd.data_restrictions | count > 0 %}
-  {% if _postfix_smtpd.data_restrictions | bodsch.core.type == "list" %}
-smtpd_data_restrictions                   =
-    {{ _postfix_smtpd.data_restrictions | join("\n") | indent(4) }}
-  {% else %}
-smtpd_data_restrictions                   = {{ _postfix_smtpd.data_restrictions }}
-  {% endif %}
-{% endif %}
-{% if _postfix_smtpd.delay is defined and
-      _postfix_smtpd.delay | count > 0 %}
-  {% if _postfix_smtpd.delay.open_until_valid_rcpt is defined and
-        _postfix_smtpd.delay.open_until_valid_rcpt | string | length > 0 %}
-smtpd_delay_open_until_valid_rcpt         = {{ _postfix_smtpd.delay.open_until_valid_rcpt | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
-  {% endif %}
-  {% if _postfix_smtpd.delay.reject is defined and
-        _postfix_smtpd.delay.reject | string | length > 0 %}
-smtpd_delay_reject                        = {{ _postfix_smtpd.delay.reject | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
-  {% endif %}
-{% endif %}
-{% if _postfix_smtpd.discard is defined and
-      _postfix_smtpd.discard | count > 0 %}
-  {% if _postfix_smtpd.discard.ehlo is defined and
-        _postfix_smtpd.discard.ehlo | count > 0 %}
-    {% if _postfix_smtpd.discard.ehlo.keyword_address_maps is defined and
-          _postfix_smtpd.discard.ehlo.keyword_address_maps | count > 0 %}
-      {% if _postfix_smtpd.discard.ehlo.keyword_address_maps | bodsch.core.type == "list" %}
-smtpd_discard_ehlo_keyword_address_maps   =
-    {{ _postfix_smtpd.discard.ehlo.keyword_address_maps | join("\n") | indent(4) }}
-      {% else %}
-smtpd_discard_ehlo_keyword_address_maps   = {{ _postfix_smtpd.discard.ehlo.keyword_address_maps }}
-      {% endif %}
-    {% endif %}
-    {% if _postfix_smtpd.discard.ehlo.keywords is defined and
-          _postfix_smtpd.discard.ehlo.keywords | count > 0 %}
-      {% if _postfix_smtpd.discard.ehlo.keywords | bodsch.core.type == "list" %}
-smtpd_discard_ehlo_keywords               =
-    {{ _postfix_smtpd.discard.ehlo.keywords | join("\n") | indent(4) }}
-      {% else %}
-smtpd_discard_ehlo_keywords               = {{ _postfix_smtpd.discard.ehlo.keywords }}
-      {% endif %}
-    {% endif %}
-  {% endif %}
-{% endif %}
-{% if _postfix_smtpd.dns_reply_filter is defined and
-      _postfix_smtpd.dns_reply_filter | count > 0 %}
-  {% if _postfix_smtpd.dns_reply_filter | bodsch.core.type == "list" %}
-smtpd_dns_reply_filter                    =
-    {{ _postfix_smtpd.dns_reply_filter | join("\n") | indent(4) }}
-  {% else %}
-smtpd_dns_reply_filter                    = {{ _postfix_smtpd.dns_reply_filter }}
-  {% endif %}
-{% endif %}
-{% if _postfix_smtpd.end_of_data_restrictions is defined and
-      _postfix_smtpd.end_of_data_restrictions | count > 0 %}
-  {% if _postfix_smtpd.end_of_data_restrictions | bodsch.core.type == "list" %}
-smtpd_end_of_data_restrictions            =
-    {{ _postfix_smtpd.end_of_data_restrictions | join("\n") | indent(4) }}
-  {% else %}
-smtpd_end_of_data_restrictions            = {{ _postfix_smtpd.end_of_data_restrictions }}
-  {% endif %}
-{% endif %}
-{% if _postfix_smtpd.enforce_tls is defined and
-      _postfix_smtpd.enforce_tls | string | length > 0 %}
-smtpd_enforce_tls                         = {{ _postfix_smtpd.enforce_tls | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
-{% endif %}
-{% if _postfix_smtpd.error_sleep_time is defined and
-      _postfix_smtpd.error_sleep_time | string | length > 0 %}
-smtpd_error_sleep_time                    = {{ _postfix_smtpd.error_sleep_time }}
-{% endif %}
-{% if _postfix_smtpd.etrn_restrictions is defined and
-      _postfix_smtpd.etrn_restrictions | count > 0 %}
-  {% if _postfix_smtpd.etrn_restrictions | bodsch.core.type == "list" %}
-smtpd_etrn_restrictions                   =
-    {{ _postfix_smtpd.etrn_restrictions | join("\n") | indent(4) }}
-  {% else %}
-smtpd_etrn_restrictions                   = {{ _postfix_smtpd.etrn_restrictions }}
-  {% endif %}
-{% endif %}
-{% if _postfix_smtpd.expansion_filter is defined and
-      _postfix_smtpd.expansion_filter | string | length > 0 %}
-smtpd_expansion_filter                    = {{ _postfix_smtpd.expansion_filter }}
-{% endif %}
-{% if _postfix_smtpd.forbidden_commands is defined and
-      _postfix_smtpd.forbidden_commands | count > 0 %}
-  {% if _postfix_smtpd.forbidden_commands | bodsch.core.type == "list" %}
-smtpd_forbidden_commands                  = {{ _postfix_smtpd.forbidden_commands | join(" ") }}
-  {% else %}
-smtpd_forbidden_commands                  = {{ _postfix_smtpd.forbidden_commands }}
-  {% endif %}
-{% endif %}
-{% if _postfix_smtpd.hard_error_limit is defined and
-      _postfix_smtpd.hard_error_limit | string | length > 0 %}
-smtpd_hard_error_limit                    = {{ _postfix_smtpd.hard_error_limit }}
-{% endif %}
-{% if _postfix_smtpd.helo is defined and
-      _postfix_smtpd.helo | count > 0 %}
-  {% if _postfix_smtpd.helo.required is defined and
-        _postfix_smtpd.helo.required | string | length > 0 %}
-smtpd_helo_required                       = {{ _postfix_smtpd.helo.required | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
-  {% endif %}
-  {% if _postfix_smtpd.helo.restrictions is defined and
-        _postfix_smtpd.helo.restrictions | count > 0 %}
-    {% if _postfix_smtpd.helo.restrictions | bodsch.core.type == "list" %}
-smtpd_helo_restrictions                   =
-    {{ _postfix_smtpd.helo.restrictions | join("\n") | indent(4) }}
+    {{ values.command_filter | join("\n") | indent(4) }}
     {% else %}
-smtpd_helo_restrictions                   = {{ _postfix_smtpd.helo.restrictions }}
+smtpd_command_filter                      = {{ values.command_filter }}
     {% endif %}
   {% endif %}
-{% endif %}
-{% if _postfix_smtpd.history_flush_threshold is defined and
-      _postfix_smtpd.history_flush_threshold | string | length > 0 %}
-smtpd_history_flush_threshold             = {{ _postfix_smtpd.history_flush_threshold }}
-{% endif %}
-{% if _postfix_smtpd.junk_command_limit is defined and
-      _postfix_smtpd.junk_command_limit | string | length > 0 %}
-smtpd_junk_command_limit                  = {{ _postfix_smtpd.junk_command_limit }}
-{% endif %}
-{% if _postfix_smtpd.log_access_permit_actions is defined and
-      _postfix_smtpd.log_access_permit_actions | count > 0 %}
-  {% if _postfix_smtpd.log_access_permit_actions | bodsch.core.type == "list" %}
+  {% if values.data_restrictions is defined and
+        values.data_restrictions | count > 0 %}
+    {% if values.data_restrictions | bodsch.core.type == "list" %}
+smtpd_data_restrictions                   =
+    {{ values.data_restrictions | join("\n") | indent(4) }}
+    {% else %}
+smtpd_data_restrictions                   = {{ values.data_restrictions }}
+    {% endif %}
+  {% endif %}
+  {% if values.delay is defined and
+        values.delay | count > 0 %}
+    {% if values.delay.open_until_valid_rcpt is defined and
+          values.delay.open_until_valid_rcpt | string | length > 0 %}
+smtpd_delay_open_until_valid_rcpt         = {{ values.delay.open_until_valid_rcpt | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+    {% endif %}
+    {% if values.delay.reject is defined and
+          values.delay.reject | string | length > 0 %}
+smtpd_delay_reject                        = {{ values.delay.reject | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+    {% endif %}
+  {% endif %}
+  {% if values.discard is defined and
+        values.discard | count > 0 %}
+    {% if values.discard.ehlo is defined and
+          values.discard.ehlo | count > 0 %}
+      {% if values.discard.ehlo.keyword_address_maps is defined and
+            values.discard.ehlo.keyword_address_maps | count > 0 %}
+        {% if values.discard.ehlo.keyword_address_maps | bodsch.core.type == "list" %}
+smtpd_discard_ehlo_keyword_address_maps   =
+    {{ values.discard.ehlo.keyword_address_maps | join("\n") | indent(4) }}
+        {% else %}
+smtpd_discard_ehlo_keyword_address_maps   = {{ values.discard.ehlo.keyword_address_maps }}
+        {% endif %}
+      {% endif %}
+      {% if values.discard.ehlo.keywords is defined and
+            values.discard.ehlo.keywords | count > 0 %}
+        {% if values.discard.ehlo.keywords | bodsch.core.type == "list" %}
+smtpd_discard_ehlo_keywords               =
+    {{ values.discard.ehlo.keywords | join("\n") | indent(4) }}
+        {% else %}
+smtpd_discard_ehlo_keywords               = {{ values.discard.ehlo.keywords }}
+        {% endif %}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+  {% if values.dns_reply_filter is defined and
+        values.dns_reply_filter | count > 0 %}
+    {% if values.dns_reply_filter | bodsch.core.type == "list" %}
+smtpd_dns_reply_filter                    =
+    {{ values.dns_reply_filter | join("\n") | indent(4) }}
+    {% else %}
+smtpd_dns_reply_filter                    = {{ values.dns_reply_filter }}
+    {% endif %}
+  {% endif %}
+  {% if values.end_of_data_restrictions is defined and
+        values.end_of_data_restrictions | count > 0 %}
+    {% if values.end_of_data_restrictions | bodsch.core.type == "list" %}
+smtpd_end_of_data_restrictions            =
+    {{ values.end_of_data_restrictions | join("\n") | indent(4) }}
+    {% else %}
+smtpd_end_of_data_restrictions            = {{ values.end_of_data_restrictions }}
+    {% endif %}
+  {% endif %}
+  {% if values.enforce_tls is defined and
+        values.enforce_tls | string | length > 0 %}
+smtpd_enforce_tls                         = {{ values.enforce_tls | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+  {% endif %}
+  {% if values.error_sleep_time is defined and
+        values.error_sleep_time | string | length > 0 %}
+smtpd_error_sleep_time                    = {{ values.error_sleep_time }}
+  {% endif %}
+  {% if values.etrn_restrictions is defined and
+        values.etrn_restrictions | count > 0 %}
+    {% if values.etrn_restrictions | bodsch.core.type == "list" %}
+smtpd_etrn_restrictions                   =
+    {{ values.etrn_restrictions | join("\n") | indent(4) }}
+    {% else %}
+smtpd_etrn_restrictions                   = {{ values.etrn_restrictions }}
+    {% endif %}
+  {% endif %}
+  {% if values.expansion_filter is defined and
+        values.expansion_filter | string | length > 0 %}
+smtpd_expansion_filter                    = {{ values.expansion_filter }}
+  {% endif %}
+  {% if values.forbidden_commands is defined and
+        values.forbidden_commands | count > 0 %}
+    {% if values.forbidden_commands | bodsch.core.type == "list" %}
+smtpd_forbidden_commands                  = {{ values.forbidden_commands | join(" ") }}
+    {% else %}
+smtpd_forbidden_commands                  = {{ values.forbidden_commands }}
+    {% endif %}
+  {% endif %}
+  {% if values.hard_error_limit is defined and
+        values.hard_error_limit | string | length > 0 %}
+smtpd_hard_error_limit                    = {{ values.hard_error_limit }}
+  {% endif %}
+  {% if values.helo is defined and
+        values.helo | count > 0 %}
+    {% if values.helo.required is defined and
+          values.helo.required | string | length > 0 %}
+smtpd_helo_required                       = {{ values.helo.required | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+    {% endif %}
+    {% if values.helo.restrictions is defined and
+          values.helo.restrictions | count > 0 %}
+      {% if values.helo.restrictions | bodsch.core.type == "list" %}
+smtpd_helo_restrictions                   =
+    {{ values.helo.restrictions | join("\n") | indent(4) }}
+      {% else %}
+smtpd_helo_restrictions                   = {{ values.helo.restrictions }}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+  {% if values.history_flush_threshold is defined and
+        values.history_flush_threshold | string | length > 0 %}
+smtpd_history_flush_threshold             = {{ values.history_flush_threshold }}
+  {% endif %}
+  {% if values.junk_command_limit is defined and
+        values.junk_command_limit | string | length > 0 %}
+smtpd_junk_command_limit                  = {{ values.junk_command_limit }}
+  {% endif %}
+  {% if values.log_access_permit_actions is defined and
+        values.log_access_permit_actions | count > 0 %}
+    {% if values.log_access_permit_actions | bodsch.core.type == "list" %}
 smtpd_log_access_permit_actions           =
-    {{ _postfix_smtpd.log_access_permit_actions | join("\n") | indent(4) }}
-  {% else %}
-smtpd_log_access_permit_actions           = {{ _postfix_smtpd.log_access_permit_actions }}
+    {{ values.log_access_permit_actions | join("\n") | indent(4) }}
+    {% else %}
+smtpd_log_access_permit_actions           = {{ values.log_access_permit_actions }}
+    {% endif %}
   {% endif %}
-{% endif %}
-{% if _postfix_smtpd.milter_maps is defined and
-      _postfix_smtpd.milter_maps | count > 0 %}
-  {% if _postfix_smtpd.milter_maps | bodsch.core.type == "list" %}
+  {% if values.milter_maps is defined and
+        values.milter_maps | count > 0 %}
+    {% if values.milter_maps | bodsch.core.type == "list" %}
 smtpd_milter_maps                         =
-    {{ _postfix_smtpd.milter_maps | join("\n") | indent(4) }}
-  {% else %}
-smtpd_milter_maps                         = {{ _postfix_smtpd.milter_maps }}
+    {{ values.milter_maps | join("\n") | indent(4) }}
+    {% else %}
+smtpd_milter_maps                         = {{ values.milter_maps }}
+    {% endif %}
   {% endif %}
-{% endif %}
-{% if _postfix_smtpd.milters is defined and
-      _postfix_smtpd.milters | count > 0 %}
-  {% if _postfix_smtpd.milters | bodsch.core.type == "list" %}
+  {% if values.milters is defined and
+        values.milters | count > 0 %}
+    {% if values.milters | bodsch.core.type == "list" %}
 smtpd_milters                             =
-    {{ _postfix_smtpd.milters | join("\n") | indent(4) }}
-  {% else %}
-smtpd_milters                             = {{ _postfix_smtpd.milters }}
+    {{ values.milters | join("\n") | indent(4) }}
+    {% else %}
+smtpd_milters                             = {{ values.milters }}
+    {% endif %}
   {% endif %}
-{% endif %}
-{% if _postfix_smtpd.noop_commands is defined and
-      _postfix_smtpd.noop_commands | count > 0 %}
-  {% if _postfix_smtpd.noop_commands | bodsch.core.type == "list" %}
+  {% if values.noop_commands is defined and
+        values.noop_commands | count > 0 %}
+    {% if values.noop_commands | bodsch.core.type == "list" %}
 smtpd_noop_commands                       =
-    {{ _postfix_smtpd.noop_commands | join("\n") | indent(4) }}
-  {% else %}
-smtpd_noop_commands                       = {{ _postfix_smtpd.noop_commands }}
+    {{ values.noop_commands | join("\n") | indent(4) }}
+    {% else %}
+smtpd_noop_commands                       = {{ values.noop_commands }}
+    {% endif %}
   {% endif %}
-{% endif %}
-{% if _postfix_smtpd.null_access_lookup_key is defined and
-      _postfix_smtpd.null_access_lookup_key | count > 0 %}
-  {% if _postfix_smtpd.null_access_lookup_key | bodsch.core.type == "list" %}
+  {% if values.null_access_lookup_key is defined and
+        values.null_access_lookup_key | count > 0 %}
+    {% if values.null_access_lookup_key | bodsch.core.type == "list" %}
 smtpd_null_access_lookup_key              =
-    {{ _postfix_smtpd.null_access_lookup_key | join("\n") | indent(4) }}
-  {% else %}
-smtpd_null_access_lookup_key              = {{ _postfix_smtpd.null_access_lookup_key }}
+    {{ values.null_access_lookup_key | join("\n") | indent(4) }}
+    {% else %}
+smtpd_null_access_lookup_key              = {{ values.null_access_lookup_key }}
+    {% endif %}
   {% endif %}
-{% endif %}
-{% if _postfix_smtpd.peername_lookup is defined and
-      _postfix_smtpd.peername_lookup | string | length > 0 %}
-smtpd_peername_lookup                     = {{ _postfix_smtpd.peername_lookup | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
-{% endif %}
-{% if _postfix_smtpd.per_record_deadline is defined and
-      _postfix_smtpd.per_record_deadline | string | length > 0 %}
+  {% if values.peername_lookup is defined and
+        values.peername_lookup | string | length > 0 %}
+smtpd_peername_lookup                     = {{ values.peername_lookup | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+  {% endif %}
+  {% if values.per_record_deadline is defined and
+        values.per_record_deadline | string | length > 0 %}
     {% if postfix_version is version_compare('3.11',  '>=') %}
 # OBSOLETE see: https://www.postfix.org/DEPRECATION_README.html#renamed
     {% endif %}
-smtpd_per_record_deadline                 = {{ _postfix_smtpd.per_record_deadline }}
-smtpd_per_request_deadline                = {{ _postfix_smtpd.per_record_deadline }}
-{% endif %}
-{% if _postfix_smtpd.per_request_deadline is defined and
-      _postfix_smtpd.per_request_deadline | string | length > 0 %}
-smtpd_per_request_deadline                = {{ _postfix_smtpd.per_request_deadline }}
-{% endif %}
-{% if _postfix_smtpd.policy is defined and
-      _postfix_smtpd.policy | count > 0 %}
-  {% if _postfix_smtpd.policy.service is defined and
-        _postfix_smtpd.policy.service | count > 0 %}
-    {% if _postfix_smtpd.policy.service.default_action is defined and
-          _postfix_smtpd.policy.service.default_action | string | length > 0 %}
-smtpd_policy_service_default_action       = {{ _postfix_smtpd.policy.service.default_action }}
-    {% endif %}
-    {% if _postfix_smtpd.policy.service.max_idle is defined and
-          _postfix_smtpd.policy.service.max_idle | string | length > 0 %}
-smtpd_policy_service_max_idle             = {{ _postfix_smtpd.policy.service.max_idle }}
-    {% endif %}
-    {% if _postfix_smtpd.policy.service.max_ttl is defined and
-          _postfix_smtpd.policy.service.max_ttl | string | length > 0 %}
-smtpd_policy_service_max_ttl              = {{ _postfix_smtpd.policy.service.max_ttl }}
-    {% endif %}
-    {% if _postfix_smtpd.policy.service.policy_context is defined and
-          _postfix_smtpd.policy.service.policy_context | count > 0 %}
-      {% if _postfix_smtpd.policy.service.policy_context | bodsch.core.type == "list" %}
+smtpd_per_record_deadline                 = {{ values.per_record_deadline }}
+smtpd_per_request_deadline                = {{ values.per_record_deadline }}
+  {% endif %}
+  {% if values.per_request_deadline is defined and
+        values.per_request_deadline | string | length > 0 %}
+smtpd_per_request_deadline                = {{ values.per_request_deadline }}
+  {% endif %}
+  {% if values.policy is defined and
+        values.policy | count > 0 %}
+    {% if values.policy.service is defined and
+          values.policy.service | count > 0 %}
+      {% if values.policy.service.default_action is defined and
+            values.policy.service.default_action | string | length > 0 %}
+smtpd_policy_service_default_action       = {{ values.policy.service.default_action }}
+      {% endif %}
+      {% if values.policy.service.max_idle is defined and
+            values.policy.service.max_idle | string | length > 0 %}
+smtpd_policy_service_max_idle             = {{ values.policy.service.max_idle }}
+      {% endif %}
+      {% if values.policy.service.max_ttl is defined and
+            values.policy.service.max_ttl | string | length > 0 %}
+smtpd_policy_service_max_ttl              = {{ values.policy.service.max_ttl }}
+      {% endif %}
+      {% if values.policy.service.policy_context is defined and
+            values.policy.service.policy_context | count > 0 %}
+        {% if values.policy.service.policy_context | bodsch.core.type == "list" %}
 smtpd_policy_service_policy_context       =
-    {{ _postfix_smtpd.policy.service.policy_context | join("\n") | indent(4) }}
-      {% else %}
-smtpd_policy_service_policy_context       = {{ _postfix_smtpd.policy.service.policy_context }}
+    {{ values.policy.service.policy_context | join("\n") | indent(4) }}
+        {% else %}
+smtpd_policy_service_policy_context       = {{ values.policy.service.policy_context }}
+        {% endif %}
+      {% endif %}
+      {% if values.policy.service.request_limit is defined and
+            values.policy.service.request_limit | string | length > 0 %}
+smtpd_policy_service_request_limit        = {{ values.policy.service.request_limit }}
+      {% endif %}
+      {% if values.policy.service.retry_delay is defined and
+            values.policy.service.retry_delay | string | length > 0 %}
+smtpd_policy_service_retry_delay          = {{ values.policy.service.retry_delay }}
+      {% endif %}
+      {% if values.policy.service.timeout is defined and
+            values.policy.service.timeout | string | length > 0 %}
+smtpd_policy_service_timeout              = {{ ostfix_smtpd.policy.service.timeout }}
+      {% endif %}
+      {% if values.policy.service.try_limit is defined and
+            values.policy.service.try_limit | string | length > 0 %}
+smtpd_policy_service_try_limit            = {{ values.policy.service.try_limit }}
       {% endif %}
     {% endif %}
-    {% if _postfix_smtpd.policy.service.request_limit is defined and
-          _postfix_smtpd.policy.service.request_limit | string | length > 0 %}
-smtpd_policy_service_request_limit        = {{ _postfix_smtpd.policy.service.request_limit }}
-    {% endif %}
-    {% if _postfix_smtpd.policy.service.retry_delay is defined and
-          _postfix_smtpd.policy.service.retry_delay | string | length > 0 %}
-smtpd_policy_service_retry_delay          = {{ _postfix_smtpd.policy.service.retry_delay }}
-    {% endif %}
-    {% if _postfix_smtpd.policy.service.timeout is defined and
-          _postfix_smtpd.policy.service.timeout | string | length > 0 %}
-smtpd_policy_service_timeout              = {{ ostfix_smtpd.policy.service.timeout }}
-    {% endif %}
-    {% if _postfix_smtpd.policy.service.try_limit is defined and
-          _postfix_smtpd.policy.service.try_limit | string | length > 0 %}
-smtpd_policy_service_try_limit            = {{ _postfix_smtpd.policy.service.try_limit }}
-    {% endif %}
   {% endif %}
-{% endif %}
-{% if _postfix_smtpd.proxy is defined and
-      _postfix_smtpd.proxy | count > 0 %}
-  {% if _postfix_smtpd.proxy.ehlo is defined and
-        _postfix_smtpd.proxy.ehlo | string | length > 0 %}
-smtpd_proxy_ehlo                          = {{ _postfix_smtpd.proxy.ehlo }}
-  {% endif %}
-  {% if _postfix_smtpd.proxy["filter"] is defined and
-        _postfix_smtpd.proxy["filter"] | string | length > 0 %}
-smtpd_proxy_filter                        = {{ _postfix_smtpd.proxy["filter"] }}
-  {% endif %}
-  {% if _postfix_smtpd.policy.proxy.options is defined and
-        _postfix_smtpd.policy.proxy.options | count > 0 %}
-    {% if _postfix_smtpd.policy.proxy.options | bodsch.core.type == "list" %}
+  {% if values.proxy is defined and
+        values.proxy | count > 0 %}
+    {% if values.proxy.ehlo is defined and
+          values.proxy.ehlo | string | length > 0 %}
+smtpd_proxy_ehlo                          = {{ values.proxy.ehlo }}
+    {% endif %}
+    {% if values.proxy["filter"] is defined and
+          values.proxy["filter"] | string | length > 0 %}
+smtpd_proxy_filter                        = {{ values.proxy["filter"] }}
+    {% endif %}
+    {% if values.policy.proxy.options is defined and
+          values.policy.proxy.options | count > 0 %}
+      {% if values.policy.proxy.options | bodsch.core.type == "list" %}
 smtpd_proxy_options                       =
-    {{ _postfix_smtpd.policy.proxy.options | join("\n") | indent(4) }}
-    {% else %}
-smtpd_proxy_options                       = {{ _postfix_smtpd.policy.proxy.options }}
+    {{ values.policy.proxy.options | join("\n") | indent(4) }}
+      {% else %}
+smtpd_proxy_options                       = {{ values.policy.proxy.options }}
+      {% endif %}
+    {% endif %}
+    {% if values.proxy.timeout is defined and
+          values.proxy.timeout | string | length > 0 %}
+smtpd_proxy_timeout                       = {{ values.proxy.timeout }}
     {% endif %}
   {% endif %}
-  {% if _postfix_smtpd.proxy.timeout is defined and
-        _postfix_smtpd.proxy.timeout | string | length > 0 %}
-smtpd_proxy_timeout                       = {{ _postfix_smtpd.proxy.timeout }}
-  {% endif %}
-{% endif %}
-{% if _postfix_smtpd.recipient is defined and
-      _postfix_smtpd.recipient | count > 0 %}
-  {% if _postfix_smtpd.recipient.limit is defined and
-        _postfix_smtpd.recipient.limit | string | length > 0 %}
-smtpd_recipient_limit                     = {{ _postfix_smtpd.recipient.limit }}
-  {% endif %}
-  {% if _postfix_smtpd.recipient.overshoot_limit is defined and
-        _postfix_smtpd.recipient.overshoot_limit | string | length > 0 %}
-smtpd_recipient_overshoot_limit           = {{ _postfix_smtpd.recipient.overshoot_limit }}
-  {% endif %}
-  {% if _postfix_smtpd.recipient.restrictions is defined and
-        _postfix_smtpd.recipient.restrictions | count > 0 %}
-    {# ATTR see _postfix_smtpd.client.restrictions #}
-    {% if _postfix_smtpd.recipient.restrictions | bodsch.core.type == "list" %}
+  {% if values.recipient is defined and
+        values.recipient | count > 0 %}
+    {% if values.recipient.limit is defined and
+          values.recipient.limit | string | length > 0 %}
+smtpd_recipient_limit                     = {{ values.recipient.limit }}
+    {% endif %}
+    {% if values.recipient.overshoot_limit is defined and
+          values.recipient.overshoot_limit | string | length > 0 %}
+smtpd_recipient_overshoot_limit           = {{ values.recipient.overshoot_limit }}
+    {% endif %}
+    {% if values.recipient.restrictions is defined and
+          values.recipient.restrictions | count > 0 %}
+      {# ATTR see values.client.restrictions #}
+      {% if values.recipient.restrictions | bodsch.core.type == "list" %}
 smtpd_recipient_restrictions              =
-    {{ _postfix_smtpd.recipient.restrictions | join("\n") | indent(4) }}
-    {% else %}
-smtpd_recipient_restrictions              = {{ _postfix_smtpd.recipient.restrictions }}
+    {{ values.recipient.restrictions | join("\n") | indent(4) }}
+      {% else %}
+smtpd_recipient_restrictions              = {{ values.recipient.restrictions }}
+      {% endif %}
     {% endif %}
   {% endif %}
-{% endif %}
-{% if _postfix_smtpd.reject is defined and
-      _postfix_smtpd.reject | count > 0 %}
-  {% if _postfix_smtpd.reject.footer is defined and
-        _postfix_smtpd.reject.footer | string | length > 0 %}
+  {% if values.reject is defined and
+        values.reject | count > 0 %}
+    {% if values.reject.footer is defined and
+          values.reject.footer | string | length > 0 %}
 smtpd_reject_footer                       =
-    {{ _postfix_smtpd.reject.footer | indent(4) }}
-  {% endif %}
-  {% if _postfix_smtpd.reject.footer_maps is defined and
-        _postfix_smtpd.reject.footer_maps | count > 0 %}
-    {% if _postfix_smtpd.reject.footer_maps | bodsch.core.type == "list" %}
+    {{ values.reject.footer | indent(4) }}
+    {% endif %}
+    {% if values.reject.footer_maps is defined and
+          values.reject.footer_maps | count > 0 %}
+      {% if values.reject.footer_maps | bodsch.core.type == "list" %}
 smtpd_reject_footer_maps                  =
-    {{ _postfix_smtpd.reject.footer_maps | join("\n") | indent(4) }}
-    {% else %}
-smtpd_reject_footer_maps                  = {{ _postfix_smtpd.reject.footer_maps }}
+    {{ values.reject.footer_maps | join("\n") | indent(4) }}
+      {% else %}
+smtpd_reject_footer_maps                  = {{ values.reject.footer_maps }}
+      {% endif %}
+    {% endif %}
+    {% if values.reject.unlisted is defined and
+          values.reject.unlisted | count > 0 %}
+      {% if values.reject.unlisted.recipient is defined and
+            values.reject.unlisted.recipient | string | length > 0 %}
+smtpd_reject_unlisted_recipient           = {{ values.reject.unlisted.recipient | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+      {% endif %}
+      {% if values.reject.unlisted.sender is defined and
+            values.reject.unlisted.sender | string | length > 0 %}
+smtpd_reject_unlisted_sender              = {{ values.reject.unlisted.sender | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+      {% endif %}
     {% endif %}
   {% endif %}
-  {% if _postfix_smtpd.reject.unlisted is defined and
-        _postfix_smtpd.reject.unlisted | count > 0 %}
-    {% if _postfix_smtpd.reject.unlisted.recipient is defined and
-          _postfix_smtpd.reject.unlisted.recipient | string | length > 0 %}
-smtpd_reject_unlisted_recipient           = {{ _postfix_smtpd.reject.unlisted.recipient | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
-    {% endif %}
-    {% if _postfix_smtpd.reject.unlisted.sender is defined and
-          _postfix_smtpd.reject.unlisted.sender | string | length > 0 %}
-smtpd_reject_unlisted_sender              = {{ _postfix_smtpd.reject.unlisted.sender | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
-    {% endif %}
-  {% endif %}
-{% endif %}
-{% if _postfix_smtpd.relay_restrictions is defined and
-      _postfix_smtpd.relay_restrictions | count > 0 %}
-  {% if _postfix_smtpd.relay_restrictions | bodsch.core.type == "list" %}
+  {% if values.relay_restrictions is defined and
+        values.relay_restrictions | count > 0 %}
+    {% if values.relay_restrictions | bodsch.core.type == "list" %}
 smtpd_relay_restrictions                  =
-    {{ _postfix_smtpd.relay_restrictions | join("\n") | indent(4) }}
-  {% else %}
-smtpd_relay_restrictions                  = {{ _postfix_smtpd.relay_restrictions }}
-  {% endif %}
-{% endif %}
-{% if _postfix_smtpd.restriction_classes is defined and
-      _postfix_smtpd.restriction_classes | count > 0 %}
-  {% if _postfix_smtpd.restriction_classes | bodsch.core.type == "list" %}
-smtpd_restriction_classes                 =
-    {{ _postfix_smtpd.restriction_classes | join("\n") | indent(4) }}
-  {% else %}
-smtpd_restriction_classes                 = {{ _postfix_smtpd.restriction_classes }}
-  {% endif %}
-{% endif %}
-{% if _postfix_smtpd.sasl is defined and
-      _postfix_smtpd.sasl | count > 0 %}
-  {% if _postfix_smtpd.sasl.auth_enable is defined and
-        _postfix_smtpd.sasl.auth_enable | string | length > 0 %}
-smtpd_sasl_auth_enable                    = {{ _postfix_smtpd.sasl.auth_enable | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
-  {% endif %}
-  {% if _postfix_smtpd.sasl.authenticated_header is defined and
-        _postfix_smtpd.sasl.authenticated_header | string | length > 0 %}
-smtpd_sasl_authenticated_header           = {{ _postfix_smtpd.sasl.authenticated_header | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
-  {% endif %}
-  {% if _postfix_smtpd.sasl.exceptions_networks is defined and
-        _postfix_smtpd.sasl.exceptions_networks | count > 0 %}
-    {% if _postfix_smtpd.sasl.exceptions_networks | bodsch.core.type == "list" %}
-smtpd_sasl_exceptions_networks            =
-    {{ _postfix_smtpd.sasl.exceptions_networks | join("\n") | indent(4) }}
+    {{ values.relay_restrictions | join("\n") | indent(4) }}
     {% else %}
-smtpd_sasl_exceptions_networks            = {{ _postfix_smtpd.sasl.exceptions_networks }}
+smtpd_relay_restrictions                  = {{ values.relay_restrictions }}
     {% endif %}
   {% endif %}
-  {% if _postfix_smtpd.sasl.local_domain is defined and
-        _postfix_smtpd.sasl.local_domain | string | length > 0 %}
-smtpd_sasl_local_domain                   = {{ _postfix_smtpd.sasl.local_domain }}
+  {% if values.restriction_classes is defined and
+        values.restriction_classes | count > 0 %}
+    {% if values.restriction_classes | bodsch.core.type == "list" %}
+smtpd_restriction_classes                 =
+    {{ values.restriction_classes | join("\n") | indent(4) }}
+    {% else %}
+smtpd_restriction_classes                 = {{ values.restriction_classes }}
+    {% endif %}
   {% endif %}
-  {% if _postfix_smtpd.sasl.path is defined and
-        _postfix_smtpd.sasl.path | string | length > 0 %}
-smtpd_sasl_path                           = {{ _postfix_smtpd.sasl.path }}
-  {% endif %}
-  {% if _postfix_smtpd.sasl.response_limit is defined and
-        _postfix_smtpd.sasl.response_limit | string | length > 0 %}
-smtpd_sasl_response_limit                 = {{ _postfix_smtpd.sasl.response_limit }}
-  {% endif %}
-  {% if _postfix_smtpd.sasl.security_options is defined and
-        _postfix_smtpd.sasl.security_options | count > 0 %}
-    {% set valid_security_options = [
-        "noplaintext", "noactive", "nodictionary", "noanonymous", "forward_secrecy", "mutual_auth"] %}
-    {% set security_options = _postfix_smtpd.sasl.security_options | bodsch.email.valid_list_data(valid_security_options) %}
+  {% if values.sasl is defined and
+        values.sasl | count > 0 %}
+    {% if values.sasl.auth_enable is defined and
+          values.sasl.auth_enable | string | length > 0 %}
+smtpd_sasl_auth_enable                    = {{ values.sasl.auth_enable | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+    {% endif %}
+    {% if values.sasl.authenticated_header is defined and
+          values.sasl.authenticated_header | string | length > 0 %}
+smtpd_sasl_authenticated_header           = {{ values.sasl.authenticated_header | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+    {% endif %}
+    {% if values.sasl.exceptions_networks is defined and
+          values.sasl.exceptions_networks | count > 0 %}
+      {% if values.sasl.exceptions_networks | bodsch.core.type == "list" %}
+smtpd_sasl_exceptions_networks            =
+    {{ values.sasl.exceptions_networks | join("\n") | indent(4) }}
+      {% else %}
+smtpd_sasl_exceptions_networks            = {{ values.sasl.exceptions_networks }}
+      {% endif %}
+    {% endif %}
+    {% if values.sasl.local_domain is defined and
+          values.sasl.local_domain | string | length > 0 %}
+smtpd_sasl_local_domain                   = {{ values.sasl.local_domain }}
+    {% endif %}
+    {% if values.sasl.path is defined and
+          values.sasl.path | string | length > 0 %}
+smtpd_sasl_path                           = {{ values.sasl.path }}
+    {% endif %}
+    {% if values.sasl.response_limit is defined and
+          values.sasl.response_limit | string | length > 0 %}
+smtpd_sasl_response_limit                 = {{ values.sasl.response_limit }}
+    {% endif %}
+    {% if values.sasl.security_options is defined and
+          values.sasl.security_options | count > 0 %}
+      {% set valid_security_options = [
+          "noplaintext", "noactive", "nodictionary", "noanonymous", "forward_secrecy", "mutual_auth"] %}
+      {% set security_options = values.sasl.security_options | bodsch.email.valid_list_data(valid_security_options) %}
 smtpd_sasl_security_options               =
     {{ security_options | join("\n") | indent(4) }}
+    {% endif %}
+    {% if values.sasl.service is defined and
+          values.sasl.service | string | length > 0 %}
+smtpd_sasl_service                        = {{ values.sasl.service }}
+    {% endif %}
+    {% if values.sasl.tls_security_options is defined and
+          values.sasl.tls_security_options | string | length > 0 %}
+smtpd_sasl_tls_security_options           = {{ values.sasl.tls_security_options }}
+    {% endif %}
+    {% if values.sasl.type is defined and
+          values.sasl.type | string | length > 0 %}
+smtpd_sasl_type                           = {{ values.sasl.type }}
+    {% endif %}
   {% endif %}
-  {% if _postfix_smtpd.sasl.service is defined and
-        _postfix_smtpd.sasl.service | string | length > 0 %}
-smtpd_sasl_service                        = {{ _postfix_smtpd.sasl.service }}
-  {% endif %}
-  {% if _postfix_smtpd.sasl.tls_security_options is defined and
-        _postfix_smtpd.sasl.tls_security_options | string | length > 0 %}
-smtpd_sasl_tls_security_options           = {{ _postfix_smtpd.sasl.tls_security_options }}
-  {% endif %}
-  {% if _postfix_smtpd.sasl.type is defined and
-        _postfix_smtpd.sasl.type | string | length > 0 %}
-smtpd_sasl_type                           = {{ _postfix_smtpd.sasl.type }}
-  {% endif %}
-{% endif %}
-{% if _postfix_smtpd.sender is defined and
-      _postfix_smtpd.sender | count > 0 %}
-  {% if _postfix_smtpd.sender.login_maps is defined and
-        _postfix_smtpd.sender.login_maps | count > 0 %}
-    {% if _postfix_smtpd.sender.login_maps | bodsch.core.type == "list" %}
+  {% if values.sender is defined and
+        values.sender | count > 0 %}
+    {% if values.sender.login_maps is defined and
+          values.sender.login_maps | count > 0 %}
+      {% if values.sender.login_maps | bodsch.core.type == "list" %}
 smtpd_sender_login_maps                   =
-    {{ _postfix_smtpd.sender_login_maps | join("\n") | indent(4) }}
-    {% else %}
+    {{ values.sender_login_maps | join("\n") | indent(4) }}
+      {% else %}
 smtpd_sender_login_maps                   = {{ postfix_virtual.sender_login_maps }}
+      {% endif %}
     {% endif %}
-  {% endif %}
-  {% if _postfix_smtpd.sender.restrictions is defined and
-        _postfix_smtpd.sender.restrictions | count > 0 %}
-    {% if _postfix_smtpd.sender.restrictions | bodsch.core.type == "list" %}
+    {% if values.sender.restrictions is defined and
+          values.sender.restrictions | count > 0 %}
+      {% if values.sender.restrictions | bodsch.core.type == "list" %}
 smtpd_sender_restrictions                 =
-    {{ _postfix_smtpd.sender_restrictions | join("\n") | indent(4) }}
-    {% else %}
-smtpd_sender_restrictions                 = {{ _postfix_smtpd.sender_restrictions }}
+    {{ values.sender_restrictions | join("\n") | indent(4) }}
+      {% else %}
+smtpd_sender_restrictions                 = {{ values.sender_restrictions }}
+      {% endif %}
     {% endif %}
   {% endif %}
-{% endif %}
-{% if _postfix_smtpd.service_name is defined and
-      _postfix_smtpd.service_name | string | length > 0 %}
-smtpd_service_name                        = {{ _postfix_smtpd.service_name }}
-{% endif %}
-{% if _postfix_smtpd.soft_error_limit is defined and
-      _postfix_smtpd.soft_error_limit | string | length > 0 %}
-smtpd_soft_error_limit                    = {{ _postfix_smtpd.soft_error_limit }}
-{% endif %}
-{% if _postfix_smtpd.starttls_timeout is defined and
-      _postfix_smtpd.starttls_timeout | string | length > 0 %}
-smtpd_starttls_timeout                    = {{ _postfix_smtpd.starttls_timeout }}
-{% endif %}
-{% if _postfix_smtpd.timeout is defined and
-      _postfix_smtpd.timeout | string | length > 0 %}
-smtpd_timeout                             = {{ _postfix_smtpd.timeout }}
-{% endif %}
-{% if _postfix_smtpd.tls is defined and
-      _postfix_smtpd.tls | count > 0 %}
-  {% if _postfix_smtpd.tls.ca_file is defined and
-        _postfix_smtpd.tls.ca_file | string | length > 0 %}
-smtpd_tls_CAfile                          = {{ _postfix_smtpd.tls.ca_file }}
+  {% if values.service_name is defined and
+        values.service_name | string | length > 0 %}
+smtpd_service_name                        = {{ values.service_name }}
   {% endif %}
-  {% if _postfix_smtpd.tls.ca_path is defined and
-        _postfix_smtpd.tls.ca_path | string | length > 0 %}
-smtpd_tls_CApath                          = {{ _postfix_smtpd.tls.ca_path }}
+  {% if values.soft_error_limit is defined and
+        values.soft_error_limit | string | length > 0 %}
+smtpd_soft_error_limit                    = {{ values.soft_error_limit }}
   {% endif %}
-  {% if _postfix_smtpd.tls.always_issue_session_ids is defined and
-        _postfix_smtpd.tls.always_issue_session_ids | string | length > 0 %}
-smtpd_tls_always_issue_session_ids        = {{ _postfix_smtpd.tls.always_issue_session_ids | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+  {% if values.starttls_timeout is defined and
+        values.starttls_timeout | string | length > 0 %}
+smtpd_starttls_timeout                    = {{ values.starttls_timeout }}
   {% endif %}
-  {% if _postfix_smtpd.tls.ask_ccert is defined and
-        _postfix_smtpd.tls.ask_ccert | string | length > 0 %}
-smtpd_tls_ask_ccert                       = {{ _postfix_smtpd.tls.ask_ccert | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+  {% if values.timeout is defined and
+        values.timeout | string | length > 0 %}
+smtpd_timeout                             = {{ values.timeout }}
   {% endif %}
-  {% if _postfix_smtpd.tls.auth_only is defined and
-        _postfix_smtpd.tls.auth_only | string | length > 0 %}
-smtpd_tls_auth_only                       = {{ _postfix_smtpd.tls.auth_only | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
-  {% endif %}
-  {% if _postfix_smtpd.tls.ccert_verifydepth is defined and
-        _postfix_smtpd.tls.ccert_verifydepth | string | length > 0 %}
-smtpd_tls_ccert_verifydepth               = {{ _postfix_smtpd.tls.ccert_verifydepth }}
-  {% endif %}
-  {% if _postfix_smtpd.tls.cert_file is defined and
-        _postfix_smtpd.tls.cert_file | string | length > 0 %}
-smtpd_tls_cert_file                       = {{ _postfix_smtpd.tls.cert_file }}
-  {% endif %}
-  {% if _postfix_smtpd.tls.chain_files is defined and
-        _postfix_smtpd.tls.chain_files | count > 0 %}
+  {% if values.tls is defined and
+        values.tls | count > 0 %}
+    {% if values.tls.ca_file is defined and
+          values.tls.ca_file | string | length > 0 %}
+smtpd_tls_CAfile                          = {{ values.tls.ca_file }}
+    {% endif %}
+    {% if values.tls.ca_path is defined and
+          values.tls.ca_path | string | length > 0 %}
+smtpd_tls_CApath                          = {{ values.tls.ca_path }}
+    {% endif %}
+    {% if values.tls.always_issue_session_ids is defined and
+          values.tls.always_issue_session_ids | string | length > 0 %}
+smtpd_tls_always_issue_session_ids        = {{ values.tls.always_issue_session_ids | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+    {% endif %}
+    {% if values.tls.ask_ccert is defined and
+          values.tls.ask_ccert | string | length > 0 %}
+smtpd_tls_ask_ccert                       = {{ values.tls.ask_ccert | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+    {% endif %}
+    {% if values.tls.auth_only is defined and
+          values.tls.auth_only | string | length > 0 %}
+smtpd_tls_auth_only                       = {{ values.tls.auth_only | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+    {% endif %}
+    {% if values.tls.ccert_verifydepth is defined and
+          values.tls.ccert_verifydepth | string | length > 0 %}
+smtpd_tls_ccert_verifydepth               = {{ values.tls.ccert_verifydepth }}
+    {% endif %}
+    {% if values.tls.cert_file is defined and
+          values.tls.cert_file | string | length > 0 %}
+smtpd_tls_cert_file                       = {{ values.tls.cert_file }}
+    {% endif %}
+    {% if values.tls.chain_files is defined and
+          values.tls.chain_files | count > 0 %}
 smtpd_tls_chain_files                     =
-    {{ _postfix_smtpd.tls.chain_files | join("\n") | indent(4) }}
-  {% endif %}
-  {% if _postfix_smtpd.tls.ciphers is defined and
-        _postfix_smtpd.tls.ciphers | string | length > 0 and
-        _postfix_smtpd.tls.ciphers in ["export", "low", "medium", "high", "null"] %}
-smtpd_tls_ciphers                         = {{ _postfix_smtpd.tls.ciphers }}
-  {% endif %}
-  {% if _postfix_smtpd.tls.dcert_file is defined and
-        _postfix_smtpd.tls.dcert_file | count > 0 %}
-smtpd_tls_dcert_file                      = {{ _postfix_smtpd.tls.dcert_file }}
-  {% endif %}
-  {% if _postfix_smtpd.tls.dh1024_param_file is defined and
-        _postfix_smtpd.tls.dh1024_param_file | length > 0 %}
-smtpd_tls_dh1024_param_file               = {{ _postfix_smtpd.tls.dh1024_param_file }}
-  {% endif %}
-  {% if _postfix_smtpd.tls.dh512_param_file is defined and
-        _postfix_smtpd.tls.dh512_param_file | length > 0 %}
-smtpd_tls_dh512_param_file                = {{ _postfix_smtpd.tls.dh512_param_file }}
-  {% endif %}
-  {% if _postfix_smtpd.tls.dkey_file is defined and
-        _postfix_smtpd.tls.dkey_file | length > 0 %}
-smtpd_tls_dkey_file                       = {{ _postfix_smtpd.tls.dkey_file }}
-  {% endif %}
-  {% if _postfix_smtpd.tls.eccert_file is defined and
-        _postfix_smtpd.tls.eccert_file | length > 0 %}
-smtpd_tls_eccert_file                     = {{ _postfix_smtpd.tls.eccert_file }}
-  {% endif %}
-  {% if _postfix_smtpd.tls.eckey_file is defined and
-        _postfix_smtpd.tls.eckey_file | length > 0 %}
-smtpd_tls_eckey_file                      = {{ _postfix_smtpd.tls.eckey_file }}
-  {% endif %}
-  {% if _postfix_smtpd.tls.eecdh_grade is defined and
-        _postfix_smtpd.tls.eecdh_grade | string | length > 0 and
-        _postfix_smtpd.tls.eecdh_grade in ["auto", "none", "strong", "ultra"] %}
-smtpd_tls_eecdh_grade                     = {{ _postfix_smtpd.tls.eecdh_grade }}
-  {% endif %}
-  {% if _postfix_smtpd.tls.exclude_ciphers is defined and
-        _postfix_smtpd.tls.exclude_ciphers | count > 0 %}
-    {% if _postfix_smtpd.tls.exclude_ciphers | bodsch.core.type == "list" %}
-smtpd_tls_exclude_ciphers                 = {{ _postfix_smtpd.tls.exclude_ciphers | join(", ") }}
-    {% else %}
-smtpd_tls_exclude_ciphers                 = {{ _postfix_smtpd.tls.exclude_ciphers }}
+    {{ values.tls.chain_files | join("\n") | indent(4) }}
     {% endif %}
-  {% endif %}
-  {% if _postfix_smtpd.tls.fingerprint_digest is defined and
-        _postfix_smtpd.tls.fingerprint_digest | string | length > 0 %}
-smtpd_tls_fingerprint_digest              = {{ _postfix_smtpd.tls.fingerprint_digest }}
-  {% endif %}
-  {% if _postfix_smtpd.tls.key_file is defined and
-        _postfix_smtpd.tls.key_file | string | length > 0 %}
-smtpd_tls_key_file                        = {{ _postfix_smtpd.tls.key_file }}
-  {% endif %}
-  {% if _postfix_smtpd.tls.loglevel is defined and
-        _postfix_smtpd.tls.loglevel | string | length > 0 %}
-smtpd_tls_loglevel                        = {{ _postfix_smtpd.tls.loglevel }}
-  {% endif %}
-  {% if _postfix_smtpd.tls.mandatory is defined %}
-    {% if _postfix_smtpd.tls.mandatory.ciphers is defined and
-          _postfix_smtpd.tls.mandatory.ciphers | string | length > 0 and
-          _postfix_smtpd.tls.mandatory.ciphers in ["export", "low", "medium", "high", "null"] %}
-smtpd_tls_mandatory_ciphers               = {{ _postfix_smtpd.tls.mandatory.ciphers }}
+    {% if values.tls.ciphers is defined and
+          values.tls.ciphers | string | length > 0 and
+          values.tls.ciphers in ["export", "low", "medium", "high", "null"] %}
+smtpd_tls_ciphers                         = {{ values.tls.ciphers }}
     {% endif %}
-    {% if _postfix_smtpd.tls.mandatory.exclude_ciphers is defined and
-          _postfix_smtpd.tls.mandatory.exclude_ciphers | count > 0 %}
-      {% if _postfix_smtpd.tls.mandatory.exclude_ciphers | bodsch.core.type == "list" %}
-smtpd_tls_mandatory_exclude_ciphers       = {{ _postfix_smtpd.tls.mandatory.exclude_ciphers | join(", ") }}
+    {% if values.tls.dcert_file is defined and
+          values.tls.dcert_file | count > 0 %}
+smtpd_tls_dcert_file                      = {{ values.tls.dcert_file }}
+    {% endif %}
+    {% if values.tls.dh1024_param_file is defined and
+          values.tls.dh1024_param_file | length > 0 %}
+smtpd_tls_dh1024_param_file               = {{ values.tls.dh1024_param_file }}
+    {% endif %}
+    {% if values.tls.dh512_param_file is defined and
+          values.tls.dh512_param_file | length > 0 %}
+smtpd_tls_dh512_param_file                = {{ values.tls.dh512_param_file }}
+    {% endif %}
+    {% if values.tls.dkey_file is defined and
+          values.tls.dkey_file | length > 0 %}
+smtpd_tls_dkey_file                       = {{ values.tls.dkey_file }}
+    {% endif %}
+    {% if values.tls.eccert_file is defined and
+          values.tls.eccert_file | length > 0 %}
+smtpd_tls_eccert_file                     = {{ values.tls.eccert_file }}
+    {% endif %}
+    {% if values.tls.eckey_file is defined and
+          values.tls.eckey_file | length > 0 %}
+smtpd_tls_eckey_file                      = {{ values.tls.eckey_file }}
+    {% endif %}
+    {% if values.tls.eecdh_grade is defined and
+          values.tls.eecdh_grade | string | length > 0 and
+          values.tls.eecdh_grade in ["auto", "none", "strong", "ultra"] %}
+smtpd_tls_eecdh_grade                     = {{ values.tls.eecdh_grade }}
+    {% endif %}
+    {% if values.tls.exclude_ciphers is defined and
+          values.tls.exclude_ciphers | count > 0 %}
+      {% if values.tls.exclude_ciphers | bodsch.core.type == "list" %}
+smtpd_tls_exclude_ciphers                 = {{ values.tls.exclude_ciphers | join(", ") }}
       {% else %}
-smtpd_tls_mandatory_exclude_ciphers       = {{ _postfix_smtpd.tls.mandatory.exclude_ciphers }}
+smtpd_tls_exclude_ciphers                 = {{ values.tls.exclude_ciphers }}
       {% endif %}
     {% endif %}
-    {% if _postfix_smtpd.tls.mandatory.protocols is defined and
-          _postfix_smtpd.tls.mandatory.protocols | count > 0 %}
-      {% if _postfix_smtpd.tls.mandatory.protocols | bodsch.core.type == "list" %}
-smtpd_tls_mandatory_protocols             = {{ _postfix_smtpd.tls.mandatory.protocols | join(", ") }}
-      {% else %}
-smtpd_tls_mandatory_protocols             = {{ _postfix_smtpd.tls.mandatory.protocols }}
+    {% if values.tls.fingerprint_digest is defined and
+          values.tls.fingerprint_digest | string | length > 0 %}
+smtpd_tls_fingerprint_digest              = {{ values.tls.fingerprint_digest }}
+    {% endif %}
+    {% if values.tls.key_file is defined and
+          values.tls.key_file | string | length > 0 %}
+smtpd_tls_key_file                        = {{ values.tls.key_file }}
+    {% endif %}
+    {% if values.tls.loglevel is defined and
+          values.tls.loglevel | string | length > 0 %}
+smtpd_tls_loglevel                        = {{ values.tls.loglevel }}
+    {% endif %}
+    {% if values.tls.mandatory is defined %}
+      {% if values.tls.mandatory.ciphers is defined and
+            values.tls.mandatory.ciphers | string | length > 0 and
+            values.tls.mandatory.ciphers in ["export", "low", "medium", "high", "null"] %}
+smtpd_tls_mandatory_ciphers               = {{ values.tls.mandatory.ciphers }}
+      {% endif %}
+      {% if values.tls.mandatory.exclude_ciphers is defined and
+            values.tls.mandatory.exclude_ciphers | count > 0 %}
+        {% if values.tls.mandatory.exclude_ciphers | bodsch.core.type == "list" %}
+smtpd_tls_mandatory_exclude_ciphers       = {{ values.tls.mandatory.exclude_ciphers | join(", ") }}
+        {% else %}
+smtpd_tls_mandatory_exclude_ciphers       = {{ values.tls.mandatory.exclude_ciphers }}
+        {% endif %}
+      {% endif %}
+      {% if values.tls.mandatory.protocols is defined and
+            values.tls.mandatory.protocols | count > 0 %}
+        {% if values.tls.mandatory.protocols | bodsch.core.type == "list" %}
+smtpd_tls_mandatory_protocols             = {{ values.tls.mandatory.protocols | join(", ") }}
+        {% else %}
+smtpd_tls_mandatory_protocols             = {{ values.tls.mandatory.protocols }}
+        {% endif %}
       {% endif %}
     {% endif %}
-  {% endif %}
-  {% if _postfix_smtpd.tls.protocols is defined and
-        _postfix_smtpd.tls.protocols | count > 0 %}
-    {% if _postfix_smtpd.tls.protocols | bodsch.core.type == "list" %}
-smtpd_tls_protocols                       = {{ _postfix_smtpd.tls.protocols | join(", ") }}
-    {% else %}
-smtpd_tls_protocols                       = {{ _postfix_smtpd.tls.protocols }}
+    {% if values.tls.protocols is defined and
+          values.tls.protocols | count > 0 %}
+      {% if values.tls.protocols | bodsch.core.type == "list" %}
+smtpd_tls_protocols                       = {{ values.tls.protocols | join(", ") }}
+      {% else %}
+smtpd_tls_protocols                       = {{ values.tls.protocols }}
+      {% endif %}
+    {% endif %}
+    {% if values.tls.received_header is defined and
+          values.tls.received_header | string | length > 0 %}
+smtpd_tls_received_header                 = {{ values.tls.received_header | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+    {% endif %}
+    {% if values.tls.req_ccert is defined and
+          values.tls.req_ccert | string | length > 0 %}
+smtpd_tls_req_ccert                       = {{ values.tls.req_ccert | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+    {% endif %}
+    {% if values.tls.security_level is defined and
+          values.tls.security_level | string | length > 0 %}
+smtpd_tls_security_level                  = {{ values.tls.security_level }}
+    {% endif %}
+    {% if values.tls.session_cache is defined %}
+      {% if values.tls.session_cache.database is defined and
+            values.tls.session_cache.database | string | length > 0 %}
+smtpd_tls_session_cache_database          = {{ values.tls.session_cache.database }}
+      {% endif %}
+      {% if values.tls.session_cache.timeout is defined and
+            values.tls.session_cache.timeout | string | length > 0 %}
+smtpd_tls_session_cache_timeout           = {{ values.tls.session_cache.timeout }}
+      {% endif %}
+    {% endif %}
+    {% if values.tls.wrappermode is defined and
+          values.tls.wrappermode | string | length > 0 %}
+smtpd_tls_wrappermode                     = {{ values.tls.wrappermode | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
     {% endif %}
   {% endif %}
-  {% if _postfix_smtpd.tls.received_header is defined and
-        _postfix_smtpd.tls.received_header | string | length > 0 %}
-smtpd_tls_received_header                 = {{ _postfix_smtpd.tls.received_header | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
-  {% endif %}
-  {% if _postfix_smtpd.tls.req_ccert is defined and
-        _postfix_smtpd.tls.req_ccert | string | length > 0 %}
-smtpd_tls_req_ccert                       = {{ _postfix_smtpd.tls.req_ccert | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
-  {% endif %}
-  {% if _postfix_smtpd.tls.security_level is defined and
-        _postfix_smtpd.tls.security_level | string | length > 0 %}
-smtpd_tls_security_level                  = {{ _postfix_smtpd.tls.security_level }}
-  {% endif %}
-  {% if _postfix_smtpd.tls.session_cache is defined %}
-    {% if _postfix_smtpd.tls.session_cache.database is defined and
-          _postfix_smtpd.tls.session_cache.database | string | length > 0 %}
-smtpd_tls_session_cache_database          = {{ _postfix_smtpd.tls.session_cache.database }}
+  {% if values.upstream_proxy is defined and
+        values.upstream_proxy | count > 0 %}
+    {% if values.upstream_proxy.protocol is defined and
+          values.upstream_proxy.protocol | string | length > 0 %}
+smtpd_upstream_proxy_protocol             = {{ values.upstream_proxy.protocol }}
     {% endif %}
-    {% if _postfix_smtpd.tls.session_cache.timeout is defined and
-          _postfix_smtpd.tls.session_cache.timeout | string | length > 0 %}
-smtpd_tls_session_cache_timeout           = {{ _postfix_smtpd.tls.session_cache.timeout }}
+    {% if values.upstream_proxy.timeout is defined and
+          values.upstream_proxy.timeout | string | length > 0 %}
+smtpd_upstream_proxy_timeout              = {{ values.upstream_proxy.timeout }}
     {% endif %}
   {% endif %}
-  {% if _postfix_smtpd.tls.wrappermode is defined and
-        _postfix_smtpd.tls.wrappermode | string | length > 0 %}
-smtpd_tls_wrappermode                     = {{ _postfix_smtpd.tls.wrappermode | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
-  {% endif %}
-{% endif %}
-{% if _postfix_smtpd.upstream_proxy is defined and
-      _postfix_smtpd.upstream_proxy | count > 0 %}
-  {% if _postfix_smtpd.upstream_proxy.protocol is defined and
-        _postfix_smtpd.upstream_proxy.protocol | string | length > 0 %}
-smtpd_upstream_proxy_protocol             = {{ _postfix_smtpd.upstream_proxy.protocol }}
-  {% endif %}
-  {% if _postfix_smtpd.upstream_proxy.timeout is defined and
-        _postfix_smtpd.upstream_proxy.timeout | string | length > 0 %}
-smtpd_upstream_proxy_timeout              = {{ _postfix_smtpd.upstream_proxy.timeout }}
-  {% endif %}
-{% endif %}
-{% if _postfix_smtpd.use_tls is defined and
-      _postfix_smtpd.use_tls | string | length > 0 %}
+  {% if values.use_tls is defined and
+        values.use_tls | string | length > 0 %}
     {% if postfix_version is version_compare('3.11',  '>=') %}
 # OBSOLETE see: https://www.postfix.org/DEPRECATION_README.html#renamed
 # support for parameter "smtpd_use_tls" will be removed; instead, specify "smtpd_tls_security_level"
     {% endif %}
-# smtpd_use_tls                             = {{ _postfix_smtpd.use_tls | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+# smtpd_use_tls                             = {{ values.use_tls | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+  {% endif %}
 {% endif %}
+# ---------------------------------------------------------
 {#
 smtpd_authorized_verp_clients = $authorized_verp_clients
 smtpd_authorized_xclient_hosts =

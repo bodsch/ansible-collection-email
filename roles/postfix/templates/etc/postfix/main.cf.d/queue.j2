@@ -1,23 +1,30 @@
-{% set _postfix_queue = postfix_queue | bodsch.core.remove_empty_values() %}
-# ---------------------------------------------------------
+{% set values = postfix_queue | bodsch.core.remove_empty_values() %}
 
-{% if _postfix_proxy.directory is defined and
-      _postfix_proxy.directory | string | length > 0 %}
-queue_directory                           = {{ _postfix_proxy.directory }}
-{% endif %}
-{% if _postfix_proxy.file_attribute_count_limit is defined and
-      _postfix_proxy.file_attribute_count_limit | string | length > 0 %}
-queue_file_attribute_count_limit          = {{ _postfix_proxy.file_attribute_count_limit }}
-{% endif %}
-{% if _postfix_proxy.minfree is defined and
-      _postfix_proxy.minfree | string | length > 0 %}
-queue_minfree                             = {{ _postfix_proxy.minfree }}
-{% endif %}
-{% if _postfix_proxy.run_delay is defined and
-      _postfix_proxy.run_delay | string | length > 0 %}
+# --[queue]------------------------------------------------
+{% if values is defined and
+      values | count > 0 %}
+
+  {% if values.directory is defined and
+        values.directory | string | length > 0 %}
+queue_directory                           = {{ values.directory }}
+  {% endif %}
+  {% if values.file_attribute_count_limit is defined and
+        values.file_attribute_count_limit | string | length > 0 %}
+queue_file_attribute_count_limit          = {{ values.file_attribute_count_limit }}
+  {% endif %}
+  {% if values.minfree is defined and
+        values.minfree | string | length > 0 %}
+queue_minfree                             = {{ values.minfree }}
+  {% endif %}
+  {% if values.run_delay is defined and
+        values.run_delay | string | length > 0 %}
 queue_run_delay                           = {{ postfix_queue_run_delay }}
+  {% endif %}
+  {% if values.service_name is defined and
+        values.service_name | string | length > 0 %}
+queue_service_name                        = {{ values.service_name }}
+  {% endif %}
 {% endif %}
-{% if _postfix_proxy.service_name is defined and
-      _postfix_proxy.service_name | string | length > 0 %}
-queue_service_name                        = {{ _postfix_proxy.service_name }}
-{% endif %}
+# ---------------------------------------------------------
+{#
+#}

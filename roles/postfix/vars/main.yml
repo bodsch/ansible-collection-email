@@ -44,8 +44,8 @@ postfix_defaults_address:
   verify_virtual_transport: ""                      #  $virtual_transport
 
 postfix_defaults_alias:
-  maps_file: "lmdb:{{ postfix_aliases_file }}"
-  database_file: "lmdb:{{ postfix_aliases_file }}"
+  database: "lmdb:{{ postfix_aliases_file }}"
+  maps: "lmdb:{{ postfix_aliases_file }}"
 
 postfix_defaults_default:
   database_type: "lmdb"                             # lmdb
@@ -75,6 +75,12 @@ postfix_defaults_default:
 postfix_defaults_header:
   address_token_limit: "" # 10240
   checks: []
+  #   - pattern: "/^Message-ID:.*"
+  #     action: "DUNNO"
+  #   - pattern: /^Message-ID:.*@(porcupine\.org)/"
+  #     action: "reject"
+  #     text: "forged domain name in Message-ID: header: $1"
+  checks_file: "{{ postfix_maps_directory }}/header_checks"
   from_format: ""         # standard
   size_limit: ""          # 102400
   #
@@ -117,10 +123,63 @@ postfix_defaults_message:
   size_limit: 10240000
   strip_characters: []
 
+postfix_defaults_milter:
+  # see:  https://www.postfix.org/MILTER_README.html
+  command_timeout: ""   # 30s
+  connect_macros: []
+    # - j
+    # - {daemon_name}
+    # - {daemon_addr}
+    # - v
+    # - _
+  connect_timeout: "" # 30s
+  content_timeout: "" # 300s
+  data_macros: []
+    # - i
+  default_action: ""  # shutdown
+  end_of_data_macros: []
+    # -  i
+  end_of_header_macros: []
+    # -  i
+  header_checks: ""
+  helo_macros: []
+    # - {tls_version}
+    # - {cipher}
+    # - {cipher_bits}
+    # - {cert_subject}
+    # - {cert_issuer}
+  macro_daemon_name: $myhostname
+  macro_defaults: ""
+  macro_v: []
+    # - $mail_name
+    # - $mail_version
+  mail_macros: []
+    # - i
+    # - {auth_type}
+    # - {auth_authen}
+    # - {auth_author}
+    # - {mail_addr}
+    # - {mail_host}
+    # - {mail_mailer}
+  # protocol: 6
+  rcpt_macros: []
+    # - i
+    # - {rcpt_addr}
+    # - {rcpt_host}
+    # - {rcpt_mailer}
+  unknown_command_macros: ""
+
 postfix_defaults_non:
   bdb:
     custom_mapping: ""
-  milters: []
+    migration_allow_root_prefixes: []                                     # [ /etc /usr/local/etc ]
+    migration_allow_user_prefixes: []                                     # [$data_directory /var/lib/mailman /var/lib/mailman3]
+    migration_level: ""                                                   # disable
+    migration_log_redirect: ""                                            # yes
+    migration_service_name: ""                                            # nbdb_reindex
+  empty_end_of_header_action: ""                                          # fix_quietly
+  fqdn_reject_code: ""                                                    # 504
+  smtpd_milters: []                                                       #
 
 postfix_defaults_postscreen:
   enable: false
@@ -716,287 +775,287 @@ postfix_defaults_tls:
   wildcard_matches_multiple_labels: ""              # yes
   tlsmgr_service_name: ""                           # tlsmgr
 
-#   service   type  private unpriv  chroot  wakeup  maxproc command + args
-#                   (yes)   (yes)   (no)    (never) (100)
-postfix_defaults_master:
-  # smtp      inet  n       -       n       -       -       smtpd
-  smtp:
-    type: inet
-    private: false
-    chroot: false
-    command: smtpd
-    args: []
-  # smtp      inet  n       -       n       -       1       postscreen
-  smtp_with_postscreen:
-    service: smtp
-    enabled: false
-    type: inet
-    private: false
-    chroot: false
-    maxproc: 1
-    command: postscreen
-  # smtpd     pass  -       -       n       -       -       smtpd
-  smtpd_deactivated:
-    service: smtpd
-    enabled: false
-    type: pass
-    chroot: false
-    command: smtpd
-  # dnsblog   unix  -       -       n       -       0       dnsblog
-  dnsblog:
-    enabled: false
-    type: unix
-    chroot: false
-    maxproc: 0
-    command: dnsblog
-  # tlsproxy  unix  -       -       n       -       0       tlsproxy
-  tlsproxy:
-    enabled: false
-    type: unix
-    chroot: false
-    maxproc: 0
-    command: tlsproxy
-
-  # Choose one: enable submission for loopback clients only, or for any client.
-  # 127.0.0.1:submission inet n -   n       -       -       smtpd
-  "127.0.0.1:submission":
-    enabled: false
-    type: inet
-    private: false
-    chroot: false
-    command: smtpd
-
-  # submission inet n       -       n       -       -       smtpd
-  submission:
-    enabled: false
-    type: inet
-    private: false
-    chroot: false
-    command: smtpd
-    args:
-      - -o syslog_name=postfix/submission
-      - -o smtpd_tls_security_level=encrypt
-      - -o smtpd_sasl_auth_enable=yes
-      - -o smtpd_tls_auth_only=yes
-      - -o smtpd_reject_unlisted_recipient=no
-      - -o smtpd_client_restrictions=$mua_client_restrictions
-      - -o smtpd_helo_restrictions=$mua_helo_restrictions
-      - -o smtpd_sender_restrictions=$mua_sender_restrictions
-      - -o smtpd_recipient_restrictions=
-      - -o smtpd_relay_restrictions=permit_sasl_authenticated,reject
-      - -o milter_macro_daemon_name=ORIGINATING
-
-  # Choose one: enable smtps for loopback clients only, or for any client.
-  # 127.0.0.1:smtps inet n  -       n       -       -       smtpd
-  "127.0.0.1:smtps":
-    enabled: false
-    type: inet
-    private: false
-    chroot: false
-    command: smtpd
-
-  # smtps     inet  n       -       n       -       -       smtpd
-  smtps:
-    enabled: false
-    type: inet
-    private: false
-    chroot: false
-    command: smtpd
-    args:
-      - -o syslog_name=postfix/smtps
-      - -o smtpd_tls_wrappermode=yes
-      - -o smtpd_sasl_auth_enable=yes
-      - -o smtpd_reject_unlisted_recipient=no
-      - -o smtpd_client_restrictions=$mua_client_restrictions
-      - -o smtpd_helo_restrictions=$mua_helo_restrictions
-      - -o smtpd_sender_restrictions=$mua_sender_restrictions
-      - -o smtpd_recipient_restrictions=
-      - -o smtpd_relay_restrictions=permit_sasl_authenticated,reject
-      - -o milter_macro_daemon_name=ORIGINATING
-
-  # pickup    unix  n       -       n       60      1       pickup
-  pickup:
-    type: unix
-    private: false
-    chroot: false
-    wakeup: 60
-    maxproc: 1
-    command: pickup
-
-  # cleanup   unix  n       -       n       -       0       cleanup
-  cleanup:
-    type: unix
-    private: false
-    chroot: false
-    maxproc: 0
-    command: cleanup
-
-  # qmgr      unix  n       -       n       300     1       qmgr
-  qmgr:
-    type: unix
-    private: false
-    chroot: false
-    wakeup: 300
-    maxproc: 1
-    command: qmgr
-
-  #qmgr     unix  n       -       n       300     1       oqmgr
-  qmgr_with_other_command:
-    service: qmgr
-    enabled: false
-    type: unix
-    private: false
-    chroot: false
-    wakeup: 300
-    maxproc: 1
-    command: oqmgr
-
-  # tlsmgr    unix  -       -       n       1000?   1       tlsmgr
-  tlsmgr:
-    type: unix
-    chroot: false
-    wakeup: 1000?
-    maxproc: 1
-    command: tlsmgr
-
-  # rewrite   unix  -       -       n       -       -       trivial-rewrite
-  rewrite:
-    type: unix
-    chroot: false
-    command: trivial-rewrite
-
-  # bounce    unix  -       -       n       -       0       bounce
-  bounce:
-    type: unix
-    chroot: false
-    maxproc: 0
-    command: bounce
-
-  # defer     unix  -       -       n       -       0       bounce
-  defer:
-    type: unix
-    chroot: false
-    maxproc: 0
-    command: bounce
-
-  # trace     unix  -       -       n       -       0       bounce
-  trace:
-    type: unix
-    chroot: false
-    maxproc: 0
-    command: bounce
-
-  # verify    unix  -       -       n       -       1       verify
-  verify:
-    type: unix
-    chroot: false
-    maxproc: 1
-    command: verify
-
-  # flush     unix  n       -       n       1000?   0       flush
-  flush:
-    type: unix
-    chroot: false
-    wakeup: 1000?
-    maxproc: 0
-    command: flush
-
-  # proxymap  unix  -       -       n       -       -       proxymap
-  proxymap:
-    type: unix
-    chroot: false
-    command: proxymap
-
-  # proxywrite unix -       -       n       -       1       proxymap
-  proxywrite:
-    type: unix
-    chroot: false
-    maxproc: 1
-    command: proxymap
-
-  # smtp      unix  -       -       n       -       -       smtp
-  smtp_with_type_unix:
-    service: smtp
-    type: unix
-    chroot: false
-    command: smtp
-
-  # relay     unix  -       -       n       -       -       smtp
-  #      -o syslog_name=postfix/$service_name
-  # #     -o smtp_helo_timeout=5 -o smtp_connect_timeout=5
-  relay:
-    type: unix
-    chroot: false
-    command: smtp
-    args:
-      - -o syslog_name=postfix/$service_name
-      - -o smtp_helo_timeout=5
-      - -o smtp_connect_timeout=5
-
-  # showq     unix  n       -       n       -       -       showq
-  showq:
-    type: unix
-    chroot: false
-    command: showq
-
-  # error     unix  -       -       n       -       -       error
-  error:
-    type: unix
-    chroot: false
-    command: error
-
-  # retry     unix  -       -       n       -       -       error
-  retry:
-    type: unix
-    chroot: false
-    command: error
-
-  # discard   unix  -       -       n       -       -       discard
-  discard:
-    type: unix
-    chroot: false
-    command: discard
-
-  # local     unix  -       n       n       -       -       local
-  local:
-    type: unix
-    unpriv: false
-    chroot: false
-    command: local
-
-  # virtual   unix  -       n       n       -       -       virtual
-  virtual:
-    type: unix
-    unpriv: false
-    chroot: false
-    command: virtual
-
-  # lmtp      unix  -       -       n       -       -       lmtp
-  lmtp:
-    type: unix
-    chroot: false
-    command: lmtp
-
-  # anvil     unix  -       -       n       -       1       anvil
-  anvil:
-    type: unix
-    chroot: false
-    maxproc: 1
-    command: anvil
-
-  # scache    unix  -       -       n       -       1       scache
-  scache:
-    type: unix
-    chroot: false
-    maxproc: 1
-    command: scache
-
-  # # postlog   unix-dgram n  -       n       -       1       postlogd
-  # postlog:
-  #   type: unix-dgram
-  #   private: false
-  #   chroot: false
-  #   maxproc: 1
-  #   command: postlogd
+# #   service   type  private unpriv  chroot  wakeup  maxproc command + args
+# #                   (yes)   (yes)   (no)    (never) (100)
+# postfix_defaults_master:
+#   # smtp      inet  n       -       n       -       -       smtpd
+#   smtp:
+#     type: inet
+#     private: false
+#     chroot: false
+#     command: smtpd
+#     args: []
+#   # smtp      inet  n       -       n       -       1       postscreen
+#   smtp_with_postscreen:
+#     service: smtp
+#     enabled: false
+#     type: inet
+#     private: false
+#     chroot: false
+#     maxproc: 1
+#     command: postscreen
+#   # smtpd     pass  -       -       n       -       -       smtpd
+#   smtpd_deactivated:
+#     service: smtpd
+#     enabled: false
+#     type: pass
+#     chroot: false
+#     command: smtpd
+#   # dnsblog   unix  -       -       n       -       0       dnsblog
+#   dnsblog:
+#     enabled: false
+#     type: unix
+#     chroot: false
+#     maxproc: 0
+#     command: dnsblog
+#   # tlsproxy  unix  -       -       n       -       0       tlsproxy
+#   tlsproxy:
+#     enabled: false
+#     type: unix
+#     chroot: false
+#     maxproc: 0
+#     command: tlsproxy
+#
+#   # Choose one: enable submission for loopback clients only, or for any client.
+#   # 127.0.0.1:submission inet n -   n       -       -       smtpd
+#   "127.0.0.1:submission":
+#     enabled: false
+#     type: inet
+#     private: false
+#     chroot: false
+#     command: smtpd
+#
+#   # submission inet n       -       n       -       -       smtpd
+#   submission:
+#     enabled: false
+#     type: inet
+#     private: false
+#     chroot: false
+#     command: smtpd
+#     args:
+#       - -o syslog_name=postfix/submission
+#       - -o smtpd_tls_security_level=encrypt
+#       - -o smtpd_sasl_auth_enable=yes
+#       - -o smtpd_tls_auth_only=yes
+#       - -o smtpd_reject_unlisted_recipient=no
+#       - -o smtpd_client_restrictions=$mua_client_restrictions
+#       - -o smtpd_helo_restrictions=$mua_helo_restrictions
+#       - -o smtpd_sender_restrictions=$mua_sender_restrictions
+#       - -o smtpd_recipient_restrictions=
+#       - -o smtpd_relay_restrictions=permit_sasl_authenticated,reject
+#       - -o milter_macro_daemon_name=ORIGINATING
+#
+#   # Choose one: enable smtps for loopback clients only, or for any client.
+#   # 127.0.0.1:smtps inet n  -       n       -       -       smtpd
+#   "127.0.0.1:smtps":
+#     enabled: false
+#     type: inet
+#     private: false
+#     chroot: false
+#     command: smtpd
+#
+#   # smtps     inet  n       -       n       -       -       smtpd
+#   smtps:
+#     enabled: false
+#     type: inet
+#     private: false
+#     chroot: false
+#     command: smtpd
+#     args:
+#       - -o syslog_name=postfix/smtps
+#       - -o smtpd_tls_wrappermode=yes
+#       - -o smtpd_sasl_auth_enable=yes
+#       - -o smtpd_reject_unlisted_recipient=no
+#       - -o smtpd_client_restrictions=$mua_client_restrictions
+#       - -o smtpd_helo_restrictions=$mua_helo_restrictions
+#       - -o smtpd_sender_restrictions=$mua_sender_restrictions
+#       - -o smtpd_recipient_restrictions=
+#       - -o smtpd_relay_restrictions=permit_sasl_authenticated,reject
+#       - -o milter_macro_daemon_name=ORIGINATING
+#
+#   # pickup    unix  n       -       n       60      1       pickup
+#   pickup:
+#     type: unix
+#     private: false
+#     chroot: false
+#     wakeup: 60
+#     maxproc: 1
+#     command: pickup
+#
+#   # cleanup   unix  n       -       n       -       0       cleanup
+#   cleanup:
+#     type: unix
+#     private: false
+#     chroot: false
+#     maxproc: 0
+#     command: cleanup
+#
+#   # qmgr      unix  n       -       n       300     1       qmgr
+#   qmgr:
+#     type: unix
+#     private: false
+#     chroot: false
+#     wakeup: 300
+#     maxproc: 1
+#     command: qmgr
+#
+#   #qmgr     unix  n       -       n       300     1       oqmgr
+#   qmgr_with_other_command:
+#     service: qmgr
+#     enabled: false
+#     type: unix
+#     private: false
+#     chroot: false
+#     wakeup: 300
+#     maxproc: 1
+#     command: oqmgr
+#
+#   # tlsmgr    unix  -       -       n       1000?   1       tlsmgr
+#   tlsmgr:
+#     type: unix
+#     chroot: false
+#     wakeup: 1000?
+#     maxproc: 1
+#     command: tlsmgr
+#
+#   # rewrite   unix  -       -       n       -       -       trivial-rewrite
+#   rewrite:
+#     type: unix
+#     chroot: false
+#     command: trivial-rewrite
+#
+#   # bounce    unix  -       -       n       -       0       bounce
+#   bounce:
+#     type: unix
+#     chroot: false
+#     maxproc: 0
+#     command: bounce
+#
+#   # defer     unix  -       -       n       -       0       bounce
+#   defer:
+#     type: unix
+#     chroot: false
+#     maxproc: 0
+#     command: bounce
+#
+#   # trace     unix  -       -       n       -       0       bounce
+#   trace:
+#     type: unix
+#     chroot: false
+#     maxproc: 0
+#     command: bounce
+#
+#   # verify    unix  -       -       n       -       1       verify
+#   verify:
+#     type: unix
+#     chroot: false
+#     maxproc: 1
+#     command: verify
+#
+#   # flush     unix  n       -       n       1000?   0       flush
+#   flush:
+#     type: unix
+#     chroot: false
+#     wakeup: 1000?
+#     maxproc: 0
+#     command: flush
+#
+#   # proxymap  unix  -       -       n       -       -       proxymap
+#   proxymap:
+#     type: unix
+#     chroot: false
+#     command: proxymap
+#
+#   # proxywrite unix -       -       n       -       1       proxymap
+#   proxywrite:
+#     type: unix
+#     chroot: false
+#     maxproc: 1
+#     command: proxymap
+#
+#   # smtp      unix  -       -       n       -       -       smtp
+#   smtp_with_type_unix:
+#     service: smtp
+#     type: unix
+#     chroot: false
+#     command: smtp
+#
+#   # relay     unix  -       -       n       -       -       smtp
+#   #      -o syslog_name=postfix/$service_name
+#   # #     -o smtp_helo_timeout=5 -o smtp_connect_timeout=5
+#   relay:
+#     type: unix
+#     chroot: false
+#     command: smtp
+#     args:
+#       - -o syslog_name=postfix/$service_name
+#       - -o smtp_helo_timeout=5
+#       - -o smtp_connect_timeout=5
+#
+#   # showq     unix  n       -       n       -       -       showq
+#   showq:
+#     type: unix
+#     chroot: false
+#     command: showq
+#
+#   # error     unix  -       -       n       -       -       error
+#   error:
+#     type: unix
+#     chroot: false
+#     command: error
+#
+#   # retry     unix  -       -       n       -       -       error
+#   retry:
+#     type: unix
+#     chroot: false
+#     command: error
+#
+#   # discard   unix  -       -       n       -       -       discard
+#   discard:
+#     type: unix
+#     chroot: false
+#     command: discard
+#
+#   # local     unix  -       n       n       -       -       local
+#   local:
+#     type: unix
+#     unpriv: false
+#     chroot: false
+#     command: local
+#
+#   # virtual   unix  -       n       n       -       -       virtual
+#   virtual:
+#     type: unix
+#     unpriv: false
+#     chroot: false
+#     command: virtual
+#
+#   # lmtp      unix  -       -       n       -       -       lmtp
+#   lmtp:
+#     type: unix
+#     chroot: false
+#     command: lmtp
+#
+#   # anvil     unix  -       -       n       -       1       anvil
+#   anvil:
+#     type: unix
+#     chroot: false
+#     maxproc: 1
+#     command: anvil
+#
+#   # scache    unix  -       -       n       -       1       scache
+#   scache:
+#     type: unix
+#     chroot: false
+#     maxproc: 1
+#     command: scache
+#
+#   # # postlog   unix-dgram n  -       n       -       1       postlogd
+#   # postlog:
+#   #   type: unix-dgram
+#   #   private: false
+#   #   chroot: false
+#   #   maxproc: 1
+#   #   command: postlogd
 
 ...

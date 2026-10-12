@@ -1,0 +1,72 @@
+{% set values = postfix_non | bodsch.core.remove_empty_values() %}
+
+# --[non]--------------------------------------------------
+{% if values is defined and
+      values | count > 0 %}
+
+  {% if values.bdb.custom_mapping is defined and
+        values.bdb.custom_mapping | string | length > 0 %}
+non_bdb_custom_mapping                    = {{ values.bdb.custom_mapping }}
+  {% endif %}
+  {% if values.bdb.migration_allow_root_prefixes is defined and
+        values.bdb.migration_allow_root_prefixes | count > 0 %}
+    {% if values.bdb.migration_allow_root_prefixes | bodsch.core.type == "list" %}
+non_bdb.migration_allow_root_prefixes     =
+    {{ values.bdb.migration_allow_root_prefixes | join("\n") | indent(4) }}
+    {% else %}
+non_bdb_migration_allow_root_prefixes     = {{ values.bdb.migration_allow_root_prefixes }}
+    {% endif %}
+  {% endif %}
+  {% if values.bdb.migration_allow_user_prefixes is defined and
+        values.bdb.migration_allow_user_prefixes | count > 0 %}
+    {% if values.bdb.migration_allow_user_prefixes | bodsch.core.type == "list" %}
+non_bdb.migration_allow_user_prefixes     =
+    {{ values.bdb.migration_allow_user_prefixes | join("\n") | indent(4) }}
+    {% else %}
+non_bdb_migration_allow_user_prefixes     = {{ values.bdb.migration_allow_user_prefixes }}
+    {% endif %}
+  {% endif %}
+  {% if values.bdb.migration_level is defined and
+        values.bdb.migration_level | string | length > 0 %}
+non_bdb_migration_level                   = {{ values.bdb.migration_level }}
+  {% endif %}
+  {% if values.bdb.migration_log_redirect is defined and
+        values.bdb.migration_log_redirect | string | length > 0 %}
+non_bdb_migration_log_redirect            = {{ values.bdb.migration_log_redirect | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
+  {% endif %}
+  {% if values.bdb.migration_service_name is defined and
+        values.bdb.migration_service_name | string | length > 0 %}
+non_bdb_migration_service_name            = {{ values.bdb.migration_service_name }}
+  {% endif %}
+  {% if values.empty_end_of_header_action is defined and
+        values.empty_end_of_header_action | string | length > 0 %}
+non_empty_end_of_header_action            = {{ values.empty_end_of_header_action }}
+  {% endif %}
+  {% if values.fqdn_reject_code is defined and
+        values.fqdn_reject_code | string | length > 0 %}
+non_fqdn_reject_code            = {{ values.fqdn_reject_code }}
+  {% endif %}
+  {% if values.smtpd_milters is defined and
+        values.smtpd_milters | count > 0 %}
+    {% if values.smtpd_milters | bodsch.core.type == "list" %}
+non_smtpd_milters                         =
+    {{ values.smtpd_milters | join("\n") | indent(4) }}
+    {% else %}
+non_smtpd_milters                         = {{ values.smtpd_milters }}
+    {% endif %}
+  {% endif %}
+{% endif %}
+# ---------------------------------------------------------
+{#
+postconf | grep non_
+
+## non_bdb_custom_mapping =
+## non_bdb.migration_allow_root_prefixes = /etc /usr/local/etc
+## non_bdb.migration_allow_user_prefixes = $data_directory /var/lib/mailman /var/lib/mailman3
+## non_bdb_migration_level = disable
+## non_bdb_migration_log_redirect = yes
+## non_bdb_migration_service_name = nbdb_reindex
+## non_empty_end_of_header_action = fix_quietly
+## non_fqdn_reject_code = 504
+## non_smtpd_milters =
+#}

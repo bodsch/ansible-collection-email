@@ -107,11 +107,14 @@ def test_listening_socket(host, get_vars):
     for i in eth:
         print(i)
 
+    #  tcp://172.17.0.2:465
+    #  tcp://172.17.0.2:587
+
     distribution = host.system_info.distribution
     release = host.system_info.release
 
     bind_address = eth[0]
-    bind_port = 25
+    bind_port = 587
     socket_name = "private/smtp"
 
     listen = []

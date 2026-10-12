@@ -1,19 +1,26 @@
-{% set _postfix_inet = postfix_inet | bodsch.core.remove_empty_values() %}
-# ---------------------------------------------------------
+{% set values = postfix_inet | bodsch.core.remove_empty_values() %}
 
-{% if _postfix_inet.interfaces is defined and
-      _postfix_inet.interfaces | length > 0 %}
-  {% if _postfix_inet.interfaces is string %}
-inet_interfaces                           = {{ _postfix_inet.interfaces }}
-  {% else %}
-inet_interfaces                           = {{ _postfix_inet.interfaces | join(", ") }}
+# --[inet]-------------------------------------------------
+{% if values is defined and
+      values | count > 0 %}
+
+  {% if values.interfaces is defined and
+        values.interfaces | length > 0 %}
+    {% if values.interfaces is string %}
+inet_interfaces                           = {{ values.interfaces }}
+    {% else %}
+inet_interfaces                           = {{ values.interfaces | join(", ") }}
+    {% endif %}
+  {% endif %}
+  {% if values.protocols is defined and
+        values.protocols | length > 0 %}
+    {% if values.protocols is string %}
+inet_protocols                            = {{ values.protocols }}
+    {% else %}
+inet_protocols                            = {{ values.protocols | join(", ") }}
+    {% endif %}
   {% endif %}
 {% endif %}
-{% if _postfix_inet.protocols is defined and
-      _postfix_inet.protocols | length > 0 %}
-  {% if _postfix_inet.protocols is string %}
-inet_protocols                            = {{ _postfix_inet.protocols }}
-  {% else %}
-inet_protocols                            = {{ _postfix_inet.protocols | join(", ") }}
-  {% endif %}
-{% endif %}
+# ---------------------------------------------------------
+{#
+#}

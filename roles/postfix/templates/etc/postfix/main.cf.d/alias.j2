@@ -1,3 +1,22 @@
+{% set values = postfix_alias | bodsch.core.remove_empty_values() %}
 
-alias_database                            = {{ postfix_alias.database_file }}
-alias_maps                                = {{ postfix_alias.maps_file }}
+# --[alias]------------------------------------------------
+{% if values is defined and
+      values | count > 0 %}
+
+  {% if values.database is defined and
+        values.database | string | length > 0 %}
+alias_database                            = {{ values.database }}
+  {% endif %}
+  {% if values.maps is defined and
+        values.maps | string | length > 0 %}
+alias_maps                                = {{ values.maps }}
+  {% endif %}
+{% endif %}
+# ---------------------------------------------------------
+{#
+# postconf | grep -E "^alias_"
+alias_database = lmdb:/etc/aliases
+alias_maps = lmdb:/etc/aliases
+postconf: warning: /etc/postfix/main.cf: support for parameter "smtp_use_tls" will be removed; instead, specify "smtp_tls_security_level"
+#}

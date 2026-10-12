@@ -1,19 +1,26 @@
-{% set _postfix_maillog = postfix_maillog | bodsch.core.remove_empty_values() %}
-# ---------------------------------------------------------
+{% set values = postfix_maillog | bodsch.core.remove_empty_values() %}
 
-{% if _postfix_maillog.file is defined and
-      _postfix_maillog.file | string | length > 0 %}
-maillog_file                              = {{ _postfix_maillog.file }}
+# --[maillog]----------------------------------------------
+{% if values is defined and
+      values | count > 0 %}
+
+  {% if values.file is defined and
+        values.file | string | length > 0 %}
+maillog_file                              = {{ values.file }}
+  {% endif %}
+  {% if values.file_compressor is defined and
+        values.file_compressor | string | length > 0 %}
+maillog_file_compressor                   = {{ values.file_compressor }}
+  {% endif %}
+  {% if values.file_prefixes is defined and
+        values.file_prefixes | length > 0 %}
+maillog_file_prefixes                     = {{ values.file_prefixes | join(", ") }}
+  {% endif %}
+  {% if values.file_rotate_suffix is defined and
+        values.file_rotate_suffix | string | length > 0 %}
+maillog_file_rotate_suffix                = {{ values.file_rotate_suffix }}
+  {% endif %}
 {% endif %}
-{% if _postfix_maillog.file_compressor is defined and
-      _postfix_maillog.file_compressor | string | length > 0 %}
-maillog_file_compressor                   = {{ _postfix_maillog.file_compressor }}
-{% endif %}
-{% if _postfix_maillog.file_prefixes is defined and
-      _postfix_maillog.file_prefixes | length > 0 %}
-maillog_file_prefixes                     = {{ _postfix_maillog.file_prefixes | join(", ") }}
-{% endif %}
-{% if _postfix_maillog.file_rotate_suffix is defined and
-      _postfix_maillog.file_rotate_suffix | string | length > 0 %}
-maillog_file_rotate_suffix                = {{ _postfix_maillog.file_rotate_suffix }}
-{% endif %}
+# ---------------------------------------------------------
+{#
+#}

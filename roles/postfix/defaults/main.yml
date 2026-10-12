@@ -62,7 +62,7 @@ postfix_virtual_backends:
   mysql: []
 
 # /etc/postfix/master.cf
-postfix_master: {}
+postfix_master: []
 postfix_raw_options: []
 
 ...
