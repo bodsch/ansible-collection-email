@@ -1,0 +1,25 @@
+---
+
+mailmonkey_version: 1.2.0
+
+mailmonkey_system_user:
+  owner:  mailmonkey
+  group: mailmonkey
+
+mailmonkey_acme_system_user:
+  owner:  mailmonkey-acme
+  group: mailmonkey-acme
+
+mailmonkey_acme_groups:
+  - adm
+
+mailmonkey_config_dir: /etc/mailmonkey
+
+mailmonkey_direct_download: false
+
+mailmonkey_release: {}
+mailmonkey_service: {}
+
+mailmonkey_config: {}
+mailmonkey_acme: {}
+...

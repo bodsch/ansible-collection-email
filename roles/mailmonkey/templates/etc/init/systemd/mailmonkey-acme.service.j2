@@ -1,0 +1,63 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+# {{ ansible_managed }}
+
+[Unit]
+Description                 = mail-monkey certificate renewal
+After                       = network-online.target mariadb.service
+Wants                       = network-online.target
+
+[Service]
+Type                        = simple
+User                        = mailmonkey-acme
+Group                       = mailmonkey-acme
+
+ExecStart                   = /usr/bin/mailmonkey-acme -config /etc/mailmonkey/acme.yaml
+
+# LoadCredential            = db-password:/etc/mailmonkey/secrets/acme-db-password
+
+Restart                     = on-failure
+RestartSec                  = 30s
+
+# The only places it writes. The certificates are state systemd creates for
+# it: /var/lib/mailmonkey/certs, 0755 like the directories certstore makes —
+# the keys inside are 0600.
+StateDirectory              = mailmonkey/certs
+StateDirectoryMode          = 0755
+# The leading "-" is not optional. Without it a missing path fails the unit
+# with 226/NAMESPACE before the binary runs: under acme.dns.challenge there is
+# no challenge directory at all, and without DNS-01 the binary's own refusal —
+# the one naming the path and the nginx block — would never be printed.
+ReadWritePaths              = -/var/www/acme/.well-known/acme-challenge
+
+# Hardening. Not PrivateUsers=: polkit decides by the caller's uid, and a
+# remapped one is nobody it has a rule for.
+UMask                       = 0022
+NoNewPrivileges             = yes
+CapabilityBoundingSet       =
+AmbientCapabilities         =
+ProtectSystem               = strict
+ProtectHome                 = yes
+PrivateTmp                  = yes
+PrivateDevices              = yes
+ProtectKernelTunables       = yes
+ProtectKernelModules        = yes
+ProtectKernelLogs           = yes
+ProtectControlGroups        = yes
+ProtectClock                = yes
+ProtectHostname             = yes
+ProtectProc                 = invisible
+RestrictAddressFamilies     = AF_UNIX AF_INET AF_INET6
+RestrictNamespaces          = yes
+RestrictRealtime            = yes
+RestrictSUIDSGID            = yes
+LockPersonality             = yes
+MemoryDenyWriteExecute      = yes
+RemoveIPC                   = yes
+SystemCallArchitectures     = native
+SystemCallFilter            = @system-service
+# Not ~@resources: it holds setrlimit, with which the Go runtime raises its
+# soft limit on open files at start. Denied, a web server stays at 1024.
+SystemCallFilter            = ~@privileged
+
+[Install]
+WantedBy                    = multi-user.target

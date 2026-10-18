@@ -1,0 +1,49 @@
+---
+
+- name: daemon-reload
+  when:
+    - ansible_facts.service_mgr | lower == "systemd"
+  become: true
+  ansible.builtin.systemd:
+    daemon_reload: true
+    force: true
+
+- name: reload mailmonkey
+  when:
+    - not running_in_check_mode
+  become: true
+  ansible.builtin.service:
+    name: mailmonkey
+    state: reloaded
+
+- name: restart mailmonkey
+  when:
+    - not running_in_check_mode
+  become: true
+  ansible.builtin.service:
+    name: mailmonkey
+    state: restarted
+
+- name: simple restart mailmonkey
+  become: true
+  ansible.builtin.service:
+    name: mailmonkey
+    state: restarted
+
+- name: reload mailmonkey_acme
+  when:
+    - not running_in_check_mode
+  become: true
+  ansible.builtin.service:
+    name: mailmonkey-acme
+    state: reloaded
+
+- name: restart mailmonkey_acme
+  when:
+    - not running_in_check_mode
+  become: true
+  ansible.builtin.service:
+    name: mailmonkey-acme
+    state: restarted
+
+...

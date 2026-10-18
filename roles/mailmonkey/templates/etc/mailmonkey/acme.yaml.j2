@@ -1,0 +1,139 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+# {{ ansible_managed }}
+
+{% set values = mailmonkey_acme | bodsch.email.mailmonkey_acme_passwords() %}
+{% set values = values | bodsch.core.remove_empty_values() %}
+
+{#
+{% if values.db is defined and
+      values.db.password is defined and
+      values.db.password_file is defined and
+%}
+
+{% endif %}
+#}
+
+# mailmonkey-acme configuration — /etc/mailmonkey/acme.yaml
+
+log:
+  {{ values.get("log") | to_nice_yaml(indent=0,sort_keys=False) | indent(2, False) }}
+
+db:
+  {{ values.get("db") | to_nice_yaml(indent=0,sort_keys=False) | indent(2, False) }}
+
+mail:
+  {{ values.get("mail") | to_nice_yaml(indent=0,sort_keys=False) | indent(2, False) }}
+
+mta_sts:
+  {{ values.get("mta_sts") | to_nice_yaml(indent=0,sort_keys=False) | indent(2, False) }}
+
+acme:
+  {{ values.get("acme") | to_nice_yaml(indent=0,sort_keys=False) | indent(2, False) }}
+
+{#
+log:
+  level: info          # debug | info | warn | error
+  format: json         # json | text  (json for journald, text to read)
+
+# Usually a narrower account than the web service's: this service reads the
+# domain list and writes nothing but its own state.
+db:
+  socket: /run/mysqld/mysqld.sock
+  # host: 127.0.0.1                        # (instead of socket)
+  # port: 3306                             # (with host; default 3306)
+  user: mailmonkey_acme
+  # password: secret
+  password_file: /etc/mailmonkey/acme-db-password
+  name: mailmonkey                         # (default mailmonkey)
+  # dsn: mailmonkey_acme:secret@unix(/run/mysqld/mysqld.sock)/mailmonkey   # instead of the parts
+  # dsn_file: /etc/mailmonkey/acme-db-dsn
+
+# The same values as in mailmonkey.yaml.
+mail:
+  hostname: mx.example.com                 # the certificate's primary name
+  ipv4: 203.0.113.25                       # answers the pre-flight IP check without
+  # ipv6: "2001:db8::25"                   #   asking anybody for this host's address
+
+mta_sts:
+  mode: ""                                 # none | testing | enforce
+  max_age: 604800
+
+acme:
+  metrics_listen: ""
+  cert_dir: /var/lib/mailmonkey/certs
+  # Where the generated placeholder pair lives; defaults to <cert_dir>/placeholder.
+  # fallback_dir: /var/lib/mailmonkey/certs/placeholder
+
+  # Use staging while setting a deployment up. Let's Encrypt's production rate
+  # limits are low enough that one typo locks you out for a week.
+  #
+  # true selects Let's Encrypt's staging CA. Mutually exclusive with
+  # directory_url, which names any ACME CA; the store records which one issued
+  # each certificate and replaces them when it changes.
+  staging: false
+  # directory_url: https://acme-v02.api.letsencrypt.org/directory
+
+  # The address the CA writes to about expiry. Optional, and worth setting: it is
+  # the only warning anyone gets if this service stops running.
+  contact: postmaster@example.com
+
+  # Where the HTTP-01 challenge is written, served by whatever fronts port 80.
+  webroot: /var/www/acme
+
+  # The resolver the pre-flight checks ask. Stated rather than taken from the
+  # host, so a stale local cache does not make every check disagree with the
+  # world.
+  resolver: "1.1.1.1:53"
+
+  # The systemd units told to pick up a new certificate.
+  reload_units: [postfix, dovecot]
+
+  # DNS-01 instead of HTTP-01. The only way to obtain a wildcard, and the only
+  # way that works when port 80 is not reachable.
+  dns:
+    challenge: false
+    provider: ""                           # a lego provider name, e.g. cloudflare
+    # KEY=value lines, put into the process environment at start, because lego's
+    # providers read their credentials there. The one place this service takes
+    # anything from the environment; see documentation/deployment.md.
+    config: ""                             # path to that provider's credentials
+
+  certificate:
+    # Extra names. An entry ending in ".*" is a subdomain label added to every
+    # domain rather than a name of its own.
+    additional_san: []
+
+    # Request nothing but the mail hostname, ignoring the database. How a
+    # deployment is brought up before its domains exist.
+    only_hostname: false
+
+    # autoconfig, autodiscover and mta-sts for every domain. On by default,
+    # because this program serves those endpoints itself and a certificate
+    # missing them makes them unusable — without anything failing loudly.
+    autodiscover_san: true
+
+    # One certificate per domain instead of one carrying every name.
+    sni: false
+
+    # Waive a pre-flight check. For deployments where the check cannot succeed
+    # even though issuance can — behind a NAT the detector cannot see through.
+    skip_ip_check: false
+    skip_http_verification: false
+
+    # How many replaced copies a certificate keeps. 0 means unlimited.
+    keep_backups: 10
+
+    # How long before expiry to renew.
+    renew_before: 720h
+
+  # The pauses between runs, by outcome.
+  timing:
+    check_interval: 1h                     # nothing to do
+    retry_interval: 10m                    # the run failed
+    stall_interval: 6h                     # nothing could be validated at all — longer,
+                                           #   because the cause is usually DNS somebody
+                                           #   has to go and change
+    verify_settle: 10s                     # wait after a reload before asking what the
+                                           #   services present
+    verify_attempts: 3
+#}

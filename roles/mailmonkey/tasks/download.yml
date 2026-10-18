@@ -1,0 +1,145 @@
+---
+
+- name: define download information
+  ansible.builtin.set_fact:
+    mailmonkey_release: "{{ mailmonkey_defaults_release | combine(mailmonkey_release, recursive=True) }}"
+
+- name: resolve mailmonkey release
+  when:
+    - not running_in_check_mode
+  delegate_to: localhost
+  become: false
+  run_once: true
+  bodsch.scm.scm_release:
+    provider: forgejo
+    host: "https://git.boone-schulz.de"
+    project: go
+    repository: mailmonkey
+    asset: "mailmonkey_{version}.tar.gz"
+    # architecture: "{{ ansible_facts.architecture }}"
+    # system: "{{ ansible_facts.system }}"
+    version: "{{ mailmonkey_version }}"
+    password: "{{ lookup('env', 'GH_TOKEN') | default(omit) }}"
+  register: _release
+
+- name: re-define mailmonkey_version
+  when:
+    - not running_in_check_mode
+    - mailmonkey_version == "latest"
+    - _release.version is defined
+    - _release.version | length > 0
+  ansible.builtin.set_fact:
+    mailmonkey_version: "{{ _release.version }}"
+
+- name: detect the downloaded mailmonkey archive
+  when:
+    - not running_in_check_mode
+  become: false
+  delegate_to: "{{ mailmonkey_delegate_to }}"
+  run_once: "{{ 'false' if mailmonkey_direct_download else 'true' }}"
+  ansible.builtin.stat:
+    path: "{{ mailmonkey_local_tmp_directory }}/{{ mailmonkey_release.file }}"
+  register: mailmonkey_stat_archive
+
+- name: define delegate instance for download handling
+  when:
+    - not running_in_check_mode
+    - mailmonkey_direct_download
+  ansible.builtin.set_fact:
+    mailmonkey_delegate_to: "{{ ansible_facts.host }}"
+    mailmonkey_local_tmp_directory: "{{
+      lookup('env', 'CUSTOM_LOCAL_TMP_DIRECTORY') |
+      default('/var/cache/ansible/mailmonkey', true) }}/{{ mailmonkey_version }}"
+
+- name: create download directory
+  when:
+    - not running_in_check_mode
+  become: false
+  delegate_to: "{{ mailmonkey_delegate_to }}"
+  run_once: "{{ 'false' if mailmonkey_direct_download else 'true' }}"
+  ansible.builtin.file:
+    path: "{{ mailmonkey_local_tmp_directory }}"
+    state: directory
+    mode: "0750"
+  check_mode: false
+
+- name: detect the downloaded mailmonkey archive
+  when:
+    - not running_in_check_mode
+  become: false
+  delegate_to: "{{ mailmonkey_delegate_to }}"
+  run_once: "{{ 'false' if mailmonkey_direct_download else 'true' }}"
+  ansible.builtin.stat:
+    path: "{{ mailmonkey_local_tmp_directory }}/{{ _release.file }}"
+  register: stat_mailmonkey_archive
+
+- name: download
+  when:
+    - not running_in_check_mode
+    - mailmonkey_stat_archive.stat is defined
+    - not mailmonkey_stat_archive.stat.exists | default('false')
+  block:
+
+    - name: download mailmonkey binary archive
+      become: false
+      delegate_to: "{{ mailmonkey_delegate_to }}"
+      run_once: "{{ 'false' if mailmonkey_direct_download else 'true' }}"
+      ansible.builtin.get_url:
+        url: "{{ _release.download_url }}"
+        username: "{{ lookup('env', 'GH_USER') | default(omit) }}"
+        password: "{{ lookup('env', 'GH_TOKEN') | default(omit) }}"
+        dest: "{{ mailmonkey_local_tmp_directory }}/{{ _release.file }}"
+        checksum: "{{ _release.checksum_string | default(omit) }}"
+        mode: "0640"
+      register: _download_archive
+      until: _download_archive is succeeded
+      retries: 5
+      delay: 2
+      check_mode: false
+
+  rescue:
+    - name: delete download directory
+      become: false
+      delegate_to: "{{ mailmonkey_delegate_to }}"
+      run_once: "{{ 'false' if mailmonkey_direct_download else 'true' }}"
+      ansible.builtin.file:
+        path: "{{ mailmonkey_local_tmp_directory }}"
+        state: absent
+
+    - name: exit with fail
+      ansible.builtin.fail:
+        msg: A serious error occurred when downloading the archive.
+
+- name: detect downloaded file
+  become: false
+  delegate_to: "{{ mailmonkey_delegate_to }}"
+  run_once: "{{ 'false' if mailmonkey_direct_download else 'true' }}"
+  ansible.builtin.stat:
+    path: "{{ mailmonkey_local_tmp_directory }}/{{ _release.file }}"
+  register: mailmonkey_stat_archive
+
+- name: detect extracted binary
+  become: false
+  delegate_to: "{{ mailmonkey_delegate_to }}"
+  run_once: "{{ 'false' if mailmonkey_direct_download else 'true' }}"
+  ansible.builtin.stat:
+    path: "{{ mailmonkey_local_tmp_directory }}/{{ mailmonkey_release.binary }}"
+  register: mailmonkey_stat_binary
+
+- name: extract mailmonkey archive
+  when:
+    - not running_in_check_mode
+    - mailmonkey_stat_archive.stat is defined
+    - mailmonkey_stat_archive.stat.exists | default('false') | bool
+    - mailmonkey_stat_archive.stat.mimetype in ["application/zip","application/gzip"]
+    - mailmonkey_stat_binary.stat is defined
+    - not mailmonkey_stat_binary.stat.exists | default('false') | bool
+  become: false
+  delegate_to: "{{ mailmonkey_delegate_to }}"
+  run_once: "{{ 'false' if mailmonkey_direct_download else 'true' }}"
+  ansible.builtin.unarchive:
+    src: "{{ mailmonkey_local_tmp_directory }}/{{ _release.file }}"
+    dest: "{{ mailmonkey_local_tmp_directory }}/"
+    remote_src: "{{ 'true' if mailmonkey_direct_download else 'false' }}"
+    extra_opts:
+      - --strip-components=1

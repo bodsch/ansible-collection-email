@@ -1,0 +1,113 @@
+---
+
+- name: merge mailmonkey configuration between defaults and custom
+  ansible.builtin.set_fact:
+    # mailmonkey_service: "{{ mailmonkey_defaults_service | combine(mailmonkey_service, recursive=True) }}"
+    mailmonkey_config: "{{ mailmonkey_defaults_config | combine(mailmonkey_config, recursive=True) }}"
+    mailmonkey_acme: "{{ mailmonkey_defaults_acme | combine(mailmonkey_acme, recursive=True) }}"
+    # mailmonkey_remote_write: "{{ mailmonkey_defaults_remote_write | union(mailmonkey_remote_write) }}"
+    # mailmonkey_remote_read: "{{ mailmonkey_defaults_remote_read | union(mailmonkey_remote_read) }}"
+    # mailmonkey_storage: "{{ mailmonkey_defaults_storage | combine(mailmonkey_storage, recursive=True) }}"
+    # mailmonkey_tracing: "{{ mailmonkey_defaults_tracing | combine(mailmonkey_tracing, recursive=True) }}"
+    # mailmonkey_rule_files: "{{ mailmonkey_defaults_rule_files | union(mailmonkey_rule_files) }}"
+    # mailmonkey_scrape_configs: "{{ mailmonkey_defaults_scrape_configs | union(mailmonkey_scrape_configs) }}"
+
+- name: create secrets
+  when:
+    - not running_in_check_mode
+  block:
+    - name: "mailmonkey: db password"
+      when:
+        - mailmonkey_config.db.password | default('') | string | length > 0
+        - mailmonkey_config.db.password_file | default('') | string | length > 0
+      ansible.builtin.copy:
+        dest: "{{ mailmonkey_config.db.password_file }}"
+        content: "{{ mailmonkey_config.db.password }}"
+        owner: "{{ mailmonkey_system_user.owner }}"
+        group: "{{ mailmonkey_system_user.group }}"
+        mode: "0600"
+      no_log: true
+
+    - name: "mailmonkey: totp key"
+      when:
+        - mailmonkey_config.totp.key | default('') | string | length > 0
+        - mailmonkey_config.totp.key_file | default('') | string | length > 0
+      ansible.builtin.copy:
+        dest: "{{ mailmonkey_config.totp.key_file }}"
+        content: "{{ mailmonkey_config.totp.key }}"
+        owner: "{{ mailmonkey_system_user.owner }}"
+        group: "{{ mailmonkey_system_user.group }}"
+        mode: "0600"
+      no_log: true
+
+    - name: "mailmonkey: redis password"
+      when:
+        - mailmonkey_config.redis.password | default('') | string | length > 0
+        - mailmonkey_config.redis.password_file | default('') | string | length > 0
+      ansible.builtin.copy:
+        dest: "{{ mailmonkey_config.redis.password_file }}"
+        content: "{{ mailmonkey_config.redis.password }}"
+        owner: "{{ mailmonkey_system_user.owner }}"
+        group: "{{ mailmonkey_system_user.group }}"
+        mode: "0600"
+      no_log: true
+
+    - name: "mailmonkey: bootstrap password"
+      when:
+        - mailmonkey_config.bootstrap.admin | default('') | string | length > 0
+        - mailmonkey_config.bootstrap.password | default('') | string | length > 0
+        - mailmonkey_config.bootstrap.password_file | default('') | string | length > 0
+      ansible.builtin.copy:
+        dest: "{{ mailmonkey_config.bootstrap.password_file }}"
+        content: "{{ mailmonkey_config.bootstrap.password }}"
+        owner: "{{ mailmonkey_system_user.owner }}"
+        group: "{{ mailmonkey_system_user.group }}"
+        mode: "0600"
+      no_log: true
+
+    - name: "mailmonkey-acme: db password"
+      when:
+        - mailmonkey_acme.db.password | default('') | string | length > 0
+        - mailmonkey_acme.db.password_file | default('') | string | length > 0
+      ansible.builtin.copy:
+        dest: "{{ mailmonkey_acme.db.password_file }}"
+        content: "{{ mailmonkey_acme.db.password }}"
+        owner: "{{ mailmonkey_acme_system_user.owner }}"
+        group: "{{ mailmonkey_acme_system_user.group }}"
+        mode: "0600"
+      no_log: true
+
+- name: create acme.yaml
+  when:
+    - not running_in_check_mode
+  ansible.builtin.template:
+    src: etc/mailmonkey/acme.yaml.j2
+    dest: "{{ mailmonkey_config_dir }}/acme.yaml"
+    force: true
+    owner: "{{ mailmonkey_acme_system_user.owner }}"
+    group: "{{ mailmonkey_acme_system_user.group }}"
+    mode: "0640"
+    backup: true
+  register: mailmonkey_acme_config
+  notify:
+    # - validate mailmonkey config
+    - reload mailmonkey_acme
+
+- name: create mailmonkey.yaml
+  when:
+    - not running_in_check_mode
+  ansible.builtin.template:
+    src: etc/mailmonkey/mailmonkey.yaml.j2
+    dest: "{{ mailmonkey_config_dir }}/mailmonkey.yaml"
+    force: true
+    owner: "{{ mailmonkey_system_user.owner }}"
+    group: "{{ mailmonkey_system_user.group }}"
+    mode: "0640"
+    backup: true
+  register: mailmonkey_config
+  notify:
+    # - validate mailmonkey config
+    - reload mailmonkey
+
+
+...

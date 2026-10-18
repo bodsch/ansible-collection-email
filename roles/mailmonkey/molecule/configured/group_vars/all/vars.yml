@@ -1,0 +1,248 @@
+---
+
+postfix_inet:
+  interfaces:
+    - "{{ ansible_facts.default_ipv4.address }}"
+
+postfix_aliases:
+  - root: you@yourdomain.org
+
+postfix_users:
+  sasl_auth:
+    - username: "postmaster@localhost"
+      password: "foofoo"
+      host: "mail.foo.bar"
+      port: 2525
+      description: "sasl credentials for postmaster"
+    - username: acc1@gmail.com
+      password: passwd2
+      host: smtp.gmail.com
+      port: 587
+    - username: account1@gmail.com
+      password: passwd1
+    - username: acc2@gmail.com
+      password: passwd2
+  relay:
+    - description: "relay for account1@gmail.com. see: sasl auth"
+      username: account1@gmail.com
+      host: smtp.gmail.com
+      port: 587
+    - username: acc2@gmail.com
+      host: smtp.gmail.com
+      port: 587
+
+postfix_smtpd:
+  banner: "$myhostname ESMTP $mail_name"
+  recipient_restrictions:
+    - check_recipient_mx_access
+    # - proxy:mysql:/opt/postfix/conf/sql/mysql_mbr_access_maps.cf
+    - permit_sasl_authenticated
+    - permit_mynetworks
+    # - check_recipient_access proxy:mysql:/opt/postfix/conf/sql/mysql_tls_enforce_in_policy.cf
+    - reject_invalid_helo_hostname
+    - reject_unauth_destination
+  data_restrictions:
+    - reject_unauth_pipelining
+    - permit
+  sender_restrictions:
+    - reject_authenticated_sender_login_mismatch
+    - permit_mynetworks
+    - permit_sasl_authenticated
+    - reject_unlisted_sender
+    - reject_unknown_sender_domain
+  relay_restrictions:
+    - permit_mynetworks
+    - permit_sasl_authenticated
+    - defer_unauth_destination
+    - reject_unauth_destination
+  milters:
+    - inet:127.0.0.1:11332
+
+postfix_smtp:
+  use_tls: true
+  generic_maps_file: "lmdb:/etc/postfix/generic"
+  header_checks_file: "lmdb:/etc/postfix/header_checks"
+  sasl:
+    auth:
+      enable: true
+    password_maps: "lmdb:/etc/postfix/sasl_passwd"
+    security_options: noanonymous
+    tls:
+      security_options: noanonymous
+    mechanism_filter: ""
+
+postfix_relay:
+  use_tls: true
+  host: 'mail.test.com'
+  mxlookup: false
+  port: 587
+
+postfix_header:
+  checks:
+    - pattern: "/^Message-ID:.*"
+      action: "DUNNO"
+    - pattern: /^Message-ID:.*@(porcupine\.org)/"
+      action: "reject"
+      text: "forged domain name in Message-ID: header: $1"
+  checks_file: ""
+
+postfix_virtual:
+  aliases:
+    - virtual: webmaster@yourdomain.com
+      alias: personal_email@gmail.com
+    - virtual: billandbob@yourdomain.com
+      alias: bill@gmail.com, bob@gmail.com
+    - virtual: ann-katrin@yourdomain.com
+      aliases:
+        - ann@gmail.com
+        - bob@gmail.com
+        - katrin@gmail.com
+
+postfix_sender:
+  canonical_maps:
+    - sender: '/^((root|dbsupport|helpdesk).*)matrix[.]lan$/'
+      rewrite: tech.nick@boone-schulz.de
+    - sender: root
+      rewrite: tech.nick@boone-schulz.de
+    - sender: root@matrix.lan
+      rewrite: tech.nick@boone-schulz.de
+  dependent_relayhost_maps:
+    - pattern: 'logcheck@yourdomain.org'
+      result: 'DUNNO'
+    - pattern: 'pflogsumm@yourdomain.org'
+      result: 'DUNNO'
+    - pattern: '*'
+      result: "smtp:{{ ansible_facts.lo['ipv4']['address'] }}:1025"
+
+postfix_non:
+  bdb:
+    custom_mapping: ""
+    migration_allow_root_prefixes: []                                     # [ /etc /usr/local/etc ]
+    migration_allow_user_prefixes: []                                     # [$data_directory /var/lib/mailman /var/lib/mailman3]
+    migration_level: ""                                                   # disable
+    migration_log_redirect: ""                                            # yes
+    migration_service_name: ""                                            # nbdb_reindex
+  empty_end_of_header_action: ""                                          # fix_quietly
+  fqdn_reject_code: ""                                                    # 504
+  smtpd_milters:
+    - inet:127.0.0.1:11332
+
+postfix_milter:
+  connect_macros: "j {daemon_name} {daemon_addr} v _"
+  mail_macros: "i {mail_addr} {client_addr} {client_name} {auth_authen}"
+  default_action: accept
+
+postfix_recipient:
+  canonical_maps_files: ""
+  canonical_maps: []
+
+postfix_transport:
+  maps:
+    - "lmdb:{{ postfix_maps_directory }}/transport_maps"
+#    - "pcre:{{ postfix_maps_directory }}/local_transport"
+  transport_maps:
+    - pattern: 'root@yourdomain.org'
+      result: ':'
+    - pattern: '*'
+      result: "smtp:{{ ansible_facts.lo['ipv4']['address'] }}:1025"
+
+postfix_postscreen:
+  enable: true
+  dnsbl_sites:
+    - wl.mailspike.net=127.0.0.[18;19;20]*-2
+    - hostkarma.junkemailfilter.com=127.0.0.1*-2
+    - list.dnswl.org=127.0.[0..255].0*-2
+    - list.dnswl.org=127.0.[0..255].1*-4
+    - list.dnswl.org=127.0.[0..255].2*-6
+    - list.dnswl.org=127.0.[0..255].3*-8
+    - ix.dnsbl.manitu.net*2
+    - bl.spamcop.net*2
+    - bl.suomispam.net*2
+    # - hostkarma.junkemailfilter.com=127.0.0.2*3
+    # - hostkarma.junkemailfilter.com=127.0.0.4*2
+    # - hostkarma.junkemailfilter.com=127.0.1.2*1
+
+
+
+# postfix_proxy:
+#   read_maps:
+#     - "proxy:mysql:/opt/postfix/conf/sql/mysql_sasl_passwd_maps_transport_maps.cf"
+#     - "proxy:mysql:/opt/postfix/conf/sql/mysql_mbr_access_maps.cf"
+#     - "proxy:mysql:/opt/postfix/conf/sql/mysql_tls_enforce_in_policy.cf"
+#     - "$sender_dependent_default_transport_maps"
+#     - "$smtp_tls_policy_maps"
+#     - "$local_recipient_maps"
+#     - "$mydestination"
+#     - "$virtual_alias_maps"
+#     - "$virtual_alias_domains"
+#     - "$virtual_mailbox_maps"
+#     - "$virtual_mailbox_domains"
+#     - "$relay_recipient_maps"
+#     - "$relay_domains"
+#     - "$canonical_maps"
+#     - "$sender_canonical_maps"
+#     - "$sender_bcc_maps"
+#     - "$recipient_bcc_maps"
+#     - "$recipient_canonical_maps"
+#     - "$relocated_maps"
+#     - "$transport_maps"
+#     - "$mynetworks"
+#     - "$smtpd_sender_login_maps"
+#     - "$smtp_sasl_password_maps"
+
+postfix_mydestinations:
+  - $myhostname
+  - "{{ postfix_hostname }}"
+  - localdomain
+  - localhost
+  - localhost.localdomain
+  # - 192.168.11.10/32
+
+postfix_mynetworks:
+  - 127.0.0.0/8
+  # - 192.168.11.10/32
+
+# # postfix_raw_options:
+# #   - |
+# #     milter_default_action = accept
+# #     milter_protocol = 6
+# #     smtpd_milters = unix:opendkim/opendkim.sock unix:opendmarc/opendmarc.sock unix:spamass/spamass.sock unix:clamav/clamav-milter.ctl
+# #     milter_connect_macros = "i j {daemon_name} v {if_name} _"
+# #     policyd-spf_time_limit = 3600
+
+postfix_handle_mastercf: true
+
+postfix_master:
+
+  - name: submission
+    type: inet
+    # enabled: false
+    private: false
+    chroot: false
+    command: smtpd
+    options:
+      syslog_name: postfix/submission
+      smtpd_tls_security_level: encrypt
+      smtpd_sasl_auth_enable: true
+      smtpd_tls_auth_only: true
+      smtpd_relay_restrictions:
+        - permit_sasl_authenticated
+        - reject
+  - name: smtps
+    type: inet
+    private: false
+    chroot: false
+    command: postscreen
+  - name: smtp
+    type: inet
+    state: disabled
+
+      # smtpd_reject_unlisted_recipient: no
+      # smtpd_client_restrictions: "$mua_client_restrictions"
+      # smtpd_helo_restrictions: "$mua_helo_restrictions"
+      # smtpd_sender_restrictions: "$mua_sender_restrictions"
+      # smtpd_recipient_restrictions: ""
+      # smtpd_relay_restrictions: permit_sasl_authenticated,reject
+      # milter_macro_daemon_name: ORIGINATING
+
+...

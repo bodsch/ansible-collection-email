@@ -1,0 +1,60 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+# {{ ansible_managed }}
+
+[Unit]
+Description                 = mail-monkey web interface and API
+After                       = network-online.target mariadb.service redis-server.service redis.service
+Wants                       = network-online.target
+
+[Service]
+Type                        = simple
+User                        = mailmonkey
+Group                       = mailmonkey
+# Running Redis over a Unix socket: add the socket's group here.
+# SupplementaryGroups       = redis
+
+ExecStart                   = /usr/bin/mailmonkey serve -config /etc/mailmonkey/mailmonkey.yaml
+
+# Secrets as <name>_file, handed in by systemd rather than read from /etc.
+# The paths in mailmonkey.yaml then point below /run/credentials/mailmonkey.service/.
+# LoadCredential            = db-password:/etc/mailmonkey/secrets/db-password
+# LoadCredential            = totp-key:/etc/mailmonkey/secrets/totp.key
+
+Restart                     = on-failure
+RestartSec                  = 5s
+# Above shutdownTimeout (20s) in cmd/mailmonkey, so in-flight requests finish.
+TimeoutStopSec              = 30s
+
+# Hardening. The process reads its configuration and talks over sockets;
+# everything else is taken away.
+UMask                       = 0077
+NoNewPrivileges             = yes
+CapabilityBoundingSet       =
+AmbientCapabilities         =
+ProtectSystem               = strict
+ProtectHome                 = yes
+PrivateTmp                  = yes
+PrivateDevices              = yes
+ProtectKernelTunables       = yes
+ProtectKernelModules        = yes
+ProtectKernelLogs           = yes
+ProtectControlGroups        = yes
+ProtectClock                = yes
+ProtectHostname             = yes
+ProtectProc                 = invisible
+RestrictAddressFamilies     = AF_UNIX AF_INET AF_INET6
+RestrictNamespaces          = yes
+RestrictRealtime            = yes
+RestrictSUIDSGID            = yes
+LockPersonality             = yes
+MemoryDenyWriteExecute      = yes
+RemoveIPC                   = yes
+SystemCallArchitectures     = native
+SystemCallFilter            = @system-service
+# Not ~@resources: it holds setrlimit, with which the Go runtime raises its
+# soft limit on open files at start. Denied, a web server stays at 1024.
+SystemCallFilter            = ~@privileged
+
+[Install]
+WantedBy                    = multi-user.target
+

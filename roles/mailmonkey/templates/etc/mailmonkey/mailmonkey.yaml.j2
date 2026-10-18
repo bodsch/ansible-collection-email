@@ -1,0 +1,289 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+# {{ ansible_managed }}
+
+{% set values = mailmonkey_config | bodsch.email.mailmonkey_config_passwords() %}
+{% set values = values | bodsch.core.remove_empty_values() %}
+
+# mailmonkey configuration — /etc/mailmonkey/mailmonkey.yaml
+
+# ---------------------------------------------------------------- logging ----
+log:
+  {{ values.get("log") | to_nice_yaml(indent=0,sort_keys=False) | indent(2, False) }}
+
+# --------------------------------------------------------------- database ----
+{% set _db = values.get("db") | bodsch.core.remove_empty_values() %}
+{% if _db | count > 0 %}
+db:
+  {{ _db | to_nice_yaml(indent=0,sort_keys=False) | indent(2, False) }}
+{% else %}
+# no database configuration found
+{% endif %}
+
+# ----------------------------------------------------------- the web service --
+listen: "{{ values.get('listen', '127.0.0.1:8080') }}"
+metrics_listen: "{{ values.get('metrics_listen', '') }}"
+base_url: "{{ values.get('base_url', '') }}"
+primary_domain: "{{ values.get('primary_domain', '') }}"
+
+# ------------------------------------------------------------- the mail host --
+mail:
+  {{ values.get("mail") | to_nice_yaml(indent=0,sort_keys=False) | indent(2, False) }}
+
+# ---------------------------------------------------------------- MTA-STS -----
+mta_sts:
+  {{ values.get("mta_sts") | to_nice_yaml(indent=0,sort_keys=False) | indent(2, False) }}
+
+# ------------------------------------------------- password recovery mail -----
+smtp:
+  {{ values.get("smtp") | to_nice_yaml(indent=0,sort_keys=False) | indent(2, False) }}
+
+# -------------------------------------------------- zweiter Faktor (TOTP) -----
+totp:
+  {{ values.get("totp") | to_nice_yaml(indent=0,sort_keys=False) | indent(2, False) }}
+
+# ---------------------------------------------------------------- Sessions -----
+session:
+  {{ values.get("session") | to_nice_yaml(indent=0,sort_keys=False) | indent(2, False) }}
+
+# ------------------------------------------------------- Passwortrichtlinie -----
+password:
+  {{ values.get("password") | to_nice_yaml(indent=0,sort_keys=False) | indent(2, False) }}
+
+# ------------------------------------------------------------------ redis -----
+redis:
+  {{ values.get("redis") | to_nice_yaml(indent=0,sort_keys=False) | indent(2, False) }}
+
+# -------------------------------------------------------------- bootstrap -----
+bootstrap:
+  {{ values.get("bootstrap") | to_nice_yaml(indent=0,sort_keys=False) | indent(2, False) }}
+
+{#
+# ---------------------------------------------------------------- logging ----
+log:
+  level: info          # debug | info | warn | error
+  format: json         # json | text  (json for journald, text to read)
+
+# --------------------------------------------------------------- database ----
+# Either the driver's DSN, or the parts below. Not both.
+#
+# The parentheses in a DSN are go-sql-driver's grammar, not ours:
+#   user:pass@tcp(host:port)/name
+#   user:pass@unix(/run/mysqld/mysqld.sock)/name
+#
+# For a single-machine deployment the socket is the better choice: no port open,
+# and the access control is file permissions.
+db:
+  # dsn: mailmonkey:secret@unix(/run/mysqld/mysqld.sock)/mailmonkey
+  # dsn_file: /etc/mailmonkey/db-dsn
+
+  socket: /run/mysqld/mysqld.sock
+  # host: 127.0.0.1                        # (instead of socket)
+  # port: 3306                           # (with host; default 3306)
+  user: mailmonkey
+  # password: secret
+  password_file: /etc/mailmonkey/db-password
+  name: mailmonkey                         # (default mailmonkey)
+
+# ----------------------------------------------------------- the web service --
+listen: "127.0.0.1:8080"                   # (default :8080)
+metrics_listen: ""                         # (empty disables it)
+
+# The URL people reach the interface at. It decides the session cookie's Secure
+# flag, so an http:// value is for a first run or a terminating proxy only.
+base_url: https://mail.example.com
+
+# The domain this installation exists for. The domain list puts it first instead
+# of leaving it somewhere in the alphabet. A name no domain here carries — or
+# one a domain administrator may not see — simply changes nothing.
+primary_domain: example.com                # (optional)
+
+# ------------------------------------------------------------- the mail host --
+# The mail server as the outside world finds it. Used for the DNS suggestions,
+# for the client autoconfiguration documents, and as the certificate's primary
+# name. This is deliberately NOT one of the mail domains: every domain on an
+# installation points its MX at this one server.
+# Eine Domain kann einen EIGENEN Mail-Hostnamen tragen (Spalte `domain.hostname`,
+# gesetzt im WebUI oder über die API). Leer heißt erben: dann gilt der Name hier.
+# Für einen Betreiber mit mehreren Kunden ist das der Unterschied zwischen
+# »mail.kunde-b.example« und »der Kunde sieht den Namen des anderen Kunden«.
+mail:
+  hostname: mx.example.com
+  ipv4: 203.0.113.25
+  # ipv6: "2001:db8::25"
+
+# ---------------------------------------------------------------- MTA-STS -----
+# Off unless a mode is set. A policy is a promise that port 25 always offers a
+# valid certificate; published before that is true, mail bounces rather than
+# arriving unencrypted.
+#
+# Switching it off later means publishing mode: none and leaving it up until the
+# caches expire — NOT deleting the DNS record, which leaves senders enforcing the
+# cached policy for up to max_age.
+#
+# Each domain then needs its own certificate for mta-sts.<domain>: senders fetch
+# the policy over HTTPS and validate strictly against that name.
+# Der Wert hier ist die VORGABE. Jede Domain kann einen eigenen Modus tragen
+# (Spalte `domain.mta_sts_mode`, gesetzt im WebUI oder über die API) und dann
+# gilt ihrer. Dazu kommt dort ein fünfter Wert, `off`: gar keine Policy.
+#
+# `none` und `off` sind nicht dasselbe — `none` liefert weiterhin eine Policy
+# aus, die »nicht durchsetzen« sagt, und genau die braucht man zum Abschalten.
+mta_sts:
+  mode: ""                                 # none | testing | enforce
+  max_age: 604800                        # seconds (default one week)
+
+# ------------------------------------------------- password recovery mail -----
+# The handover to the local mail server, for the two messages this program
+# sends: the link that resets a forgotten password, and the one that confirms a
+# recovery address.
+#
+# OFF unless `from` is set. Off is a usable state — the login page then offers no
+# "Passwort vergessen" and the account page says why — and it is better than a
+# form promising a mail that nothing can send.
+#
+# `addr` must be a loopback address and startup refuses anything else. The
+# message goes to the Postfix this installation already administers: no new
+# credentials, and no way out of this process over the network for whoever gets
+# into it. Consequently there is no authentication and no TLS here — the
+# connection does not leave the machine.
+#
+# `from` is the sender of both messages. It is not derived from the hostname on
+# purpose: mail from an address nobody chose bounces at the far end, days later,
+# to nobody.
+smtp:
+  addr: 127.0.0.1:25                       # (loopback only)
+  # from: mailmonkey@mx.example.com        # set this to switch recovery on
+
+# -------------------------------------------------- zweiter Faktor (TOTP) -----
+# Der Schlüssel, mit dem die TOTP-Geheimnisse in der Datenbank verschlüsselt
+# werden. 32 Byte, hex oder base64:
+#
+#     openssl rand -hex 32
+#
+# DER SCHLÜSSEL IST DER SCHALTER. Ohne ihn bietet das WebUI keinen zweiten
+# Faktor an — es gibt bewusst keinen zusätzlichen on/off-Schalter daneben: ein
+# Schalter auf "an" ohne Schlüssel wäre ein Versprechen, das der Prozess nicht
+# halten kann, und einer auf "aus" mit Schlüssel ließe offen, welcher von beiden
+# gewinnt.
+#
+# `key_file` ist die Form, die ein Deployment verwenden sollte. Diese Datei hier
+# wird kopiert, aus Templates erzeugt und verglichen, und ein Schlüssel darin
+# reist mit; ein Pfad ist kein Geheimnis, die Datei dahinter kann eine sein, die
+# nur dieser Dienst liest.
+#
+# ES GIBT KEINE ROTATION. Ein verlorener oder ausgetauschter Schlüssel heißt:
+# jede eingerichtete 2FA ist tot, für alle gleichzeitig, und jeder richtet neu
+# ein. Der Notausgang dafür ist `mailmonkey totp reset <adresse>`.
+totp:
+  # key: 0123456789abcdef...
+  key_file: /etc/mailmonkey/totp.key
+
+# ---------------------------------------------------------------- Sessions -----
+# Wie lange eine Anmeldung am WebUI gilt.
+#
+# idle_timeout beendet sie nach so langer Zeit ohne Anfrage, max_lifetime so
+# lange nach der Anmeldung, egal wie aktiv. Die Vorgaben sind NIST SP 800-63B
+# für AAL2 — Passwort plus TOTP —: 30 Minuten und 12 Stunden. Ein Arbeitstag
+# ohne erneute Anmeldung, aber kein über Nacht offenes Notebook, an dem jemand
+# Admin ist.
+#
+# Höchstens 24h und 168h (eine Woche); mehr verweigert den Start. Das waren die
+# Vorgaben bis 2026-10-01, und ein SuperAdmin-Login blieb damit einen Tag lang
+# gültig. idle_timeout länger als max_lifetime wird ebenfalls abgelehnt — es
+# würde nie greifen.
+#
+# Ein kürzerer Wert gilt sofort auch für Sessions, die vorher ausgegeben wurden.
+session:
+  idle_timeout: 30m
+  max_lifetime: 12h
+
+# ------------------------------------------------------- Passwortrichtlinie -----
+# Was ein NEUES Passwort erfüllen muss. Geprüft an jeder Stelle, an der eines
+# gesetzt wird: Postfach anlegen, Passwort ändern (WebUI und API), Reset über
+# den Mail-Link, und `mailmonkey bootstrap`.
+#
+# BESTEHENDE PASSWÖRTER SIND NICHT BETROFFEN. Eine verschärfte Richtlinie sperrt
+# niemanden aus; sie greift beim nächsten Setzen. Wer Bestandskonten erfassen
+# will, setzt `must_change_password` — das ist die sichtbare Variante derselben
+# Entscheidung, und niemand steht morgens vor einem Login, das gestern noch ging.
+#
+# DIE VORGABE FOLGT NIST SP 800-63B: Mindestlänge, Sperrliste, eigene Adresse
+# verboten — und AUSDRÜCKLICH KEINE Zeichenklassenregeln. Was die zuverlässig
+# erzeugen, ist `Passwort1!`: ein Wort aus einer Liste, genau so weit dekoriert,
+# wie die Regel es verlangt, und keinen Schritt weiter. Die Schalter dafür stehen
+# unten, weil eine Revision danach fragen kann — nicht, weil sie helfen.
+#
+# Alle Zahlen zählen ZEICHEN. Die Obergrenze von 72 Byte kommt von bcrypt, steht
+# nicht hier und ist nicht einstellbar; ein Umlaut zählt einmal für die
+# Mindestlänge und zweimal gegen das Maximum. 0 schaltet eine Regel ab.
+password:
+  min_length: 12
+
+  # Die Sperrliste: eingebaut sind die Passwörter, die zuerst geraten werden —
+  # deutsch wie englisch — und die Formen, die keine Liste fassen kann: ein
+  # Zeichen wiederholt, ein Lauf durchs Alphabet oder die Zahlenreihe, ein Weg
+  # über die Tastatur. Geprüft wird auch gegen Dekoration: `Passwort1234` und
+  # `P4ssw0rt!` sind beide `passwort`.
+
+  # Das ist die eine Regel, die NIST fordert, und die einzige, die `Sommer2026!`
+  # fängt — die Mindestlänge tut es nicht.
+  deny_common: true
+
+  # Verbietet die eigene Adresse im Passwort: die ganze Adresse, den lokalen
+  # Teil und das erste Label der Domain. Wer bei example.com liegt, bekommt
+  # "example" nirgends im Passwort durch. Das ist der harte Teil dieser Regel
+  # und zugleich der, der sich lohnt: es ist das erste Wort, zu dem jemand
+  # greift, und das erste, das ein Angreifer probiert.
+
+  # Teile unter drei Zeichen werden ignoriert.
+  deny_username: true
+
+  # Eine eigene Sperrliste, ein Passwort je Zeile, `#` ist ein Kommentar. Gilt
+  # zusätzlich zur eingebauten und auch dann, wenn deny_common aus ist: wer eine
+  # Liste schreibt, will sie angewendet sehen. Eine Datei ohne Einträge ist ein
+  # Startfehler und kein leeres Ergebnis.
+
+  # Heißt NICHT deny_list_file: diese Endung bedeutet in dieser Datei "lies den
+  # WERT dieser Einstellung aus der Datei", und eine Liste ist kein Wert.
+  # deny_list: /etc/mailmonkey/denied-passwords.txt
+
+  # Zeichenklassenregeln. Aus, siehe oben. min_classes verlangt, dass so viele
+  # der vier Klassen überhaupt vorkommen (Kleinbuchstaben, Großbuchstaben,
+  # Ziffern, Rest); die vier Einzelzahlen verlangen jeweils eine Anzahl. Beides
+  # gesetzt heißt: beides muss gelten.
+  min_classes: 0                            # 0 bis 4
+  min_digits: 0
+  min_upper: 0
+  min_lower: 0
+  min_special: 0
+
+# ------------------------------------------------------------------ redis -----
+# Wo rspamd die DKIM-Signaturschlüssel liest.
+#
+# Leere Adresse = aus, und aus ist ein brauchbarer Zustand: Schlüssel werden
+# weiter erzeugt, gespeichert und mit ihrem DNS-Record angezeigt — sie werden
+# nur nirgends gespiegelt, also signiert nichts. Genau das ist richtig für eine
+# Installation, die rspamd noch nicht ausgerollt hat.
+#
+# Die Wahrheit steht in MariaDB. Redis ist abgeleitet und darf jederzeit leer
+# sein: der Abgleich beim Start und auf dem Ticker baut beide Hashes neu auf.
+#
+# ACHTUNG: mail-monkey besitzt DKIM_SELECTORS und DKIM_PRIV_KEYS in der hier
+# genannten Datenbank vollständig und löscht darin alles, was es nicht selbst
+# geschrieben hat. Ein zweiter Erzeuger von DKIM-Schlüsseln braucht eine eigene
+# Datenbanknummer.
+redis:
+  # addr: /var/run/redis/redis.sock         # (Socket bevorzugt)
+  addr: 127.0.0.1:6379
+  # password: secret
+  # password_file: /etc/mailmonkey/redis-password
+  db: 0
+
+# -------------------------------------------------------------- bootstrap -----
+# Read only by `mailmonkey bootstrap`, which creates the first domain and
+# superadmin. Running it again once one exists is a no-op and exits 0.
+bootstrap:
+  admin: admin@example.com
+  # password: secret
+  password_file: /etc/mailmonkey/bootstrap-password
+#}
