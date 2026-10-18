@@ -64,7 +64,8 @@ jobs:
           - postfix
           - dovecot
           - mailcow
-          - rspamds
+          - rspamd
+          - webmail
 
     steps:
       - name: check out the codebase.
