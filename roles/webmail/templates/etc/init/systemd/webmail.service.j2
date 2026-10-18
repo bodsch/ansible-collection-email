@@ -1,0 +1,83 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+# {{ ansible_managed }}
+
+
+[Unit]
+Description                 = webmail - IMAP/SMTP web frontend
+After                       = network-online.target
+Wants                       = network-online.target
+# A configuration error makes every start fail; give up after five
+# attempts instead of restarting forever.
+StartLimitIntervalSec       = 60s
+StartLimitBurst             = 5
+
+[Service]
+Type                        = simple
+EnvironmentFile             = {{ webmail_defaults_directory }}/webmail
+
+ExecReload                  = /bin/kill -HUP $MAINPID
+ExecStart                   = /usr/bin/webmail $OPTIONS
+Restart                     = on-failure
+RestartSec                  = 2s
+# On shutdown the live-update streams are closed first, so open browser
+# tabs do not hold the service; this bounds the wait either way.
+TimeoutStopSec              = 20s
+
+DynamicUser                 = true
+StateDirectory              = webmail
+StateDirectoryMode          = 0700
+ConfigurationDirectory      = webmail
+{% if webmail_config.dav.secret is defined and
+      webmail_config.dav.secret | string | length > 0 and
+      webmail_config.dav.secret_key_file is defined and
+      webmail_config.dav.secret_key_file | string | length > 0 %}
+# Secret key for the per-user DAV app passwords. Without it users can
+# enter no separate address book and calendar credentials and no server of
+# their own — the settings page says so. The file can stay root-only
+# (0400); systemd hands a copy to the dynamic user, which the
+# configuration then reads as
+#   secret_key_file: /run/credentials/webmail.service/secret.key
+#   openssl rand -hex 32 > /etc/webmail/secret.key && chmod 400 …
+LoadCredential              = secret.key:{{ webmail_config.dav.secret_key_file }}
+{% endif %}
+
+# Hardening
+NoNewPrivileges             = true
+ProtectSystem               = strict
+# ProtectHome hides /home, so data_dir and secret_key_file must not point
+# there — the configuration expands "~" and "$HOME", and the service would
+# then fail at startup instead of writing somewhere unexpected.
+ProtectHome                 = true
+PrivateTmp                  = true
+PrivateDevices              = true
+ProtectKernelTunables       = true
+ProtectKernelModules        = true
+ProtectKernelLogs           = true
+ProtectControlGroups        = true
+ProtectClock                = true
+ProtectHostname             = true
+RestrictAddressFamilies     = AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces          = true
+RemoveIPC                   = true
+PrivateMounts               = true
+# Other processes stay invisible in /proc.
+ProtectProc                 = invisible
+ProcSubset                  = pid
+RestrictRealtime            = true
+RestrictSUIDSGID            = true
+LockPersonality             = true
+# Nothing here compiles code at run time: SQLite is transpiled to Go, so
+# this costs no performance (it did before go-sqlite3 v0.35, which ran
+# SQLite on a JIT — see README "Data storage").
+MemoryDenyWriteExecute      = true
+SystemCallArchitectures     = native
+SystemCallFilter            = @system-service
+SystemCallFilter            = ~@privileged
+SystemCallErrorNumber       = EPERM
+CapabilityBoundingSet       =
+# Everything the service writes — preferences, the SQLite database — stays
+# readable by its own user only.
+UMask                       = 0077
+
+[Install]
+WantedBy                    = multi-user.target

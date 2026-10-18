@@ -1,0 +1,48 @@
+---
+
+- name: merge webmail configuration between defaults and custom
+  ansible.builtin.set_fact:
+    # webmail_service: "{{ webmail_defaults_service | combine(webmail_service, recursive=True) }}"
+    webmail_config: "{{ webmail_defaults_config | combine(webmail_config, recursive=True) }}"
+
+- name: create webmail directories
+  when:
+    - not running_in_check_mode
+  bodsch.core.directories:
+    paths:
+      - path: "{{ webmail_config_dir }}"
+      # - path: "{{ webmail_config.data_dir }}"
+      #   owner: "{{ webmail_system_user.owner }}"
+      #   group: "{{ webmail_system_user.group }}"
+      #   mode: "0750"
+
+- name: "create dav secret"
+  when:
+    - not running_in_check_mode
+    - webmail_config.dav.secret | default('') | string | length > 0
+    - webmail_config.dav.secret_key_file | default('') | string | length > 0
+  ansible.builtin.copy:
+    dest: "{{ webmail_config.dav.secret_key_file }}"
+    content: "{{ webmail_config.dav.secret }}"
+    owner: "{{ webmail_system_user.owner }}"
+    group: "{{ webmail_system_user.group }}"
+    mode: "0400"
+  no_log: true
+
+- name: create webmail configuration
+  when:
+    - not running_in_check_mode
+  ansible.builtin.template:
+    src: etc/webmail/config.yaml.j2
+    dest: "{{ webmail_config_dir }}/config.yaml"
+    force: true
+    owner: "{{ webmail_system_user.owner }}"
+    group: "{{ webmail_system_user.group }}"
+    mode: "0640"
+    backup: true
+  register: webmail_config
+  notify:
+    # - validate webmail config
+    - reload webmail
+
+...

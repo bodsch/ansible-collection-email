@@ -1,0 +1,255 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+# {{ ansible_managed }}
+
+{% set values = webmail_config | bodsch.core.remove_empty_values() %}
+
+{% if values.server.listen is defined and
+      values.server.listen | string | length > 0 %}
+server:
+  listen: "{{ values.server.listen }}"
+  {% if values.server.trust_proxy_headers is defined and
+        values.server.trust_proxy_headers | string | length > 0 %}
+  trust_proxy_headers: {{ values.server.trust_proxy_headers | bool | bodsch.core.config_bool(true_as='true', false_as='false') }}
+  {% endif %}
+  {% if values.server.cookie_secure is defined and
+        values.server.cookie_secure | string | length > 0 %}
+  cookie_secure: {{ values.server.cookie_secure | bool | bodsch.core.config_bool(true_as='true', false_as='false') }}
+  {% endif %}
+  {% if values.server.base_path is defined and
+        values.server.base_path | string | length > 0 %}
+  base_path: {{ values.server.base_path }}
+  {% endif %}
+  {% if values.server.shutdown_timeout is defined and
+        values.server.shutdown_timeout | string | length > 0 %}
+  shutdown_timeout: {{ values.server.shutdown_timeout }}
+  {% endif %}
+{% endif %}
+
+{% if values.imap.address is defined and
+      values.imap.address | string | length > 0 %}
+imap:
+  address: "{{ values.imap.address }}"
+  {% set _imap_security = "none" %}
+  {% if values.imap.security is defined and
+        values.imap.security | string | length > 0 and
+        values.imap.security in ["tls", "starttls", "none"] %}
+    {% set _imap_security = values.imap.security %}
+  security: {{ _imap_security }}
+  {% endif %}
+  {% if values.imap.server_name is defined and
+        values.imap.server_name | string | length > 0 %}
+  server_name: "imap.example.org"   # SNI / certificate name override
+  {% endif %}
+  {% if values.imap.insecure_skip_verify is defined and
+        values.imap.insecure_skip_verify | string | length > 0 %}
+  insecure_skip_verify: {{ values.imap.insecure_skip_verify | bool | bodsch.core.config_bool(true_as='true', false_as='false') }}
+  {% endif %}
+  {% if values.imap.timeout is defined and
+        values.imap.timeout | string | length > 0 %}
+  timeout: {{ values.imap.timeout }}
+  {% endif %}
+{% endif %}
+
+{% if values.smtp.address is defined and
+      values.smtp.address | string | length > 0 %}
+smtp:
+  address: "{{ values.smtp.address }}"
+  {% set _smtp_security = "none" %}
+  {% if values.smtp.security is defined and
+        values.smtp.security | string | length > 0 and
+        values.smtp.security in ["tls", "starttls", "none"] %}
+    {% set _smtp_security = values.smtp.security %}
+  security: {{ _smtp_security }}
+  {% endif %}
+  {% if values.smtp.timeout is defined and
+        values.smtp.timeout | string | length > 0 %}
+  timeout: {{ values.smtp.timeout }}
+  {% endif %}
+{% endif %}
+
+{% if values.sieve.address is defined and
+      values.sieve.address | string | length > 0 %}
+sieve:
+  address: "{{ values.sieve.address }}"
+  {% set _sieve_security = "none" %}
+  {% if values.sieve.security is defined and
+        values.sieve.security | string | length > 0 and
+        values.sieve.security in ["tls", "starttls", "none"] %}
+    {% set _sieve_security = values.sieve.security %}
+  security: {{ _sieve_security }}
+  {% endif %}
+  {% if values.sieve.timeout is defined and
+        values.sieve.timeout | string | length > 0 %}
+  timeout: {{ values.sieve.timeout }}
+  {% endif %}
+{% endif %}
+
+{% if values.dav.url is defined and
+      values.dav.url | string | length > 0 %}
+dav:
+  url: "{{ values.dav.url }}"
+  {% if values.dav.username is defined and
+        values.dav.username | string | length > 0 %}
+  username: "{{ values.dav.username }}"
+  {% endif %}
+  {% if values.dav.timeout is defined and
+        values.dav.timeout | string | length > 0 %}
+  timeout: {{ values.dav.timeout }}
+  {% endif %}
+  {% if values.dav.cache_ttl is defined and
+        values.dav.cache_ttl | string | length > 0 %}
+  cache_ttl: {{ values.dav.cache_ttl }}
+  {% endif %}
+  {% if values.dav.carddav is defined and
+        values.dav.carddav | string | length > 0 %}
+  carddav: {{ values.dav.carddav | bool | bodsch.core.config_bool(true_as='true', false_as='false') }}
+  {% endif %}
+  {% if values.dav.caldav is defined and
+        values.dav.caldav | string | length > 0 %}
+  caldav: {{ values.dav.caldav | bool | bodsch.core.config_bool(true_as='true', false_as='false') }}
+  {% endif %}
+  {% if values.dav.default_calendar is defined and
+        values.dav.default_calendar | string | length > 0 %}
+  default_calendar: {{ values.dav.default_calendar }}
+  {% endif %}
+  {% if values.dav.agenda_days is defined and
+        values.dav.agenda_days | string | length > 0 %}
+  agenda_days: {{ values.dav.agenda_days }}
+  {% endif %}
+  {% if values.dav.user_servers is defined and
+        values.dav.user_servers | string | length > 0 %}
+  user_servers: {{ values.dav.user_servers | bool | bodsch.core.config_bool(true_as='true', false_as='false') }}
+  {% endif %}
+  {% if values.dav.allowed_networks is defined and
+        values.dav.allowed_networks | bodsch.core.type == "list" and
+        values.dav.allowed_networks | count > 0 %}
+  allowed_networks:
+    {{ values.dav.allowed_networks | to_nice_yaml(indent=2,sort_keys=False) | indent(4, False) }}
+  {% endif %}
+  {% if webmail_config.dav.secret is defined and
+        webmail_config.dav.secret | string | length > 0 and
+        webmail_config.dav.secret_key_file is defined and
+        webmail_config.dav.secret_key_file | string | length > 0 %}
+secret_key_file: {{ webmail_config.dav.secret_key_file }}
+  {% endif %}
+{% endif %}
+{#
+# Optional: 32-byte key (hex/base64/raw) to encrypt per-user DAV app
+# passwords at rest. Without it, the mail credentials are used for DAV.
+#   openssl rand -hex 32 > /etc/webmail/secret.key
+# With the systemd unit (LoadCredential) the path is:
+  # secret_key_file: "/run/credentials/webmail.service/secret.key"
+#}
+
+{% if values.metrics.listen is defined and
+      values.metrics.listen | string | length > 0 %}
+metrics:
+  listen: "{{ values.metrics.listen }}"
+{% endif %}
+
+session:
+{% if values.session.idle_timeout is defined and
+      values.session.idle_timeout | string | length > 0 %}
+  idle_timeout: {{ values.session.idle_timeout }}
+{% endif %}
+{% if values.session.max_lifetime is defined and
+      values.session.max_lifetime | string | length > 0 %}
+  max_lifetime: {{ values.session.max_lifetime }}
+{% endif %}
+
+login:
+{% if values.login.default_domain is defined and
+      values.login.default_domain | string | length > 0 %}
+  default_domain: {{ values.login.default_domain }}
+{% endif %}
+{% if values.login.max_failures is defined and
+      values.login.max_failures | string | length > 0 %}
+  max_failures: {{ values.login.max_failures }}
+{% endif %}
+{% if values.login.failure_window is defined and
+      values.login.failure_window | string | length > 0 %}
+  failure_window: {{ values.login.failure_window }}
+{% endif %}
+
+ui:
+{% if values.ui.title is defined and
+      values.ui.title | string | length > 0 %}
+  title: {{ values.ui.title }}
+{% endif %}
+{% if values.ui.page_size is defined and
+      values.ui.page_size | string | length > 0 %}
+  page_size: {{ values.ui.page_size }}
+{% endif %}
+{% if values.ui.default_theme is defined and
+      values.ui.default_theme | string | length > 0 %}
+  default_theme: {{ values.ui.default_theme }}
+{% endif %}
+{% if values.ui.themes_dir is defined and
+      values.ui.themes_dir | string | length > 0 %}
+  themes_dir: {{ values.ui.themes_dir }}
+{% endif %}
+{% if values.ui.timezone is defined and
+      values.ui.timezone | string | length > 0 %}
+  timezone: "{{ values.ui.timezone }}"
+{% endif %}
+{% if values.ui.attachment_marker is defined and
+      values.ui.attachment_marker | string | length > 0 %}
+  attachment_marker: {{ values.ui.attachment_marker | bool | bodsch.core.config_bool(true_as='true', false_as='false') }}
+{% endif %}
+{% if values.ui.tags is defined and
+      values.ui.tags | string | length > 0 %}
+  {# Message tags (IMAP keywords). Default: Thunderbird's $label1..$label5. #}
+  tags:
+    {{ values.ui.tags | to_nice_yaml(indent=2,sort_keys=False) | indent(4, False) }}
+  {#
+    - { keyword: "$label1", label: "Important", color: "#d32f2f" }
+    - { keyword: "$label2", label: "Work",      color: "#f57c00" }
+  #}
+{% endif %}
+
+mail:
+{% if values.mail.sent_mailbox is defined and
+      values.mail.sent_mailbox | string | length > 0 %}
+  sent_mailbox: {{ values.mail.sent_mailbox }}
+{% endif %}
+{% if values.mail.trash_mailbox is defined and
+      values.mail.trash_mailbox | string | length > 0 %}
+  trash_mailbox: {{ values.mail.trash_mailbox }}
+{% endif %}
+{% if values.mail.drafts_mailbox is defined and
+      values.mail.drafts_mailbox | string | length > 0 %}
+  drafts_mailbox: {{ values.mail.drafts_mailbox }}
+{% endif %}
+{% if values.mail.draft_autosave is defined and
+      values.mail.draft_autosave | string | length > 0 %}
+  draft_autosave: {{ values.mail.draft_autosave }}
+{% endif %}
+{% if values.mail.max_upload_size is defined and
+      values.mail.max_upload_size | string | length > 0 %}
+  max_upload_size: {{ values.mail.max_upload_size }}
+{% endif %}
+{% if values.mail.collect_recipients is defined and
+      values.mail.collect_recipients | string | length > 0 %}
+  collect_recipients: {{ values.mail.collect_recipients | bool | bodsch.core.config_bool(true_as='true', false_as='false') }}
+{% endif %}
+
+log:
+{% set _log_level = "info" %}
+{% set _log_format = "text" %}
+{% if values.log.level is defined and
+      values.log.level | string | length > 0 and
+      values.log.level in ["debug", "info", "warn", "error"] %}
+  {% set _log_level = values.log.level %}
+  level: {{ _log_level }}
+{% endif %}
+{% if values.log.format is defined and
+      values.log.format | string | length > 0 and
+      values.log.format in ["text", "json"] %}
+  {% set _log_format = values.log.format %}
+  format: {{ _log_format }}
+{% endif %}
+
+{% if values.data_dir is defined and
+      values.data_dir | string | length > 0 %}
+data_dir: {{ values.data_dir }}
+{% endif %}
