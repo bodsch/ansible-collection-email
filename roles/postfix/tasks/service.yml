@@ -5,8 +5,8 @@
     - not running_in_check_mode
   ansible.builtin.service:
     name: postfix
-    state: "{{ service_default_state | default('started') }}"
-    enabled: "{{ service_default_enabled | default(true) | bool }}"
+    state: "{{ postfix_service.state | default('started') }}"
+    enabled: "{{ postfix_service.enabled | default(true) | bool }}"
   tags:
     - configuration
     - postfix

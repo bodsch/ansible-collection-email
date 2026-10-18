@@ -3,6 +3,10 @@
 postfix_hostname: "{{ ansible_facts.fqdn }}"
 postfix_mailname: "{{ ansible_facts.fqdn }}"
 
+postfix_service:
+  state: started
+  enabled: true
+
 postfix_myorigin: "{{ postfix_mailname_file }}"
 postfix_delay_warning_time: ''
 postfix_compatibility_level: 'auto'
