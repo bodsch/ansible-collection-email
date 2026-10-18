@@ -1,0 +1,90 @@
+---
+
+- name: user and group handling
+  when:
+    - not running_in_check_mode
+    - webmail_system_user.owner != "root" or
+      webmail_acme_system_user.owner != "root"
+  block:
+    - name: create webmail group
+      ansible.builtin.group:
+        name: "{{ webmail_system_user.group }}"
+        state: present
+        system: true
+
+    - name: create webmail user
+      ansible.builtin.user:
+        name: "{{ webmail_system_user.owner }}"
+        groups: "{{ webmail_system_user.group }}"
+        append: true
+        shell: /usr/bin/nologin
+        system: true
+        createhome: false
+        home: /nonexistent
+
+# - name: merge webmail configuration between defaults and custom
+#   ansible.builtin.set_fact:
+#     webmail_service: "{{ webmail_defaults_service | combine(webmail_service, recursive=True) }}"
+
+- name: create install directory
+  when:
+    - not running_in_check_mode
+  ansible.builtin.file:
+    path: "{{ webmail_install_path }}"
+    state: directory
+    owner: "{{ webmail_system_user.owner }}"
+    group: "{{ webmail_system_user.group }}"
+    mode: "0755"
+
+- name: deploy and activate webmail version {{ webmail_version }}
+  when:
+    - not running_in_check_mode
+  bodsch.core.deploy_and_activate:
+    src_dir: "{{ webmail_local_tmp_directory }}"
+    install_dir: "{{ webmail_install_path }}"
+    link_dir: "/usr/bin"
+    remote_src: "{{ ('true' if webmail_direct_download else 'false') | bool }}"
+    owner: "{{ webmail_system_user.owner }}"
+    group: "{{ webmail_system_user.group }}"
+    mode: "0755"
+    items:
+      - name: "webmail"
+        src: "webmail-{{ ansible_facts.system | lower }}-{{ system_architecture }}"
+        link_name: "webmail"
+  notify:
+    - restart webmail
+
+- name: systemd
+  when:
+    - not running_in_check_mode
+    - ansible_facts.service_mgr | lower == "systemd"
+  block:
+    - name: create webmail run configuration
+      ansible.builtin.template:
+        src: "etc/default/webmail.j2"
+        dest: "{{ webmail_defaults_directory }}/webmail"
+        force: true
+        owner: root
+        group: "{{ webmail_system_user.group }}"
+        mode: "0640"
+      notify:
+        - restart webmail
+
+    - name: create systemd service unit
+      ansible.builtin.template:
+        src: "etc/init/systemd/webmail.service.j2"
+        dest: "{{ systemd_lib_directory }}/webmail.service"
+        owner: root
+        group: root
+        mode: "0644"
+      notify:
+        - daemon-reload
+
+- name: create custom fact file
+  when:
+    - not running_in_check_mode
+  bodsch.core.facts:
+    name: webmail
+    facts:
+      version: "{{ webmail_version }}"
+...
