@@ -1,0 +1,5 @@
+---
+
+collections:
+  - name: bodsch.scm
+    version: ">=1.12.1"
