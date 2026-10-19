@@ -19,7 +19,7 @@
     architecture: "{{ ansible_facts.architecture }}"
     system: "{{ ansible_facts.system }}"
     version: "{{ webmail_version }}"
-    password: "{{ _webmail_fj_token | default(_webmail_gh_token | default(omit) ) }}"
+    password: "{{ _webmail_scm_token | default(omit, true) }}"
   register: _release
 
 - name: re-define webmail_version
@@ -86,8 +86,8 @@
       run_once: "{{ 'false' if webmail_direct_download else 'true' }}"
       ansible.builtin.get_url:
         url: "{{ _release.download_url }}"
-        username: "{{ _webmail_fj_user | default(_webmail_gh_user | default(omit) ) }}"
-        password: "{{ _webmail_fj_token | default(_webmail_gh_token | default(omit) ) }}"
+        username: "{{ _webmail_scm_user | default(omit, true) }}"
+        password: "{{ _webmail_scm_token | default(omit, true) }}"
         dest: "{{ webmail_local_tmp_directory }}/{{ _release.file }}"
         checksum: "{{ _release.checksum_string | default(omit) }}"
         mode: "0640"

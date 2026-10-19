@@ -40,6 +40,8 @@ env:
   COLLECTION_NAME: email
   PY_COLORS: '1'
   ANSIBLE_FORCE_COLOR: '1'
+  FJ_TOKEN: ${{ secrets.FJ_TOKEN }}
+  FJ_TUSER: ${{ secrets.FJ_TUSER }}
 
 defaults:
   run:
