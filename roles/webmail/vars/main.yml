@@ -163,4 +163,9 @@ system_architecture: "{{ go_arch_map[ansible_facts.architecture] | default(ansib
 
 systemd_lib_directory: /lib/systemd/system
 
+_webmail_gh_token: "{{ lookup('ansible.builtin.env', 'GH_TOKEN', default=omit) }}"
+_webmail_gh_user:  "{{ lookup('ansible.builtin.env', 'GH_TUSER', default=omit) }}"
+_webmail_fj_token: "{{ lookup('ansible.builtin.env', 'FJ_TOKEN', default=omit) }}"
+_webmail_fj_user:  "{{ lookup('ansible.builtin.env', 'FJ_TUSER', default=omit) }}"
+
 ...
