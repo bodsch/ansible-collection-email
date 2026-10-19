@@ -163,10 +163,10 @@ system_architecture: "{{ go_arch_map[ansible_facts.architecture] | default(ansib
 
 systemd_lib_directory: /lib/systemd/system
 
-_webmail_gh_token: "{{ lookup('ansible.builtin.env', 'GH_TOKEN') }}"
-_webmail_gh_user: "{{ lookup('ansible.builtin.env', 'GH_USER') }}"
-_webmail_fj_token: "{{ lookup('ansible.builtin.env', 'FJ_TOKEN') }}"
-_webmail_fj_user: "{{ lookup('ansible.builtin.env', 'FJ_USER') }}"
+_webmail_gh_token: "{{ lookup('env', 'GH_TOKEN') }}"
+_webmail_gh_user: "{{ lookup('env', 'GH_USER') }}"
+_webmail_fj_token: "{{ lookup('env', 'FJ_TOKEN') }}"
+_webmail_fj_user: "{{ lookup('env', 'FJ_USER') }}"
 
 # credentials matching the configured release provider (empty when unset)
 _webmail_scm_token: "{{ _webmail_fj_token if webmail_release.provider == 'forgejo' else _webmail_gh_token }}"
