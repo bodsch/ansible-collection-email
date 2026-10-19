@@ -1,0 +1,118 @@
+---
+
+webmail_version: 1.1.0
+
+webmail_system_user:
+  owner:  webmail
+  group: webmail
+
+webmail_service:
+  state: started
+  enabled: true
+
+webmail_config_dir: /etc/webmail
+
+webmail_direct_download: false
+
+webmail_release:
+  provider: forgejo
+  host: https://git.boone-schulz.de
+  project: go
+  repository: webmail
+  file: "webmail_{{ webmail_version }}.tar.gz"
+  binary: "webmail-{{ ansible_facts.system | lower }}-{{ system_architecture }}"
+
+webmail_config:
+  server:
+    listen: "127.0.0.1:8080"
+    trust_proxy_headers: true
+    cookie_secure: true
+    base_path: ""                                         # /webmail"
+    shutdown_timeout: 15s
+
+  imap:
+    address: "127.0.0.1:993"
+    # tls | starttls | none
+    security: tls
+    # "imap.example.org"   # SNI / certificate name override
+    server_name: ""
+    insecure_skip_verify: false
+    timeout: 30s
+
+  smtp:
+    address: "127.0.0.1:465"
+    # tls (465) | starttls (587) | none
+    security: tls
+    timeout: 60s
+
+  sieve:
+    address: "127.0.0.1:4190"
+    # starttls | tls | none
+    security: starttls
+    timeout: 30s
+
+  dav:
+    url: "https://127.0.0.1/remote.php/dav"               # https://cloud.example.org/remote.php/dav"
+    # Maps the mail login to the DAV user: {user} full login,
+    # {local} part before "@", {domain} part after "@".
+    username: "{user}"
+    timeout: 20s
+    cache_ttl: 10m
+    carddav: true
+    caldav: true
+    default_calendar: "Personal"
+    agenda_days: 14
+    # Allow users to configure their own DAV server under Settings
+    # (needs `secret_key_file`; used only with an app password, never the mail password).
+    user_servers: true
+    allowed_networks: []
+    # Optional: 32-byte key (hex/base64/raw) to encrypt per-user DAV app
+    # passwords at rest. Without it, the mail credentials are used for DAV.
+    #   openssl rand -hex 32 > /etc/webmail/secret.key
+    # With the systemd unit (LoadCredential) the path is:
+    #  "/run/credentials/webmail.service/secret.key"
+    secret: ""
+    secret_key_file: /etc/webmail/secret.key
+
+  metrics:
+    listen: "127.0.0.1:9109"
+
+  session:
+    idle_timeout: 30m
+    max_lifetime: 12h
+
+  login:
+    default_domain: ""
+    max_failures: 10
+    failure_window: 10m
+
+  ui:
+    title: "Webmail"
+    page_size: 50
+    # default | light | dark
+    default_theme: "default"
+    timezone: "Europe/Berlin"
+    attachment_marker: true
+    # Message tags (IMAP keywords). Default: Thunderbird's $label1..$label5.
+    tags: []
+    #   - { keyword: "$label1", label: "Important", color: "#d32f2f" }
+    #   - { keyword: "$label2", label: "Work",      color: "#f57c00" }
+
+  mail:
+    sent_mailbox: "Sent"
+    trash_mailbox: "Trash"
+    drafts_mailbox: "Drafts"
+    draft_autosave: 60s
+    max_upload_size: 26214400
+    collect_recipients: true
+
+  log:
+    # debug | info | warn | error
+    level: info
+    # text | json
+    format: text
+
+  # Per-user preferences (theme, display name, signature).
+  data_dir: "/var/lib/webmail"
+
+...

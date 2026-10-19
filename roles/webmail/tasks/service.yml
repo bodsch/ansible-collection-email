@@ -1,0 +1,15 @@
+---
+
+- name: start and enable service
+  when:
+    - not running_in_check_mode
+  ansible.builtin.service:
+    name: webmail
+    state: "{{ webmail_service.state | default('started') }}"
+    enabled: "{{ webmail_service.enabled | default(true) | bool }}"
+  tags:
+    - configuration
+    - webmail
+    - webmail-start-enable-service
+
+...

@@ -20,9 +20,9 @@
     mode: "0755"
     paths:
       - path: local.d
-        mode: "0750"
+        # mode: "0750"
       - path: override.d
-        mode: "0750"
+        # mode: "0750"
       - path: custom
         mode: "0750"
 

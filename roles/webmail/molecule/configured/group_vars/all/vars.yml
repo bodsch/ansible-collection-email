@@ -1,0 +1,128 @@
+---
+
+webmail_config:
+  server:
+    # Bind to localhost and put a TLS-terminating reverse proxy in front.
+    listen: "127.0.0.1:8080"
+    # Evaluate X-Forwarded-For (right-most entry) for rate limiting and logs.
+    # Enable only if the service is reachable exclusively through the proxy.
+    trust_proxy_headers: true
+    # Secure cookie attribute; keep true behind HTTPS.
+    cookie_secure: true
+    # Sub-path the application is served under, when the reverse proxy cannot
+    # give it a host or root of its own. Empty means the root. All generated
+    # URLs and the session cookie then carry this prefix, and the proxy must
+    # pass the path through unchanged (no stripping).
+    base_path: ""                                         # /webmail"
+    shutdown_timeout: 15s
+
+  imap:
+    address: "127.0.0.1:993"                              # imap.example.org:993"
+    security: tls                                         # tls | starttls | none
+    server_name: ""                                       # "imap.example.org"   # SNI / certificate name override
+    insecure_skip_verify: ""                              # false
+    timeout: 30s
+
+  smtp:
+    # Submission with the user's own credentials (AUTH PLAIN).
+    address: "127.0.0.1:465"                              # smtp.example.org:465
+    security: tls            # tls (465) | starttls (587) | none
+    timeout: 60s
+
+  # ManageSieve for filters and vacation (Dovecot Pigeonhole: port 4190).
+  # Remove the address (or the whole block) to disable the filter UI.
+  sieve:
+    address: "127.0.0.1:4190"                             # imap.example.org:4190
+    security: starttls       # starttls | tls | none
+    timeout: 30s
+
+  # Contacts (CardDAV) and calendar (CalDAV), e.g. Nextcloud.
+  # url is the installation's server (optional); users can additionally use
+  # their own server (user_servers). The former "carddav" block is still accepted.
+  dav:
+    url: "https://127.0.0.1/remote.php/dav"               # https://cloud.example.org/remote.php/dav"
+    # Maps the mail login to the DAV user: {user} full login,
+    # {local} part before "@", {domain} part after "@".
+    username: "{user}"
+    timeout: 20s
+    cache_ttl: 10m
+    carddav: true
+    caldav: true
+    # Calendar preselected for accepted invitations (display name or path
+    # segment); falls back to the first calendar.
+    default_calendar: "Personal"
+    # Days shown on the agenda page.
+    agenda_days: 14
+    # Allow users to configure their own DAV server under Settings (needs
+    # secret_key_file; used only with an app password, never the mail password).
+    user_servers: true
+    # Own servers must resolve to public addresses (HTTPS only). Networks listed
+    # here are allowed in addition, plain HTTP included, e.g. a home LAN:
+    allowed_networks: []                                  # e.g. ["192.168.10.0/24", "fd00:10::/64"]
+
+    # Optional: 32-byte key (hex/base64/raw) to encrypt per-user DAV app
+    # passwords at rest. Without it, the mail credentials are used for DAV.
+    #   openssl rand -hex 32 > /etc/webmail/secret.key
+    # With the systemd unit (LoadCredential) the path is:
+    #  "/run/credentials/webmail.service/secret.key"
+    secret: "b60e8619202659dfcae6851b031c1e499886e5de2d4c25b76a1b1967b4f87041"
+    secret_key_file: /etc/webmail/secret.key
+
+  # Metrics for Prometheus, on a listener of their own. Empty (the default)
+  # switches them off. The endpoint has no authentication, so keep it on a
+  # loopback address or a management network — never on the address the
+  # users reach. Labels carry operations, methods, status codes and route
+  # patterns, never mailbox names or addresses.
+  metrics:
+    listen: "127.0.0.1:9109"
+
+  session:
+    idle_timeout: 30m
+    max_lifetime: 12h
+
+  login:
+    # Appended to user names without "@": "bodo" -> "bodo@example.org"
+    default_domain: ""
+    # Failed logins per client IP within the window before HTTP 429.
+    max_failures: 10
+    failure_window: 10m
+
+  ui:
+    title: "Webmail"
+    page_size: 50
+    default_theme: "default"   # default | light | dark | <name in themes_dir>
+    # themes_dir: "/etc/webmail/themes"
+    # Default time zone for dates (IANA name); users can override it.
+    # Empty: the server's local zone.
+    timezone: "Europe/Berlin"
+    # Show the paperclip for messages with attachments. It costs a
+    # BODYSTRUCTURE per listed message, which servers without that
+    # information in their index have to parse. Turn it off when
+    # "op=fetch-envelopes" dominates the debug log (see README).
+    attachment_marker: true
+    # Message tags (IMAP keywords). Default: Thunderbird's $label1..$label5.
+    tags:
+      - { keyword: "$label1", label: "Important", color: "#d32f2f" }
+      - { keyword: "$label2", label: "Work",      color: "#f57c00" }
+
+  mail:
+    # Fallbacks if the server does not announce SPECIAL-USE mailboxes.
+    sent_mailbox: "Sent"
+    trash_mailbox: "Trash"
+    drafts_mailbox: "Drafts"
+    # Autosave interval of the compose form; 0 disables autosave.
+    draft_autosave: 60s
+    # Maximum size of a compose request (all attachments) in bytes.
+    max_upload_size: 26214400
+    # Store recipients of sent mail (data_dir/webmail.db) for autocompletion;
+    # users can opt out under Settings.
+    collect_recipients: true
+
+  log:
+    level: info    # debug | info | warn | error
+    format: text   # text | json
+
+  # Per-user preferences (theme, display name, signature).
+  data_dir: "/var/lib/webmail"
+
+...

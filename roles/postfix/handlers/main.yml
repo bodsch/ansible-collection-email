@@ -100,7 +100,7 @@
   listen: restart postfix
   when:
     - not running_in_check_mode
-    - service_default_state | default('started') == 'started'
+    - postfix_service.state | default('started') == 'started'
 
 - name: reload service
   ansible.builtin.service:
@@ -109,6 +109,6 @@
   listen: reload postfix
   when:
     - not running_in_check_mode
-    - service_default_state | default('started') == 'started'
+    - postfix_service.state | default('started') == 'started'
 
 ...
