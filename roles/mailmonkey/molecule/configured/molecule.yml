@@ -9,6 +9,32 @@ driver:
   name: docker
 
 platforms:
+  - name: database
+    image: "ghcr.io/bodsch/docker-ansible/ansible-${DISTRIBUTION:-debian:13}"
+    command: ${MOLECULE_DOCKER_COMMAND:-""}
+    docker_host: "${DOCKER_HOST:-unix://run/docker.sock}"
+    privileged: true
+    pre_build_image: true
+    cgroupns_mode: host
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - /var/lib/containerd
+    capabilities:
+      - SYS_ADMIN
+    tmpfs:
+      - /run
+      - /tmp
+    groups:
+      - mariadb
+    docker_networks:
+      - name: mailmonkey
+        ipam_config:
+          - subnet: "10.29.1.0/24"
+            gateway: "10.29.1.254"
+    networks:
+      - name: mailmonkey
+        ipv4_address: "10.29.1.10"
+
   - name: instance
     image: "ghcr.io/bodsch/docker-ansible/ansible-${DISTRIBUTION:-archlinux:latest}"
     command: ${MOLECULE_DOCKER_COMMAND:-""}
@@ -24,6 +50,11 @@ platforms:
     tmpfs:
       - /run
       - /tmp
+    groups:
+      - mailmonkey
+    networks:
+      - name: mailmonkey
+        ipv4_address: "10.29.1.20"
 
 provisioner:
   name: ansible

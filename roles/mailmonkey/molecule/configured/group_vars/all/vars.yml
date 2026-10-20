@@ -1,248 +1,144 @@
 ---
 
-postfix_inet:
-  interfaces:
-    - "{{ ansible_facts.default_ipv4.address }}"
+mailmonkey_config:
+  log:
+    level: info          # debug | info | warn | error
+    format: text         # json | text  (json for journald, text to read)
 
-postfix_aliases:
-  - root: you@yourdomain.org
+  # The parentheses in a DSN are go-sql-driver's grammar, not ours:
+  #   user:pass@tcp(host:port)/name
+  #   user:pass@unix(/run/mysqld/mysqld.sock)/name
+  db:
+    # dsn: mailmonkey:secret@unix(/run/mysqld/mysqld.sock)/mailmonkey
+    # dsn_file: /etc/mailmonkey/db-dsn
+    # socket: ""                                    # /run/mysqld/mysqld.sock
+    host: "10.29.1.10"                                      # 127.0.0.1     - (instead of socket)
+    port: "3306"                                      # 3306          - (with host; default 3306)
+    user: "mailmonkey"                                      # mailmonkey
+    password: "{{ vault__mariadb.mailmonkey }}"                                  # secr3t
+    password_file: /etc/mailmonkey/db-password
+    name: "mailmonkey"                                      # mailmonkey    - (default mailmonkey)
 
-postfix_users:
-  sasl_auth:
-    - username: "postmaster@localhost"
-      password: "foofoo"
-      host: "mail.foo.bar"
-      port: 2525
-      description: "sasl credentials for postmaster"
-    - username: acc1@gmail.com
-      password: passwd2
-      host: smtp.gmail.com
-      port: 587
-    - username: account1@gmail.com
-      password: passwd1
-    - username: acc2@gmail.com
-      password: passwd2
-  relay:
-    - description: "relay for account1@gmail.com. see: sasl auth"
-      username: account1@gmail.com
-      host: smtp.gmail.com
-      port: 587
-    - username: acc2@gmail.com
-      host: smtp.gmail.com
-      port: 587
+  # ----------------------------------------------------------- the web service --
+  listen: "127.0.0.1:8080"                        # (default :8080)
+  metrics_listen: "127.0.0.1:9110"                              # (empty disables it)
+  base_url: https://mail.example.com
+  primary_domain: example.com                     # (optional)
 
-postfix_smtpd:
-  banner: "$myhostname ESMTP $mail_name"
-  recipient_restrictions:
-    - check_recipient_mx_access
-    # - proxy:mysql:/opt/postfix/conf/sql/mysql_mbr_access_maps.cf
-    - permit_sasl_authenticated
-    - permit_mynetworks
-    # - check_recipient_access proxy:mysql:/opt/postfix/conf/sql/mysql_tls_enforce_in_policy.cf
-    - reject_invalid_helo_hostname
-    - reject_unauth_destination
-  data_restrictions:
-    - reject_unauth_pipelining
-    - permit
-  sender_restrictions:
-    - reject_authenticated_sender_login_mismatch
-    - permit_mynetworks
-    - permit_sasl_authenticated
-    - reject_unlisted_sender
-    - reject_unknown_sender_domain
-  relay_restrictions:
-    - permit_mynetworks
-    - permit_sasl_authenticated
-    - defer_unauth_destination
-    - reject_unauth_destination
-  milters:
-    - inet:127.0.0.1:11332
+  # ------------------------------------------------------------- the mail host --
+  mail:
+    hostname: ""                                  # mx.example.com
+    ipv4: ""                                      # 127.0.0.1
+    ipv6: ""                                      # 2001:db8::25
 
-postfix_smtp:
-  use_tls: true
-  generic_maps_file: "lmdb:/etc/postfix/generic"
-  header_checks_file: "lmdb:/etc/postfix/header_checks"
-  sasl:
-    auth:
-      enable: true
-    password_maps: "lmdb:/etc/postfix/sasl_passwd"
-    security_options: noanonymous
-    tls:
-      security_options: noanonymous
-    mechanism_filter: ""
+  # ---------------------------------------------------------------- MTA-STS -----
+  mta_sts:
+    mode: ""                                      # none | testing | enforce
+    max_age: ""                                   # 604800        -  seconds (default one week)
 
-postfix_relay:
-  use_tls: true
-  host: 'mail.test.com'
-  mxlookup: false
-  port: 587
+  # ------------------------------------------------- password recovery mail -----
+  smtp:
+    addr: 127.0.0.1:25                            # (loopback only)
+    from: ""                                      # mailmonkey@mx.example.com - set this to switch recovery on
 
-postfix_header:
-  checks:
-    - pattern: "/^Message-ID:.*"
-      action: "DUNNO"
-    - pattern: /^Message-ID:.*@(porcupine\.org)/"
-      action: "reject"
-      text: "forged domain name in Message-ID: header: $1"
-  checks_file: ""
+  # -------------------------------------------------- zweiter Faktor (TOTP) -----
+  totp:
+    key: ""                                       # 0123456789abcdef...
+    key_file: ""                                  # /etc/mailmonkey/totp.key
 
-postfix_virtual:
-  aliases:
-    - virtual: webmaster@yourdomain.com
-      alias: personal_email@gmail.com
-    - virtual: billandbob@yourdomain.com
-      alias: bill@gmail.com, bob@gmail.com
-    - virtual: ann-katrin@yourdomain.com
-      aliases:
-        - ann@gmail.com
-        - bob@gmail.com
-        - katrin@gmail.com
+  # ---------------------------------------------------------------- Sessions -----
+  session:
+    idle_timeout: 30m
+    max_lifetime: 12h
 
-postfix_sender:
-  canonical_maps:
-    - sender: '/^((root|dbsupport|helpdesk).*)matrix[.]lan$/'
-      rewrite: tech.nick@boone-schulz.de
-    - sender: root
-      rewrite: tech.nick@boone-schulz.de
-    - sender: root@matrix.lan
-      rewrite: tech.nick@boone-schulz.de
-  dependent_relayhost_maps:
-    - pattern: 'logcheck@yourdomain.org'
-      result: 'DUNNO'
-    - pattern: 'pflogsumm@yourdomain.org'
-      result: 'DUNNO'
-    - pattern: '*'
-      result: "smtp:{{ ansible_facts.lo['ipv4']['address'] }}:1025"
+  # ------------------------------------------------------- Passwortrichtlinie -----
+  password:
+    min_length: 12
+    deny_common: true
+    deny_username: true
+    min_classes: 0                                # 0 bis 4
+    min_digits: 1
+    min_upper: 1
+    min_lower: 1
+    min_special: 1
 
-postfix_non:
-  bdb:
-    custom_mapping: ""
-    migration_allow_root_prefixes: []                                     # [ /etc /usr/local/etc ]
-    migration_allow_user_prefixes: []                                     # [$data_directory /var/lib/mailman /var/lib/mailman3]
-    migration_level: ""                                                   # disable
-    migration_log_redirect: ""                                            # yes
-    migration_service_name: ""                                            # nbdb_reindex
-  empty_end_of_header_action: ""                                          # fix_quietly
-  fqdn_reject_code: ""                                                    # 504
-  smtpd_milters:
-    - inet:127.0.0.1:11332
+  # ------------------------------------------------------------------ redis -----
+  redis:
+    addr: "database:6379"                                      # /var/run/redis/redis.sock   - (Socket bevorzugt)
+    password: ""                                  # secret
+    password_file: ""                             # /etc/mailmonkey/redis-password
+    db: 0
 
-postfix_milter:
-  connect_macros: "j {daemon_name} {daemon_addr} v _"
-  mail_macros: "i {mail_addr} {client_addr} {client_name} {auth_authen}"
-  default_action: accept
+  # -------------------------------------------------------------- bootstrap -----
+  bootstrap:
+    admin: ""                                     # admin@example.com
+    password: ""                                  # secret
+    password_file: ""                             # /etc/mailmonkey/bootstrap-password
 
-postfix_recipient:
-  canonical_maps_files: ""
-  canonical_maps: []
+mailmonkey_acme:
+  log:
+    level: info          # debug | info | warn | error
+    format: json         # json | text  (json for journald, text to read)
 
-postfix_transport:
-  maps:
-    - "lmdb:{{ postfix_maps_directory }}/transport_maps"
-#    - "pcre:{{ postfix_maps_directory }}/local_transport"
-  transport_maps:
-    - pattern: 'root@yourdomain.org'
-      result: ':'
-    - pattern: '*'
-      result: "smtp:{{ ansible_facts.lo['ipv4']['address'] }}:1025"
+  db:
+    # socket: ""                                    # /run/mysqld/mysqld.sock
+    host: "10.29.1.10"                              # 127.0.0.1     - (instead of socket)
+    port: "3306"                                    # 3306          - (with host; default 3306)
+    user: "mailmonkey"                              # mailmonkey_acme
+    password: "{{ vault__mariadb.mailmonkey }}"
+    password_file: /etc/mailmonkey/acme-db-password
+    name: "mailmonkey"                                      # mailmonkey    - (default mailmonkey)
+    # dsn: mailmonkey_acme:secret@unix(/run/mysqld/mysqld.sock)/mailmonkey   # instead of the parts
+    # dsn_file: /etc/mailmonkey/acme-db-dsn
 
-postfix_postscreen:
-  enable: true
-  dnsbl_sites:
-    - wl.mailspike.net=127.0.0.[18;19;20]*-2
-    - hostkarma.junkemailfilter.com=127.0.0.1*-2
-    - list.dnswl.org=127.0.[0..255].0*-2
-    - list.dnswl.org=127.0.[0..255].1*-4
-    - list.dnswl.org=127.0.[0..255].2*-6
-    - list.dnswl.org=127.0.[0..255].3*-8
-    - ix.dnsbl.manitu.net*2
-    - bl.spamcop.net*2
-    - bl.suomispam.net*2
-    # - hostkarma.junkemailfilter.com=127.0.0.2*3
-    # - hostkarma.junkemailfilter.com=127.0.0.4*2
-    # - hostkarma.junkemailfilter.com=127.0.1.2*1
+  mail:
+    hostname: ""                                  # mx.example.com
+    ipv4: ""                                      # 127.0.0.1
+    ipv6: ""                                      # 2001:db8::25
 
+  mta_sts:
+    mode: "none"                                  # none | testing | enforce
+    max_age: 604800
 
+  acme:
+    metrics_listen: "127.0.0.1:9111"
+    cert_dir: ""                                  # /var/lib/mailmonkey/certs
+    # Where the generated placeholder pair lives; defaults to <cert_dir>/placeholder.
+    fallback_dir: ""                              # /var/lib/mailmonkey/certs/placeholder
+    staging: true
+    # directory_url: https://acme-v02.api.letsencrypt.org/directory
+    contact: ""                                   # postmaster@example.com
 
-# postfix_proxy:
-#   read_maps:
-#     - "proxy:mysql:/opt/postfix/conf/sql/mysql_sasl_passwd_maps_transport_maps.cf"
-#     - "proxy:mysql:/opt/postfix/conf/sql/mysql_mbr_access_maps.cf"
-#     - "proxy:mysql:/opt/postfix/conf/sql/mysql_tls_enforce_in_policy.cf"
-#     - "$sender_dependent_default_transport_maps"
-#     - "$smtp_tls_policy_maps"
-#     - "$local_recipient_maps"
-#     - "$mydestination"
-#     - "$virtual_alias_maps"
-#     - "$virtual_alias_domains"
-#     - "$virtual_mailbox_maps"
-#     - "$virtual_mailbox_domains"
-#     - "$relay_recipient_maps"
-#     - "$relay_domains"
-#     - "$canonical_maps"
-#     - "$sender_canonical_maps"
-#     - "$sender_bcc_maps"
-#     - "$recipient_bcc_maps"
-#     - "$recipient_canonical_maps"
-#     - "$relocated_maps"
-#     - "$transport_maps"
-#     - "$mynetworks"
-#     - "$smtpd_sender_login_maps"
-#     - "$smtp_sasl_password_maps"
+    webroot: ""                                   # /var/www/acme
+    resolver: ""                                  # 1.1.1.1:53
+    reload_units: []                              # [postfix, dovecot]
 
-postfix_mydestinations:
-  - $myhostname
-  - "{{ postfix_hostname }}"
-  - localdomain
-  - localhost
-  - localhost.localdomain
-  # - 192.168.11.10/32
+    dns:
+      challenge: false
+      provider: ""                                # a lego provider name, e.g. cloudflare
+      # KEY=value lines, put into the process environment at start, because lego's
+      # providers read their credentials there. The one place this service takes
+      # anything from the environment; see documentation/deployment.md.
+      config: ""                                  # path to that provider's credentials
 
-postfix_mynetworks:
-  - 127.0.0.0/8
-  # - 192.168.11.10/32
+    certificate:
+      additional_san: []
+      only_hostname: false
+      autodiscover_san: true
+      sni: false
+      skip_ip_check: false
+      skip_http_verification: false
+      keep_backups: 10
+      renew_before: 720h
 
-# # postfix_raw_options:
-# #   - |
-# #     milter_default_action = accept
-# #     milter_protocol = 6
-# #     smtpd_milters = unix:opendkim/opendkim.sock unix:opendmarc/opendmarc.sock unix:spamass/spamass.sock unix:clamav/clamav-milter.ctl
-# #     milter_connect_macros = "i j {daemon_name} v {if_name} _"
-# #     policyd-spf_time_limit = 3600
-
-postfix_handle_mastercf: true
-
-postfix_master:
-
-  - name: submission
-    type: inet
-    # enabled: false
-    private: false
-    chroot: false
-    command: smtpd
-    options:
-      syslog_name: postfix/submission
-      smtpd_tls_security_level: encrypt
-      smtpd_sasl_auth_enable: true
-      smtpd_tls_auth_only: true
-      smtpd_relay_restrictions:
-        - permit_sasl_authenticated
-        - reject
-  - name: smtps
-    type: inet
-    private: false
-    chroot: false
-    command: postscreen
-  - name: smtp
-    type: inet
-    state: disabled
-
-      # smtpd_reject_unlisted_recipient: no
-      # smtpd_client_restrictions: "$mua_client_restrictions"
-      # smtpd_helo_restrictions: "$mua_helo_restrictions"
-      # smtpd_sender_restrictions: "$mua_sender_restrictions"
-      # smtpd_recipient_restrictions: ""
-      # smtpd_relay_restrictions: permit_sasl_authenticated,reject
-      # milter_macro_daemon_name: ORIGINATING
+    timing:
+      check_interval: 1h                          # nothing to do
+      retry_interval: 10m                         # the run failed
+      stall_interval: 6h                          # nothing could be validated at all — longer,
+                                                  #   because the cause is usually DNS somebody
+                                                  #   has to go and change
+      verify_settle: 10s                          # wait after a reload before asking what the
+                                                  #   services present
+      verify_attempts: 3
 
 ...

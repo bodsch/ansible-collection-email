@@ -47,3 +47,12 @@
           - "distribution version : {{ ansible_facts.distribution_major_version }}"
           - "ansible version      : {{ ansible_version.full }}"
           - "python version       : {{ ansible_facts.python.version.major }}.{{ ansible_facts.python.version.minor }}"
+
+
+- name: prepare
+  hosts: database
+  any_errors_fatal: false
+  become: false
+  roles:
+    - role: bodsch.database.mariadb
+    - role: bodsch.redis

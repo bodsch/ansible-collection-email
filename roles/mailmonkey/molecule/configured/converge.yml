@@ -1,5 +1,13 @@
 ---
 
+# - name: prepare
+#   hosts: database
+#   any_errors_fatal: false
+#   become: false
+#   roles:
+#     - role: bodsch.database.mariadb
+#     - role: bodsch.redis
+
 - name: converge
   hosts: instance
   any_errors_fatal: false
@@ -9,4 +17,4 @@
     NETRC: ''
 
   roles:
-    - role: bodsch.email.postfix
+    - role: bodsch.email.mailmonkey

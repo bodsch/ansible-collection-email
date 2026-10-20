@@ -13,12 +13,9 @@ testinfra_hosts = infra_hosts(host_name="instance")
 def test_directories(host, get_vars):
     """ """
     directories = [
-        "/etc/postfix",
-        "/etc/postfix/maps.d",
-        "/etc/postfix/postfix-files.d",
-        "/etc/postfix/dynamicmaps.cf.d",
+        "/etc/mailmonkey",
+        "/var/lib/mailmonkey",
     ]
-    directories.append(get_vars.get("postfix_config_directory"))
 
     for dirs in directories:
         d = host.file(dirs)
@@ -30,45 +27,25 @@ def test_files(host, get_vars):
     created config files
     """
     files = [
-        "/etc/postfix/main.cf",
-        "/etc/postfix/maps.d/generic",
-        "/etc/postfix/maps.d/generic.lmdb",
-        "/etc/postfix/maps.d/header_checks",
-        "/etc/postfix/maps.d/recipient_canonical_maps",
-        "/etc/postfix/maps.d/recipient_canonical_maps.lmdb",
-        "/etc/postfix/maps.d/sasl_passwd",
-        "/etc/postfix/maps.d/sasl_passwd.lmdb",
-        "/etc/postfix/maps.d/sender_canonical_maps",
-        "/etc/postfix/maps.d/sender_canonical_maps.lmdb",
-        "/etc/postfix/maps.d/sender_dependent_relayhost_maps",
-        "/etc/postfix/maps.d/sender_dependent_relayhost_maps.lmdb",
-        "/etc/postfix/maps.d/transport_maps",
-        "/etc/postfix/maps.d/transport_maps.lmdb",
-        "/etc/postfix/maps.d/virtual",
-        "/etc/postfix/master.cf",
+        "/etc/mailmonkey/mailmonkey.yaml",
+        "/etc/mailmonkey/acme.yaml",
+        "/usr/bin/mailmonkey",
+        "/usr/bin/mailmonkey-acme",
+        "/usr/lib/systemd/system/mailmonkey.service",
+        "/usr/lib/systemd/system/mailmonkey-acme.service",
     ]
-    files.append(get_vars.get("postfix_mailname_file"))
-    files.append(get_vars.get("postfix_aliases_file"))
 
     for _file in files:
         f = host.file(_file)
         assert f.is_file
 
 
-def test_user(host, get_vars):
+def test_mailmonkey_acme_user(host, get_vars):
     """
     created user
     """
-    shell = "/usr/sbin/nologin"
-
-    distribution = host.system_info.distribution
-
-    if distribution == "arch":
-        shell = "/usr/bin/nologin"
-    elif distribution == "artix":
-        shell = "/bin/nologin"
-
-    user_name = "postfix"
+    shell = "/usr/bin/nologin"
+    user_name = "mailmonkey-acme"
     u = host.user(user_name)
     g = host.group(user_name)
 
@@ -78,11 +55,25 @@ def test_user(host, get_vars):
     assert u.shell == shell
 
 
+def test_mailmonkey_user(host, get_vars):
+    """
+    created user
+    """
+    shell = "/usr/bin/nologin"
+    user_name = "mailmonkey"
+    u = host.user(user_name)
+    g = host.group(user_name)
+
+    assert g.exists
+    assert u.exists
+    assert user_name in u.groups
+    assert u.shell == shell
+
 def test_service_running_and_enabled(host, get_vars):
     """
     running service
     """
-    service_name = "postfix"
+    service_name = "mailmonkey"
 
     service = host.service(service_name)
     assert service.is_running

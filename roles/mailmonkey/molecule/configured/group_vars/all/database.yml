@@ -1,0 +1,67 @@
+---
+
+mariadb_system_users:
+  - username: root
+    password: '{{ vault__mariadb.root }}'
+    home: /root
+    update: true
+    ignore: true
+
+mariadb_config_mysqld:
+  bind-address: 0.0.0.0
+
+  query_cache_type: '0'
+  query_cache_limit: '6M'
+  query_cache_size: '16M'
+  # fine-tuning
+  max_connections: 80
+  max_heap_table_size: 32M
+  max_allowed_packet: 64M
+  key_buffer_size: 256M
+  thread_stack: 192k
+  thread_cache_size: 16384
+  # thread_cache_size: 24
+  skip-external-locking: ""
+  # Skip reverse DNS lookup of clients
+  skip-name-resolve: ""
+  # enable performance schema
+  performance_schema: 1
+  table_cache: 1520
+  table_definition_cache: 650
+
+  tmp_table_size: 125M
+  # INNODB
+  innodb_buffer_pool_size: 256M
+  innodb_compression_default: 0
+  innodb_data_file_path: ibdata1:10M:autoextend:max:128M
+  innodb_file_per_table: 1
+  innodb_flush_log_at_trx_commit: 1
+  innodb_lock_wait_timeout: 50
+  innodb_log_buffer_size: 8M
+  innodb_log_file_size: 32M
+  innodb_read_only_compressed: "0"
+
+  character-set-server: utf8mb4
+  collation-server: utf8mb4_general_ci
+
+  expire_logs_days: 2
+
+mariadb_config_client:
+  socket: /run/mysqld/mysqld.sock
+
+mariadb_monitoring:
+  enabled: false
+
+mariadb_databases:
+  - name: mailmonkey
+    collation: utf8_general_ci
+    encoding: utf8
+
+mariadb_users:
+  - name: mailmonkey
+    host: 0.0.0.0
+    password: '{{ vault__mariadb.mailmonkey }}'
+    priv: "mailmonkey.*:ALL"
+    encrypted: false
+
+...
