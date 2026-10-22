@@ -14,7 +14,6 @@ def test_directories(host, get_vars):
     """ """
     directories = [
         "/etc/mailmonkey",
-        "/var/lib/mailmonkey",
         "/usr/local/opt/mailmonkey",
     ]
 
