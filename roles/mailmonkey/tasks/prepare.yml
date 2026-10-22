@@ -42,4 +42,18 @@
     name: "{{ mailmonkey_dependencies }}"
     state: present
 
+- name: find account defaults
+  when:
+    - not running_in_check_mode
+  bodsch.core.account_defaults:
+    default_user: "{{ mailmonkey_acme_owner_default }}"
+  register: _default_user
+
+- name: define mailmonkey acme additional group
+  when:
+    - not running_in_check_mode
+    - _default_user is defined
+  ansible.builtin.set_fact:
+    mailmonkey_acme_additional_groups: "{{ mailmonkey_acme_additional_groups + [_default_user.group] }}"
+
 ...

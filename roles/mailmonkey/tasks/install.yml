@@ -17,7 +17,7 @@
         name: "{{ mailmonkey_system_user.owner }}"
         groups: "{{ mailmonkey_system_user.group }}"
         append: true
-        shell: /usr/bin/nologin
+        shell: /usr/sbin/nologin
         system: true
         createhome: false
         home: /nonexistent
@@ -33,21 +33,19 @@
         name: "{{ mailmonkey_acme_system_user.owner }}"
         groups: "{{ mailmonkey_acme_system_user.group }}"
         append: true
-        shell: /usr/bin/nologin
+        shell: /usr/sbin/nologin
         system: true
         createhome: false
         home: /nonexistent
 
     - name: add user {{ mailmonkey_acme_system_user.owner }} to additional groups
+      when:
+        - mailmonkey_acme_additional_groups | default([]) | count > 0
       ansible.builtin.user:
         name: "{{ mailmonkey_acme_system_user.owner }}"
-        groups: "{{ item }}"
+        groups: "{{ mailmonkey_acme_additional_groups | join(',') }}"
         append: true
         state: present
-      loop: "{{ mailmonkey_acme_groups }}"
-      loop_control:
-        label: "add {{ mailmonkey_acme_system_user.owner }} to group {{ item }}"
-
 
 - name: merge mailmonkey configuration between defaults and custom
   ansible.builtin.set_fact:

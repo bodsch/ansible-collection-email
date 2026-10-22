@@ -47,7 +47,7 @@ def test_mailmonkey_acme_user(host, get_vars):
     """
     created user
     """
-    shell = "/usr/bin/nologin"
+    shell = "/usr/sbin/nologin"
     user_name = "mailmonkey-acme"
     u = host.user(user_name)
     g = host.group(user_name)
@@ -62,7 +62,7 @@ def test_mailmonkey_user(host, get_vars):
     """
     created user
     """
-    shell = "/usr/bin/nologin"
+    shell = "/usr/sbin/nologin"
     user_name = "mailmonkey"
     u = host.user(user_name)
     g = host.group(user_name)

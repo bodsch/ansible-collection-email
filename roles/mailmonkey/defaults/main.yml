@@ -10,8 +10,7 @@ mailmonkey_acme_system_user:
   owner:  mailmonkey-acme
   group: mailmonkey-acme
 
-mailmonkey_acme_groups:
-  - adm
+mailmonkey_acme_additional_groups: []
 
 mailmonkey_service:
   state: started
