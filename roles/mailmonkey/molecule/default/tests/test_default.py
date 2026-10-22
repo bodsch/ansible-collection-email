@@ -13,12 +13,10 @@ testinfra_hosts = infra_hosts(host_name="instance")
 def test_directories(host, get_vars):
     """ """
     directories = [
-        "/etc/postfix",
-        "/etc/postfix/maps.d",
-        "/etc/postfix/postfix-files.d",
-        "/etc/postfix/dynamicmaps.cf.d",
+        "/etc/mailmonkey",
+        "/var/lib/mailmonkey",
+        "/usr/local/opt/mailmonkey",
     ]
-    directories.append(get_vars.get("postfix_config_directory"))
 
     for dirs in directories:
         d = host.file(dirs)
@@ -30,37 +28,25 @@ def test_files(host, get_vars):
     created config files
     """
     files = [
-        "/etc/postfix/main.cf",
-        "/etc/postfix/maps.d/generic",
-        "/etc/postfix/maps.d/generic.lmdb",
-        "/etc/postfix/master.cf",
+        "/etc/mailmonkey/mailmonkey.yaml",
+        "/etc/mailmonkey/acme.yaml",
+        "/usr/bin/mailmonkey",
+        "/usr/bin/mailmonkey-acme",
+        "/usr/lib/systemd/system/mailmonkey.service",
+        "/usr/lib/systemd/system/mailmonkey-acme.service",
     ]
-    files.append(get_vars.get("postfix_mailname_file"))
-    files.append(get_vars.get("postfix_aliases_file"))
 
     for _file in files:
         f = host.file(_file)
         assert f.is_file
 
 
-def test_user(host, get_vars):
+def test_mailmonkey_acme_user(host, get_vars):
     """
     created user
     """
-    shell = "/usr/sbin/nologin"
-
-    distribution = host.system_info.distribution
-
-    print(distribution)
-
-    if distribution in ["redhat", "ol", "centos", "rocky", "almalinux"]:
-        shell = "/sbin/nologin"
-    elif distribution in ["arch"]:
-        shell = "/usr/bin/nologin"
-    elif distribution in ["artix"]:
-        shell = "/bin/nologin"
-
-    user_name = "postfix"
+    shell = "/usr/bin/nologin"
+    user_name = "mailmonkey-acme"
     u = host.user(user_name)
     g = host.group(user_name)
 
@@ -70,48 +56,16 @@ def test_user(host, get_vars):
     assert u.shell == shell
 
 
-def test_service_running_and_enabled(host, get_vars):
+def test_mailmonkey_user(host, get_vars):
     """
-    running service
+    created user
     """
-    service_name = "postfix"
+    shell = "/usr/bin/nologin"
+    user_name = "mailmonkey"
+    u = host.user(user_name)
+    g = host.group(user_name)
 
-    service = host.service(service_name)
-    assert service.is_running
-    assert service.is_enabled
-
-
-def test_listening_socket(host, get_vars):
-    """ """
-    listening = host.socket.get_listening_sockets()
-    interfaces = host.interface.names()
-    eth = []
-
-    if "lo" in interfaces:
-        eth = host.interface("lo").addresses
-
-    for i in listening:
-        print(i)
-
-    for i in interfaces:
-        print(i)
-
-    for i in eth:
-        print(i)
-
-    distribution = host.system_info.distribution
-    release = host.system_info.release
-
-    bind_address = eth[0]
-    bind_port = 25
-    socket_name = "private/smtp"
-
-    listen = []
-    listen.append(f"tcp://{bind_address}:{bind_port}")
-
-    if not (distribution == "ubuntu" and release == "18.04"):
-        listen.append(f"unix://{socket_name}")
-
-    for spec in listen:
-        socket = host.socket(spec)
-        assert socket.is_listening
+    assert g.exists
+    assert u.exists
+    assert user_name in u.groups
+    assert u.shell == shell
