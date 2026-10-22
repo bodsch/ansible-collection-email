@@ -3,3 +3,6 @@
 vault__mariadb:
   root: 64751fe5f65f408ec211a0139373acf4d478c710ab
   mailmonkey: 7e8effe07f5d5ea5f80f9df60da4dabf
+
+vault__mailmonkey:
+  bootstrap: f1094bfd0d26ebd2ABE61!65b5a06fa9

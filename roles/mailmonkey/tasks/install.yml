@@ -17,7 +17,7 @@
         name: "{{ mailmonkey_system_user.owner }}"
         groups: "{{ mailmonkey_system_user.group }}"
         append: true
-        shell: /usr/sbin/nologin
+        shell: /usr/bin/nologin
         system: true
         createhome: false
         home: /nonexistent
@@ -33,7 +33,7 @@
         name: "{{ mailmonkey_acme_system_user.owner }}"
         groups: "{{ mailmonkey_acme_system_user.group }}"
         append: true
-        shell: /usr/sbin/nologin
+        shell: /usr/bin/nologin
         system: true
         createhome: false
         home: /nonexistent

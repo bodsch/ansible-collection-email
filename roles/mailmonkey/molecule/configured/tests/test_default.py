@@ -15,6 +15,7 @@ def test_directories(host, get_vars):
     directories = [
         "/etc/mailmonkey",
         "/var/lib/mailmonkey",
+        "/usr/local/opt/mailmonkey",
     ]
 
     for dirs in directories:
@@ -29,6 +30,8 @@ def test_files(host, get_vars):
     files = [
         "/etc/mailmonkey/mailmonkey.yaml",
         "/etc/mailmonkey/acme.yaml",
+        "/etc/mailmonkey/db-password",
+        "/etc/mailmonkey/acme-db-password",
         "/usr/bin/mailmonkey",
         "/usr/bin/mailmonkey-acme",
         "/usr/lib/systemd/system/mailmonkey.service",
@@ -98,21 +101,10 @@ def test_listening_socket(host, get_vars):
     for i in eth:
         print(i)
 
-    #  tcp://172.17.0.2:465
-    #  tcp://172.17.0.2:587
-
-    distribution = host.system_info.distribution
-    release = host.system_info.release
-
-    bind_address = eth[0]
-    bind_port = 587
-    socket_name = "private/smtp"
-
     listen = []
-    listen.append(f"tcp://{bind_address}:{bind_port}")
-
-    if not (distribution == "ubuntu" and release == "18.04"):
-        listen.append(f"unix://{socket_name}")
+    listen.append("tcp://127.0.0.1:8080")
+    listen.append("tcp://127.0.0.1:9110")
+    listen.append("tcp://127.0.0.1:9111")
 
     for spec in listen:
         socket = host.socket(spec)

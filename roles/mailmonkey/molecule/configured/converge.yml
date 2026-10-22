@@ -1,13 +1,5 @@
 ---
 
-# - name: prepare
-#   hosts: database
-#   any_errors_fatal: false
-#   become: false
-#   roles:
-#     - role: bodsch.database.mariadb
-#     - role: bodsch.redis
-
 - name: converge
   hosts: instance
   any_errors_fatal: false

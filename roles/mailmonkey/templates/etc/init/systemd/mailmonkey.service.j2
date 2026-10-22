@@ -8,17 +8,18 @@ Wants                       = network-online.target
 
 [Service]
 Type                        = simple
-User                        = mailmonkey
-Group                       = mailmonkey
+User                        = {{ mailmonkey_system_user.owner }}
+Group                       = {{ mailmonkey_system_user.group }}
 # Running Redis over a Unix socket: add the socket's group here.
 # SupplementaryGroups       = redis
 
-ExecStart                   = /usr/bin/mailmonkey serve -config /etc/mailmonkey/mailmonkey.yaml
+ExecReload                  = /bin/kill -HUP $MAINPID
+ExecStart                   = /usr/bin/mailmonkey serve -config {{ mailmonkey_config_dir }}/mailmonkey.yaml
 
 # Secrets as <name>_file, handed in by systemd rather than read from /etc.
 # The paths in mailmonkey.yaml then point below /run/credentials/mailmonkey.service/.
-# LoadCredential            = db-password:/etc/mailmonkey/secrets/db-password
-# LoadCredential            = totp-key:/etc/mailmonkey/secrets/totp.key
+# LoadCredential            = db-password:{{ mailmonkey_config_dir }}/secrets/db-password
+# LoadCredential            = totp-key:{{ mailmonkey_config_dir }}/secrets/totp.key
 
 Restart                     = on-failure
 RestartSec                  = 5s
@@ -51,6 +52,7 @@ MemoryDenyWriteExecute      = yes
 RemoveIPC                   = yes
 SystemCallArchitectures     = native
 SystemCallFilter            = @system-service
+
 # Not ~@resources: it holds setrlimit, with which the Go runtime raises its
 # soft limit on open files at start. Denied, a web server stays at 1024.
 SystemCallFilter            = ~@privileged

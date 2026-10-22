@@ -15,6 +15,7 @@ mailmonkey_dependencies: []
 # -----------------------------------------------------------------------------
 
 mailmonkey_defaults_service: {}
+
 mailmonkey_defaults_config:
   log:
     level: info          # debug | info | warn | error
@@ -79,7 +80,7 @@ mailmonkey_defaults_config:
 
   # ------------------------------------------------------------------ redis -----
   redis:
-    addr: ""                                      # /var/run/redis/redis.sock   - (Socket bevorzugt)
+    # addr: ""                                      # /var/run/redis/redis.sock   - (Socket bevorzugt)
     addr: ""                                      # 127.0.0.1:6379
     password: ""                                  # secret
     password_file: ""                             # /etc/mailmonkey/redis-password
@@ -113,20 +114,19 @@ mailmonkey_defaults_acme:
     ipv6: ""                                      # 2001:db8::25
 
   mta_sts:
-    mode: "none"                                  # none | testing | enforce
-    max_age: 604800
+    mode: ""                                      # none | testing | enforce
+    max_age: ""                                   # 604800
 
   acme:
     metrics_listen: ""
-    cert_dir: ""                                  # /var/lib/mailmonkey/certs
+    cert_dir: "/var/lib/mailmonkey/certs"         # /var/lib/mailmonkey/certs
     # Where the generated placeholder pair lives; defaults to <cert_dir>/placeholder.
-    fallback_dir: ""                              # /var/lib/mailmonkey/certs/placeholder
+    fallback_dir: "/var/lib/mailmonkey/certs/placeholder" # /var/lib/mailmonkey/certs/placeholder
     staging: true
     # directory_url: https://acme-v02.api.letsencrypt.org/directory
     contact: ""                                   # postmaster@example.com
-
     webroot: ""                                   # /var/www/acme
-    resolver: ""                                  # 1.1.1.1:53
+    resolver: "127.0.0.1:53"                      # 1.1.1.1:53
     reload_units: []                              # [postfix, dovecot]
 
     dns:
@@ -162,8 +162,11 @@ mailmonkey_defaults_acme:
 mailmonkey_defaults_directory: /etc/default
 
 mailmonkey_defaults_release:
-  download_url: https://github.com/mailmonkey/mailmonkey/releases
-  file: mailmonkey_{{ mailmonkey_version }}.tar.gz
+  provider: forgejo
+  host: https://git.boone-schulz.de
+  project: go
+  repository: mailmonkey
+  file: "mailmonkey_{{ mailmonkey_version }}.tar.gz"
   binary: "mailmonkey-{{ ansible_facts.system | lower }}-{{ system_architecture }}"
 
 go_arch_map:
@@ -175,5 +178,14 @@ go_arch_map:
 system_architecture: "{{ go_arch_map[ansible_facts.architecture] | default(ansible_facts.architecture) }}"
 
 systemd_lib_directory: /lib/systemd/system
+
+_mailmonkey_gh_token: "{{ lookup('env', 'GH_TOKEN') }}"
+_mailmonkey_gh_user: "{{ lookup('env', 'GH_USER') }}"
+_mailmonkey_fj_token: "{{ lookup('env', 'FJ_TOKEN') }}"
+_mailmonkey_fj_user: "{{ lookup('env', 'FJ_USER') }}"
+
+# credentials matching the configured release provider (empty when unset)
+_mailmonkey_scm_token: "{{ _mailmonkey_fj_token if mailmonkey_release.provider == 'forgejo' else _mailmonkey_gh_token }}"
+_mailmonkey_scm_user: "{{ _mailmonkey_fj_user if mailmonkey_release.provider == 'forgejo' else _mailmonkey_gh_user }}"
 
 ...

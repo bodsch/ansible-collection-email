@@ -11,15 +11,15 @@
   become: false
   run_once: true
   bodsch.scm.scm_release:
-    provider: forgejo
-    host: "https://git.boone-schulz.de"
-    project: go
-    repository: mailmonkey
+    provider: "{{ mailmonkey_release.provider }}"
+    host: "{{ mailmonkey_release.host }}"
+    project: "{{ mailmonkey_release.project }}"
+    repository: "{{ mailmonkey_release.repository }}"
     asset: "mailmonkey_{version}.tar.gz"
-    # architecture: "{{ ansible_facts.architecture }}"
-    # system: "{{ ansible_facts.system }}"
+    architecture: "{{ ansible_facts.architecture }}"
+    system: "{{ ansible_facts.system }}"
     version: "{{ mailmonkey_version }}"
-    password: "{{ lookup('env', 'GH_TOKEN') | default(omit) }}"
+    password: "{{ _mailmonkey_scm_token | default(omit, true) }}"
   register: _release
 
 - name: re-define mailmonkey_version
@@ -86,8 +86,8 @@
       run_once: "{{ 'false' if mailmonkey_direct_download else 'true' }}"
       ansible.builtin.get_url:
         url: "{{ _release.download_url }}"
-        username: "{{ lookup('env', 'GH_USER') | default(omit) }}"
-        password: "{{ lookup('env', 'GH_TOKEN') | default(omit) }}"
+        username: "{{ _mailmonkey_scm_user | default(omit, true) }}"
+        password: "{{ _mailmonkey_scm_token | default(omit, true) }}"
         dest: "{{ mailmonkey_local_tmp_directory }}/{{ _release.file }}"
         checksum: "{{ _release.checksum_string | default(omit) }}"
         mode: "0640"

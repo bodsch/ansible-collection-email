@@ -8,13 +8,44 @@
 
 # ---------------------------------------------------------------- logging ----
 log:
-  {{ values.get("log") | to_nice_yaml(indent=0,sort_keys=False) | indent(2, False) }}
+{% set _log_level = "info" %}
+{% set _log_format = "text" %}
+{% if values.log.level is defined and
+      values.log.level | string | length > 0 and
+      values.log.level in ["debug", "info", "warn", "error"] %}
+  {% set _log_level = values.log.level %}
+  level: {{ _log_level }}
+{% endif %}
+{% if values.log.format is defined and
+      values.log.format | string | length > 0 and
+      values.log.format in ["text", "json"] %}
+  {% set _log_format = values.log.format %}
+  format: {{ _log_format }}
+{% endif %}
 
 # --------------------------------------------------------------- database ----
-{% set _db = values.get("db") | bodsch.core.remove_empty_values() %}
-{% if _db | count > 0 %}
+{% if (values.db.socket | default('') | string | length > 0) or
+      (values.db.host | default('') | string | length > 0)  %}
+  {% if values.db.host | default('') | string | length > 0 %}
+    {% set _ = values.db.pop("socket") %}
+  {% endif %}
 db:
-  {{ _db | to_nice_yaml(indent=0,sort_keys=False) | indent(2, False) }}
+  {% if values.db.socket | default('') | string | length > 0 %}
+  socket: {{ values.db.socket }}
+  {% endif %}
+  {% if values.db.host | default('') | string | length > 0 %}
+  host: {{ values.db.host }}
+  port: {{ values.db.port | default(3306) | int }}
+  {% endif %}
+  {% if values.db.name | default('mailmonkey') | string | length > 0 %}
+  name: {{ values.db.name }}
+  {% endif %}
+  {% if values.db.user | default('mailmonkey') | string | length > 0 %}
+  user: {{ values.db.user }}
+  {% endif %}
+  {% if values.db.password_file | default('') | string | length > 0 %}
+  password_file: {{ values.db.password_file }}
+  {% endif %}
 {% else %}
 # no database configuration found
 {% endif %}
@@ -26,36 +57,113 @@ base_url: "{{ values.get('base_url', '') }}"
 primary_domain: "{{ values.get('primary_domain', '') }}"
 
 # ------------------------------------------------------------- the mail host --
+{% if values.mail.hostname | default('') | string | length > 0 %}
 mail:
-  {{ values.get("mail") | to_nice_yaml(indent=0,sort_keys=False) | indent(2, False) }}
+  hostname: {{ values.mail.hostname }}
+  {% if values.mail.ipv4 | default('') | string | length > 0 %}
+  ipv4: {{ values.mail.ipv4 }}
+  {% endif %}
+  {% if values.mail.ipv6 | default('') | string | length > 0 %}
+  ipv6: {{ values.mail.ipv6 }}
+  {% endif %}
+{% endif %}
 
 # ---------------------------------------------------------------- MTA-STS -----
+{% if values.mta_sts is defined and
+      values.mta_sts | count > 0 %}
 mta_sts:
-  {{ values.get("mta_sts") | to_nice_yaml(indent=0,sort_keys=False) | indent(2, False) }}
+  {% if values.mta_sts.mode | default('') | string | length > 0 and
+        values.mta_sts.mode in ["none", "testing", "enforce"] %}
+    {% set _mta_sts_mode = values.mta_sts.mode %}
+  mode: {{ _mta_sts_mode }}
+    {% if values.mta_sts.max_age | default('') | string | length > 0 %}
+  max_age: {{ values.mta_sts.max_age }}
+    {% endif %}
+  {% endif %}
+{% endif %}
 
 # ------------------------------------------------- password recovery mail -----
+{% if values.smtp is defined and
+      values.smtp | count > 0 %}
 smtp:
-  {{ values.get("smtp") | to_nice_yaml(indent=0,sort_keys=False) | indent(2, False) }}
+  {% if values.smtp.addr | default('') | string | length > 0 %}
+  addr: {{ values.smtp.addr }}
+  {% endif %}
+  {% if values.smtp.from | default('') | string | length > 0 %}
+  from: {{ values.smtp.from }}
+  {% endif %}
+{% endif %}
 
 # -------------------------------------------------- zweiter Faktor (TOTP) -----
+{% if values.totp is defined and
+      values.totp | count > 0 %}
 totp:
-  {{ values.get("totp") | to_nice_yaml(indent=0,sort_keys=False) | indent(2, False) }}
+  {% if values.totp.key_file | default('') | string | length > 0 %}
+  key_file: {{ values.totp.key_file }}
+  {% endif %}
+{% endif %}
 
 # ---------------------------------------------------------------- Sessions -----
+{% if values.session is defined and
+      values.session | count > 0 %}
 session:
-  {{ values.get("session") | to_nice_yaml(indent=0,sort_keys=False) | indent(2, False) }}
+  {% if values.session.idle_timeout | default('') | string | length > 0 %}
+  idle_timeout: {{ values.session.idle_timeout }}
+  {% endif %}
+  {% if values.session.max_lifetime | default('') | string | length > 0 %}
+  max_lifetime: {{ values.session.max_lifetime }}
+  {% endif %}
+{% endif %}
 
 # ------------------------------------------------------- Passwortrichtlinie -----
+{% if values.password is defined and
+      values.password | count > 0 %}
 password:
-  {{ values.get("password") | to_nice_yaml(indent=0,sort_keys=False) | indent(2, False) }}
+  {% if values.password.min_length | default('') | string | length > 0 %}
+  min_length: {{ values.password.min_length | int }}
+  {% endif %}
+  {% if values.password.deny_common | default('') | string | length > 0 %}
+  deny_common: {{ values.password.deny_common | bool | bodsch.core.config_bool(true_as='true', false_as='false') }}
+  {% endif %}
+  {% if values.password.deny_username | default('') | string | length > 0 %}
+  deny_username: {{ values.password.deny_username | bool | bodsch.core.config_bool(true_as='true', false_as='false') }}
+  {% endif %}
+  {% if values.password.min_classes | default('') | string | length > 0 %}
+  min_classes: {{ values.password.min_classes | int }}
+  {% endif %}
+  {% if values.password.min_digits | default('') | string | length > 0 %}
+  min_digits: {{ values.password.min_digits | int }}
+  {% endif %}
+  {% if values.password.min_upper | default('') | string | length > 0 %}
+  min_upper: {{ values.password.min_upper | int }}
+  {% endif %}
+  {% if values.password.min_lower | default('') | string | length > 0 %}
+  min_lower: {{ values.password.min_lower | int }}
+  {% endif %}
+  {% if values.password.min_special | default('') | string | length > 0 %}
+  min_special: {{ values.password.min_special | int }}
+  {% endif %}
+{% endif %}
 
 # ------------------------------------------------------------------ redis -----
+{% if values.redis.addr | default('') | string | length > 0 %}
 redis:
-  {{ values.get("redis") | to_nice_yaml(indent=0,sort_keys=False) | indent(2, False) }}
+  addr: {{ values.redis.addr }}
+  {% if values.redis.password_file | default('') | string | length > 0 %}
+  password_file: {{ values.redis.password_file }}
+  {% endif %}
+  {% if values.redis.db | default('0') | string | length > 0 %}
+  db: {{ values.redis.db | int }}
+  {% endif %}
+{% endif %}
 
 # -------------------------------------------------------------- bootstrap -----
+{% if values.bootstrap.admin | default('') | string | length > 0 and
+      values.bootstrap.password | default('') | string | length > 0 %}
 bootstrap:
-  {{ values.get("bootstrap") | to_nice_yaml(indent=0,sort_keys=False) | indent(2, False) }}
+  admin: {{ values.bootstrap.admin }}
+  password: {{ values.bootstrap.password }}
+{% endif %}
 
 {#
 # ---------------------------------------------------------------- logging ----

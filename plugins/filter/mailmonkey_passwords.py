@@ -95,19 +95,19 @@ class FilterModule:
                 _ = data["redis"].pop("password")
                 data["redis"]["password_file"] = "/etc/mailmonkey/redis-password"
 
-        _bootstrap = data.get("bootstrap", None)
-
-        if _bootstrap:
-            _bootstrap_password = _bootstrap.get("password", None)
-            _bootstrap_password_file = _bootstrap.get("password_file", None)
-
-            if _bootstrap_password and _bootstrap_password_file:
-                pass
-            elif not _bootstrap_password and _bootstrap_password_file:
-                _ = data["bootstrap"].pop("password_file")
-            elif _bootstrap_password and not _bootstrap_password_file:
-                _ = data["bootstrap"].pop("password")
-                data["bootstrap"]["password_file"] = "/etc/mailmonkey/bootstrap-password"
+        # _bootstrap = data.get("bootstrap", None)
+        #
+        # if _bootstrap:
+        #     _bootstrap_password = _bootstrap.get("password", None)
+        #     _bootstrap_password_file = _bootstrap.get("password_file", None)
+        #
+        #     if _bootstrap_password and _bootstrap_password_file:
+        #         pass
+        #     elif not _bootstrap_password and _bootstrap_password_file:
+        #         _ = data["bootstrap"].pop("password_file")
+        #     elif _bootstrap_password and not _bootstrap_password_file:
+        #         _ = data["bootstrap"].pop("password")
+        #         data["bootstrap"]["password_file"] = "/etc/mailmonkey/bootstrap-password"
 
         display.v(
             f" = result '{data}'"

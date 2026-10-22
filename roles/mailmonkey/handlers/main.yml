@@ -24,15 +24,10 @@
     name: mailmonkey
     state: restarted
 
-- name: simple restart mailmonkey
-  become: true
-  ansible.builtin.service:
-    name: mailmonkey
-    state: restarted
-
 - name: reload mailmonkey_acme
   when:
     - not running_in_check_mode
+    - mailmonkey_acme_valid.valid
   become: true
   ansible.builtin.service:
     name: mailmonkey-acme
@@ -41,6 +36,7 @@
 - name: restart mailmonkey_acme
   when:
     - not running_in_check_mode
+    - mailmonkey_acme_valid.valid
   become: true
   ansible.builtin.service:
     name: mailmonkey-acme

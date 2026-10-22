@@ -8,12 +8,13 @@ Wants                       = network-online.target
 
 [Service]
 Type                        = simple
-User                        = mailmonkey-acme
-Group                       = mailmonkey-acme
+User                        = {{ mailmonkey_acme_system_user.owner }}
+Group                       = {{ mailmonkey_acme_system_user.group }}
 
-ExecStart                   = /usr/bin/mailmonkey-acme -config /etc/mailmonkey/acme.yaml
+ExecReload                  = /bin/kill -HUP $MAINPID
+ExecStart                   = /usr/bin/mailmonkey-acme -config {{ mailmonkey_config_dir }}/acme.yaml
 
-# LoadCredential            = db-password:/etc/mailmonkey/secrets/acme-db-password
+# LoadCredential            = db-password:{{ mailmonkey_config_dir }}/secrets/acme-db-password
 
 Restart                     = on-failure
 RestartSec                  = 30s
@@ -23,11 +24,12 @@ RestartSec                  = 30s
 # the keys inside are 0600.
 StateDirectory              = mailmonkey/certs
 StateDirectoryMode          = 0755
+
 # The leading "-" is not optional. Without it a missing path fails the unit
 # with 226/NAMESPACE before the binary runs: under acme.dns.challenge there is
 # no challenge directory at all, and without DNS-01 the binary's own refusal —
 # the one naming the path and the nginx block — would never be printed.
-ReadWritePaths              = -/var/www/acme/.well-known/acme-challenge
+ReadWritePaths              = -{{ mailmonkey_acme.acme.webroot }}/.well-known/acme-challenge
 
 # Hardening. Not PrivateUsers=: polkit decides by the caller's uid, and a
 # remapped one is nobody it has a rule for.
@@ -55,9 +57,10 @@ MemoryDenyWriteExecute      = yes
 RemoveIPC                   = yes
 SystemCallArchitectures     = native
 SystemCallFilter            = @system-service
+
 # Not ~@resources: it holds setrlimit, with which the Go runtime raises its
 # soft limit on open files at start. Denied, a web server stays at 1024.
-SystemCallFilter            = ~@privileged
+# SystemCallFilter            = ~@privileged
 
 [Install]
 WantedBy                    = multi-user.target

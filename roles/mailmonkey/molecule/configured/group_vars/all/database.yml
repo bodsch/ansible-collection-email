@@ -59,7 +59,7 @@ mariadb_databases:
 
 mariadb_users:
   - name: mailmonkey
-    host: 0.0.0.0
+    host: "%"
     password: '{{ vault__mariadb.mailmonkey }}'
     priv: "mailmonkey.*:ALL"
     encrypted: false

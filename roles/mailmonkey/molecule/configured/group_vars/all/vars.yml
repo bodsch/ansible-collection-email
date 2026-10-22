@@ -1,5 +1,8 @@
 ---
 
+mailmonkey_acme_groups:
+  - http
+
 mailmonkey_config:
   log:
     level: info          # debug | info | warn | error
@@ -71,8 +74,8 @@ mailmonkey_config:
 
   # -------------------------------------------------------------- bootstrap -----
   bootstrap:
-    admin: ""                                     # admin@example.com
-    password: ""                                  # secret
+    admin: "admin@example.com"                                     # admin@example.com
+    password: "{{ vault__mailmonkey.bootstrap }}"  # secret
     password_file: ""                             # /etc/mailmonkey/bootstrap-password
 
 mailmonkey_acme:
@@ -92,53 +95,53 @@ mailmonkey_acme:
     # dsn_file: /etc/mailmonkey/acme-db-dsn
 
   mail:
-    hostname: ""                                  # mx.example.com
-    ipv4: ""                                      # 127.0.0.1
-    ipv6: ""                                      # 2001:db8::25
+    hostname: "mx.example.com"                      # mx.example.com
+    ipv4: "127.0.0.1"                               # 127.0.0.1
+  #   ipv6: ""                                      # 2001:db8::25
 
-  mta_sts:
-    mode: "none"                                  # none | testing | enforce
-    max_age: 604800
+  # mta_sts:
+  #   mode: "none"                                  # none | testing | enforce
+  #   max_age: 604800
 
   acme:
     metrics_listen: "127.0.0.1:9111"
-    cert_dir: ""                                  # /var/lib/mailmonkey/certs
+    # cert_dir: ""                                  # /var/lib/mailmonkey/certs
     # Where the generated placeholder pair lives; defaults to <cert_dir>/placeholder.
-    fallback_dir: ""                              # /var/lib/mailmonkey/certs/placeholder
-    staging: true
+    # fallback_dir: ""                              # /var/lib/mailmonkey/certs/placeholder
+    # staging: true
     # directory_url: https://acme-v02.api.letsencrypt.org/directory
-    contact: ""                                   # postmaster@example.com
+    # contact: ""                                   # postmaster@example.com
 
-    webroot: ""                                   # /var/www/acme
-    resolver: ""                                  # 1.1.1.1:53
-    reload_units: []                              # [postfix, dovecot]
+    webroot: "{{ nginx_acme.challenge_directory}}"  # /var/www/acme
+    resolver: "1.1.1.1:53"                          # 1.1.1.1:53
+    # reload_units: []                              # [postfix, dovecot]
 
-    dns:
-      challenge: false
-      provider: ""                                # a lego provider name, e.g. cloudflare
-      # KEY=value lines, put into the process environment at start, because lego's
-      # providers read their credentials there. The one place this service takes
-      # anything from the environment; see documentation/deployment.md.
-      config: ""                                  # path to that provider's credentials
+    # dns:
+    #   challenge: false
+    #   provider: ""                                # a lego provider name, e.g. cloudflare
+    #   # KEY=value lines, put into the process environment at start, because lego's
+    #   # providers read their credentials there. The one place this service takes
+    #   # anything from the environment; see documentation/deployment.md.
+    #   config: ""                                  # path to that provider's credentials
 
-    certificate:
-      additional_san: []
-      only_hostname: false
-      autodiscover_san: true
-      sni: false
-      skip_ip_check: false
-      skip_http_verification: false
-      keep_backups: 10
-      renew_before: 720h
+    # certificate:
+    #   additional_san: []
+    #   only_hostname: false
+    #   autodiscover_san: true
+    #   sni: false
+    #   skip_ip_check: false
+    #   skip_http_verification: false
+    #   keep_backups: 10
+    #   renew_before: 720h
 
-    timing:
-      check_interval: 1h                          # nothing to do
-      retry_interval: 10m                         # the run failed
-      stall_interval: 6h                          # nothing could be validated at all — longer,
-                                                  #   because the cause is usually DNS somebody
-                                                  #   has to go and change
-      verify_settle: 10s                          # wait after a reload before asking what the
-                                                  #   services present
-      verify_attempts: 3
+    # timing:
+    #   check_interval: 1h                          # nothing to do
+    #   retry_interval: 10m                         # the run failed
+    #   stall_interval: 6h                          # nothing could be validated at all — longer,
+    #                                               #   because the cause is usually DNS somebody
+    #                                               #   has to go and change
+    #   verify_settle: 10s                          # wait after a reload before asking what the
+    #                                               #   services present
+    #   verify_attempts: 3
 
 ...
