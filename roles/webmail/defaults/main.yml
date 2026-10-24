@@ -1,6 +1,6 @@
 ---
 
-webmail_version: 1.1.0
+webmail_version: 1.2.0
 
 webmail_system_user:
   owner:  webmail
