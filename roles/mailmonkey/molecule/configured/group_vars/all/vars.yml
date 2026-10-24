@@ -1,0 +1,144 @@
+---
+
+mailmonkey_config:
+  log:
+    level: info          # debug | info | warn | error
+    format: text         # json | text  (json for journald, text to read)
+
+  # The parentheses in a DSN are go-sql-driver's grammar, not ours:
+  #   user:pass@tcp(host:port)/name
+  #   user:pass@unix(/run/mysqld/mysqld.sock)/name
+  db:
+    # dsn: mailmonkey:secret@unix(/run/mysqld/mysqld.sock)/mailmonkey
+    # dsn_file: /etc/mailmonkey/db-dsn
+    # socket: ""                                    # /run/mysqld/mysqld.sock
+    host: "10.29.1.10"                                      # 127.0.0.1     - (instead of socket)
+    port: "3306"                                      # 3306          - (with host; default 3306)
+    user: "mailmonkey"                                      # mailmonkey
+    password: "{{ vault__mariadb.mailmonkey }}"                                  # secr3t
+    password_file: /etc/mailmonkey/db-password
+    name: "mailmonkey"                                      # mailmonkey    - (default mailmonkey)
+
+  # ----------------------------------------------------------- the web service --
+  listen: "127.0.0.1:8080"                        # (default :8080)
+  metrics_listen: "127.0.0.1:9110"                              # (empty disables it)
+  base_url: https://mail.example.com
+  primary_domain: example.com                     # (optional)
+
+  # ------------------------------------------------------------- the mail host --
+  mail:
+    hostname: ""                                  # mx.example.com
+    ipv4: ""                                      # 127.0.0.1
+    ipv6: ""                                      # 2001:db8::25
+
+  # ---------------------------------------------------------------- MTA-STS -----
+  mta_sts:
+    mode: ""                                      # none | testing | enforce
+    max_age: ""                                   # 604800        -  seconds (default one week)
+
+  # ------------------------------------------------- password recovery mail -----
+  smtp:
+    addr: 127.0.0.1:25                            # (loopback only)
+    from: ""                                      # mailmonkey@mx.example.com - set this to switch recovery on
+
+  # -------------------------------------------------- zweiter Faktor (TOTP) -----
+  totp:
+    key: ""                                       # 0123456789abcdef...
+    key_file: ""                                  # /etc/mailmonkey/totp.key
+
+  # ---------------------------------------------------------------- Sessions -----
+  session:
+    idle_timeout: 30m
+    max_lifetime: 12h
+
+  # ------------------------------------------------------- Passwortrichtlinie -----
+  password:
+    min_length: 12
+    deny_common: true
+    deny_username: true
+    min_classes: 0                                # 0 bis 4
+    min_digits: 1
+    min_upper: 1
+    min_lower: 1
+    min_special: 1
+
+  # ------------------------------------------------------------------ redis -----
+  redis:
+    addr: "database:6379"                                      # /var/run/redis/redis.sock   - (Socket bevorzugt)
+    password: ""                                  # secret
+    password_file: ""                             # /etc/mailmonkey/redis-password
+    db: 0
+
+  # -------------------------------------------------------------- bootstrap -----
+  bootstrap:
+    admin: "admin@example.com"                                     # admin@example.com
+    password: "{{ vault__mailmonkey.bootstrap }}"  # secret
+    password_file: ""                             # /etc/mailmonkey/bootstrap-password
+
+mailmonkey_acme:
+  log:
+    level: info          # debug | info | warn | error
+    format: json         # json | text  (json for journald, text to read)
+
+  db:
+    # socket: ""                                    # /run/mysqld/mysqld.sock
+    host: "10.29.1.10"                              # 127.0.0.1     - (instead of socket)
+    port: "3306"                                    # 3306          - (with host; default 3306)
+    user: "mailmonkey"                              # mailmonkey_acme
+    password: "{{ vault__mariadb.mailmonkey }}"
+    password_file: /etc/mailmonkey/acme-db-password
+    name: "mailmonkey"                                      # mailmonkey    - (default mailmonkey)
+    # dsn: mailmonkey_acme:secret@unix(/run/mysqld/mysqld.sock)/mailmonkey   # instead of the parts
+    # dsn_file: /etc/mailmonkey/acme-db-dsn
+
+  mail:
+    hostname: "mx.example.com"                      # mx.example.com
+    ipv4: "127.0.0.1"                               # 127.0.0.1
+  #   ipv6: ""                                      # 2001:db8::25
+
+  # mta_sts:
+  #   mode: "none"                                  # none | testing | enforce
+  #   max_age: 604800
+
+  acme:
+    metrics_listen: "127.0.0.1:9111"
+    # cert_dir: ""                                  # /var/lib/mailmonkey/certs
+    # Where the generated placeholder pair lives; defaults to <cert_dir>/placeholder.
+    # fallback_dir: ""                              # /var/lib/mailmonkey/certs/placeholder
+    # staging: true
+    # directory_url: https://acme-v02.api.letsencrypt.org/directory
+    # contact: ""                                   # postmaster@example.com
+
+    webroot: "{{ nginx_acme.challenge_directory}}"  # /var/www/acme
+    resolver: "1.1.1.1:53"                          # 1.1.1.1:53
+    # reload_units: []                              # [postfix, dovecot]
+
+    # dns:
+    #   challenge: false
+    #   provider: ""                                # a lego provider name, e.g. cloudflare
+    #   # KEY=value lines, put into the process environment at start, because lego's
+    #   # providers read their credentials there. The one place this service takes
+    #   # anything from the environment; see documentation/deployment.md.
+    #   config: ""                                  # path to that provider's credentials
+
+    # certificate:
+    #   additional_san: []
+    #   only_hostname: false
+    #   autodiscover_san: true
+    #   sni: false
+    #   skip_ip_check: false
+    #   skip_http_verification: false
+    #   keep_backups: 10
+    #   renew_before: 720h
+
+    # timing:
+    #   check_interval: 1h                          # nothing to do
+    #   retry_interval: 10m                         # the run failed
+    #   stall_interval: 6h                          # nothing could be validated at all — longer,
+    #                                               #   because the cause is usually DNS somebody
+    #                                               #   has to go and change
+    #   verify_settle: 10s                          # wait after a reload before asking what the
+    #                                               #   services present
+    #   verify_attempts: 3
+
+...

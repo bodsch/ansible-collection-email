@@ -1,0 +1,29 @@
+---
+
+- name: start and enable mailmonkey service
+  when:
+    - not running_in_check_mode
+  ansible.builtin.service:
+    name: mailmonkey.service
+    state: "{{ mailmonkey_service.state | default('started') }}"
+    enabled: "{{ mailmonkey_service.enabled | default(true) | bool }}"
+  tags:
+    - configuration
+    - mailmonkey
+    - mailmonkey-start-enable-service
+
+- name: start and enable mailmonkey-acme service
+  when:
+    - not running_in_check_mode
+    - mailmonkey_acme_valid.valid
+  ansible.builtin.service:
+    name: mailmonkey-acme.service
+    state: "{{ mailmonkey_acme_service.state | default('started') }}"
+    enabled: "{{ mailmonkey_acme_service.enabled | default(true) | bool }}"
+  tags:
+    - configuration
+    - mailmonkey
+    - mailmonkey-acme
+    - mailmonkey-start-enable-service
+
+...

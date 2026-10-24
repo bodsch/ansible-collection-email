@@ -1,0 +1,115 @@
+---
+
+- name: merge mailmonkey configuration between defaults and custom
+  when:
+    - not running_in_check_mode
+  ansible.builtin.set_fact:
+    mailmonkey_config: "{{ mailmonkey_defaults_config | combine(mailmonkey_config, recursive=True) }}"
+    mailmonkey_acme: "{{ mailmonkey_defaults_acme | combine(mailmonkey_acme, recursive=True) }}"
+  no_log: true
+
+- name: create secrets
+  when:
+    - not running_in_check_mode
+  block:
+    - name: "mailmonkey: db password"
+      when:
+        - mailmonkey_config.db.password | default('') | string | length > 0
+        - mailmonkey_config.db.password_file | default('') | string | length > 0
+      ansible.builtin.copy:
+        dest: "{{ mailmonkey_config.db.password_file }}"
+        content: "{{ mailmonkey_config.db.password }}"
+        owner: "{{ mailmonkey_system_user.owner }}"
+        group: "{{ mailmonkey_system_user.group }}"
+        mode: "0600"
+      no_log: true
+
+    - name: "mailmonkey: totp key"
+      when:
+        - mailmonkey_config.totp.key | default('') | string | length > 0
+        - mailmonkey_config.totp.key_file | default('') | string | length > 0
+      ansible.builtin.copy:
+        dest: "{{ mailmonkey_config.totp.key_file }}"
+        content: "{{ mailmonkey_config.totp.key }}"
+        owner: "{{ mailmonkey_system_user.owner }}"
+        group: "{{ mailmonkey_system_user.group }}"
+        mode: "0600"
+      no_log: true
+
+    - name: "mailmonkey: redis password"
+      when:
+        - mailmonkey_config.redis.password | default('') | string | length > 0
+        - mailmonkey_config.redis.password_file | default('') | string | length > 0
+      ansible.builtin.copy:
+        dest: "{{ mailmonkey_config.redis.password_file }}"
+        content: "{{ mailmonkey_config.redis.password }}"
+        owner: "{{ mailmonkey_system_user.owner }}"
+        group: "{{ mailmonkey_system_user.group }}"
+        mode: "0600"
+      no_log: true
+
+    - name: "mailmonkey-acme: db password"
+      when:
+        - mailmonkey_acme.db.password | default('') | string | length > 0
+        - mailmonkey_acme.db.password_file | default('') | string | length > 0
+      ansible.builtin.copy:
+        dest: "{{ mailmonkey_acme.db.password_file }}"
+        content: "{{ mailmonkey_acme.db.password }}"
+        owner: "{{ mailmonkey_acme_system_user.owner }}"
+        group: "{{ mailmonkey_acme_system_user.group }}"
+        mode: "0600"
+      no_log: true
+
+- name: validate acme configuration
+  when:
+    - not running_in_check_mode
+  ansible.builtin.set_fact:
+    mailmonkey_acme_valid: "{{ mailmonkey_acme | bodsch.email.validate_acme_config() }}"
+
+- name: msg for invalid config
+  when:
+    - not running_in_check_mode
+    - not mailmonkey_acme_valid.valid
+  ansible.builtin.debug:
+    msg: "{{ mailmonkey_acme_valid.msg }}"
+
+- name: create acme.yaml
+  when:
+    - not running_in_check_mode
+  ansible.builtin.template:
+    src: etc/mailmonkey/acme.yaml.j2
+    dest: "{{ mailmonkey_config_dir }}/acme.yaml"
+    force: true
+    owner: "{{ mailmonkey_acme_system_user.owner }}"
+    group: "{{ mailmonkey_acme_system_user.group }}"
+    mode: "0640"
+    backup: true
+  register: _mailmonkey_acme_config
+  notify:
+    - restart mailmonkey_acme
+
+- name: create mailmonkey.yaml
+  when:
+    - not running_in_check_mode
+  ansible.builtin.template:
+    src: etc/mailmonkey/mailmonkey.yaml.j2
+    dest: "{{ mailmonkey_config_dir }}/mailmonkey.yaml"
+    force: true
+    owner: "{{ mailmonkey_system_user.owner }}"
+    group: "{{ mailmonkey_system_user.group }}"
+    mode: "0640"
+    backup: true
+  register: _mailmonkey_config
+  notify:
+    - restart mailmonkey
+
+- name: bootstrap mailmonkey
+  when:
+    - not running_in_check_mode
+    - mailmonkey_config.bootstrap is defined
+    - mailmonkey_config.bootstrap.admin | default('') | string | length > 0
+    - mailmonkey_config.bootstrap.password | default('') | string | length > 0
+  bodsch.email.mailmonkey_bootstrap:
+    config: "{{ mailmonkey_config_dir }}/mailmonkey.yaml"
+
+...

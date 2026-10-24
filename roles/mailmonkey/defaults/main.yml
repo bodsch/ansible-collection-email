@@ -1,0 +1,38 @@
+---
+
+mailmonkey_version: 1.2.0
+
+mailmonkey_system_user:
+  owner:  mailmonkey
+  group: mailmonkey
+
+mailmonkey_acme_system_user:
+  owner:  mailmonkey-acme
+  group: mailmonkey-acme
+
+mailmonkey_acme_additional_groups: []
+
+mailmonkey_service:
+  state: started
+  enabled: true
+
+mailmonkey_acme_service:
+  state: started
+  enabled: true
+
+mailmonkey_config_dir: /etc/mailmonkey
+
+mailmonkey_direct_download: false
+
+mailmonkey_release:
+  provider: forgejo
+  host: https://git.boone-schulz.de
+  project: go
+  repository: mailmonkey
+  file: "mailmonkey_{{ mailmonkey_version }}.tar.gz"
+  binary: "mailmonkey_-{{ ansible_facts.system | lower }}-{{ system_architecture }}"
+
+mailmonkey_config: {}
+mailmonkey_acme: {}
+
+...

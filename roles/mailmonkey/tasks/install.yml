@@ -1,0 +1,138 @@
+---
+
+- name: user and group handling
+  when:
+    - not running_in_check_mode
+    - mailmonkey_system_user.owner != "root" or
+      mailmonkey_acme_system_user.owner != "root"
+  block:
+    - name: create mailmonkey group
+      ansible.builtin.group:
+        name: "{{ mailmonkey_system_user.group }}"
+        state: present
+        system: true
+
+    - name: create mailmonkey user
+      ansible.builtin.user:
+        name: "{{ mailmonkey_system_user.owner }}"
+        groups: "{{ mailmonkey_system_user.group }}"
+        append: true
+        shell: /usr/sbin/nologin
+        system: true
+        createhome: false
+        home: /nonexistent
+
+    - name: create mailmonkey-acme group
+      ansible.builtin.group:
+        name: "{{ mailmonkey_acme_system_user.group }}"
+        state: present
+        system: true
+
+    - name: create mailmonkey user
+      ansible.builtin.user:
+        name: "{{ mailmonkey_acme_system_user.owner }}"
+        groups: "{{ mailmonkey_acme_system_user.group }}"
+        append: true
+        shell: /usr/sbin/nologin
+        system: true
+        createhome: false
+        home: /nonexistent
+
+    - name: add user {{ mailmonkey_acme_system_user.owner }} to additional groups
+      when:
+        - mailmonkey_acme_additional_groups | default([]) | count > 0
+      ansible.builtin.user:
+        name: "{{ mailmonkey_acme_system_user.owner }}"
+        groups: "{{ mailmonkey_acme_additional_groups | join(',') }}"
+        append: true
+        state: present
+
+- name: merge mailmonkey configuration between defaults and custom
+  ansible.builtin.set_fact:
+    mailmonkey_service: "{{ mailmonkey_defaults_service | combine(mailmonkey_service, recursive=True) }}"
+
+- name: create install directory
+  when:
+    - not running_in_check_mode
+  ansible.builtin.file:
+    path: "{{ mailmonkey_install_path }}"
+    state: directory
+    owner: "{{ mailmonkey_system_user.owner }}"
+    group: "{{ mailmonkey_system_user.group }}"
+    mode: "0755"
+
+- name: deploy and activate mailmonkey version {{ mailmonkey_version }}
+  when:
+    - not running_in_check_mode
+  bodsch.core.deploy_and_activate:
+    src_dir: "{{ mailmonkey_local_tmp_directory }}"
+    install_dir: "{{ mailmonkey_install_path }}"
+    link_dir: "/usr/bin"
+    remote_src: "{{ ('true' if mailmonkey_direct_download else 'false') | bool }}"
+    owner: "{{ mailmonkey_system_user.owner }}"
+    group: "{{ mailmonkey_system_user.group }}"
+    mode: "0755"
+    items:
+      - name: "mailmonkey"
+        src: "mailmonkey-{{ ansible_facts.system | lower }}-{{ system_architecture }}"
+        link_name: "mailmonkey"
+      - name: "mailmonkey-acme"
+        src: "mailmonkey-acme-{{ ansible_facts.system | lower }}-{{ system_architecture }}"
+        link_name: "mailmonkey-acme"
+  notify:
+    - restart mailmonkey
+
+- name: create mailmonkey configuration directory
+  when:
+    - not running_in_check_mode
+  ansible.builtin.file:
+    path: "{{ mailmonkey_config_dir }}"
+    state: directory
+    owner: root
+    group: "{{ mailmonkey_system_user.group }}"
+    mode: "0755"
+
+- name: systemd
+  when:
+    - not running_in_check_mode
+    - ansible_facts.service_mgr | lower == "systemd"
+  block:
+    # - name: create mailmonkey run configuration
+    #   ansible.builtin.template:
+    #     src: "default/mailmonkey.j2"
+    #     dest: "{{ mailmonkey_defaults_directory }}/mailmonkey"
+    #     force: true
+    #     owner: root
+    #     group: "{{ mailmonkey_system_group }}"
+    #     mode: "0640"
+    #   notify:
+    #     - simple restart mailmonkey
+
+    - name: create systemd service unit (mailmonkey)
+      ansible.builtin.template:
+        src: "etc/init/systemd/mailmonkey.service.j2"
+        dest: "{{ systemd_lib_directory }}/mailmonkey.service"
+        owner: root
+        group: root
+        mode: "0644"
+      notify:
+        - daemon-reload
+
+    - name: create systemd service unit (mailmonkey-acme)
+      ansible.builtin.template:
+        src: "etc/init/systemd/mailmonkey-acme.service.j2"
+        dest: "{{ systemd_lib_directory }}/mailmonkey-acme.service"
+        owner: root
+        group: root
+        mode: "0644"
+      notify:
+        - daemon-reload
+
+- name: create custom fact file
+  when:
+    - not running_in_check_mode
+  bodsch.core.facts:
+    name: mailmonkey
+    facts:
+      version: "{{ mailmonkey_version }}"
+...
