@@ -1,8 +1,5 @@
 ---
 
-mailmonkey_acme_groups:
-  - http
-
 mailmonkey_config:
   log:
     level: info          # debug | info | warn | error

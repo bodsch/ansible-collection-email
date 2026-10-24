@@ -72,11 +72,23 @@ def test_mailmonkey_user(host, get_vars):
     assert user_name in u.groups
     assert u.shell == shell
 
-def test_service_running_and_enabled(host, get_vars):
+
+def test_service_mailmonkey(host, get_vars):
     """
     running service
     """
     service_name = "mailmonkey"
+
+    service = host.service(service_name)
+    assert service.is_running
+    assert service.is_enabled
+
+
+def test_service_mailmonkey_acme(host, get_vars):
+    """
+    running service
+    """
+    service_name = "mailmonkey-acme"
 
     service = host.service(service_name)
     assert service.is_running
