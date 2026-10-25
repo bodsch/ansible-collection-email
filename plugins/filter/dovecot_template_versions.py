@@ -75,8 +75,7 @@ class FilterModule:
         resolves everything up to the last "/" as a literal directory, so a
         wildcard in the directory part - "2.*/conf.d/*.j2" - never matches.
         """
-        display.vv(
-            f"bodsch.email::dovecot_template_versions(data, {version})")
+        display.vv(f"bodsch.email::dovecot_template_versions(data, {version})")
 
         if not isinstance(data, list):
             raise AnsibleFilterError(

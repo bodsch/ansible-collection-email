@@ -133,7 +133,7 @@ USER_VARS_PATTERN = re.compile(
 # 2.4 has a setting per part, and the global ACL FILE is gone entirely.
 ACL_GLOBAL_PATH_HINT = [
     "# NOTE the global ACL file of the 2.3 acl setting has no 2.4 equivalent;",
-    "#   configure global rights in a \"mailbox <name> { acl <id> { } }\" block.",
+    '#   configure global rights in a "mailbox <name> { acl <id> { } }" block.',
 ]
 
 # 2.3 numbered its repeatable plugin settings: quota2, quota2_rule,

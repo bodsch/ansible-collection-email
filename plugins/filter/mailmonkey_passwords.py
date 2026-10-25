@@ -17,11 +17,8 @@ class FilterModule:
         }
 
     def mailmonkey_acme_passwords(self, data):
-        """
-        """
-        display.v(
-            f"bodsch.email::mailmonkey_acme_passwords('{data}')"
-        )
+        """ """
+        display.vv(f"bodsch.email::mailmonkey_acme_passwords(data: {data})")
 
         _db = data.get("db", None)
 
@@ -35,18 +32,13 @@ class FilterModule:
         elif _password and not _password_file:
             data["db"]["password_file"] = "/etc/mailmonkey/acme-db-password"
 
-        display.v(
-            f" = result '{data}'"
-        )
+        display.vv(f" = result '{data}'")
 
         return data
 
     def mailmonkey_config_passwords(self, data):
-        """
-        """
-        display.v(
-            f"bodsch.email::mailmonkey_config_passwords('{data}')"
-        )
+        """ """
+        display.vv(f"bodsch.email::mailmonkey_config_passwords('{data}')")
 
         _db = data.get("db", None)
 
@@ -56,7 +48,7 @@ class FilterModule:
 
             if _db_password and _db_password_file:
                 """
-                    db.password and db.password_file are both set; use one or the other
+                db.password and db.password_file are both set; use one or the other
                 """
                 _ = data["db"].pop("password")
             elif not _db_password and _db_password_file:
@@ -109,9 +101,7 @@ class FilterModule:
         #         _ = data["bootstrap"].pop("password")
         #         data["bootstrap"]["password_file"] = "/etc/mailmonkey/bootstrap-password"
 
-        display.v(
-            f" = result '{data}'"
-        )
+        display.vv(f" = result '{data}'")
 
         return data
 

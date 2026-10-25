@@ -2,6 +2,7 @@
 
 from ansible.errors import AnsibleFilterError
 from ansible.utils.display import Display
+from packaging.version import Version
 
 display = Display()
 
@@ -21,6 +22,7 @@ class FilterModule:
             "valid_list_data": self.valid_list_data,
             "sasl_data": self.sasl_data,
             "relay_data": self.relay_data,
+            "compatibility_level": self.compatibility_level,
         }
 
     @staticmethod
@@ -187,3 +189,25 @@ class FilterModule:
         result["msg"] = None
 
         return self._relay_host(result, mxlookup)
+
+    def compatibility_level(self, data):
+        """ """
+        display.vv(f"bodsch.email::compatibility_level(data: {data})")
+
+        result: str = ""
+        major: int = 0
+        minor: int | None = None
+
+        major = Version(data).major
+
+        if len(Version(data).release) >= 2:
+            minor = Version(data).minor
+
+        if not minor:
+            result = f"{major}"
+        else:
+            result = f"{major}.{minor}"
+
+        display.vv(f" = result '{result}'")
+
+        return result

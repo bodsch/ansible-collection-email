@@ -187,9 +187,7 @@ class FilterModule:
                     f"to start on a metric block without one."
                 )
 
-            unknown = sorted(
-                set(metric) - set(METRIC_SETTINGS) - set(NAME_KEYS)
-            )
+            unknown = sorted(set(metric) - set(METRIC_SETTINGS) - set(NAME_KEYS))
             if unknown:
                 raise AnsibleFilterError(
                     f"dovecot_metrics: metric {name!r} has unknown setting(s): "

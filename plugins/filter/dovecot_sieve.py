@@ -185,7 +185,9 @@ class FilterModule:
                 consumed.append("sieve_default_name")
 
             for option in unknown:
-                notes.append(f"# NOTE {key}: option '{option}' has no dovecot 2.4 counterpart")
+                notes.append(
+                    f"# NOTE {key}: option '{option}' has no dovecot 2.4 counterpart"
+                )
 
             scripts[name] = block
             consumed.append(key)
@@ -194,7 +196,10 @@ class FilterModule:
             consumed.append("sieve_dir")
             personal = scripts.get("personal")
             if personal is None:
-                scripts = {"personal": {"driver": "file", "path": settings["sieve_dir"]}, **scripts}
+                scripts = {
+                    "personal": {"driver": "file", "path": settings["sieve_dir"]},
+                    **scripts,
+                }
             elif "active_path" not in personal and personal.get("driver") == "file":
                 # "sieve" named the active script, sieve_dir the storage
                 personal["active_path"] = personal.get("path")

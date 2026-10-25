@@ -35,9 +35,7 @@ class FilterModule:
         somewhere else stays intact. Empty entries - a fileglob that matched
         nothing returns one - are dropped.
         """
-        display.vv(
-            f"bodsch.email::file_names('{data}')"
-        )
+        display.vv(f"bodsch.email::file_names('{data}')")
 
         if isinstance(data, str):
             data = data.split(",")
@@ -47,8 +45,4 @@ class FilterModule:
                 f"file_names expects a list, got {type(data).__name__}"
             )
 
-        return [
-            os.path.basename(entry).removesuffix(".j2")
-            for entry in data
-            if entry
-        ]
+        return [os.path.basename(entry).removesuffix(".j2") for entry in data if entry]

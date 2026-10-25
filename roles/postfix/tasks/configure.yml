@@ -87,7 +87,7 @@
     - postfix_compatibility_level | string | length > 0
     - postfix_compatibility_level == "auto"
   ansible.builtin.set_fact:
-    postfix_compatibility_level: "{{ _postfix_version.postconf_value[0:1] }}"
+    postfix_compatibility_level: "{{ _postfix_version.postconf_value | bodsch.email.compatibility_level() }}"
 
 - name: configure mailname
   when:
