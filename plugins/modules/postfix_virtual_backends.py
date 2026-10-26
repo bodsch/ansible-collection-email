@@ -18,9 +18,7 @@ from ansible_collections.bodsch.core.plugins.module_utils.module_results import 
 from ansible_collections.bodsch.core.plugins.module_utils.template.template import (
     TemplateHandler,
 )
-from ansible_collections.bodsch.email.plugins.module_utils.backup import (
-    create_backup,
-)
+from ansible_collections.bodsch.email.plugins.module_utils.backup import create_backup
 
 # ----------------------------------------------------------------------
 
@@ -116,13 +114,17 @@ class PostfixVirtualBackends:
         Initialize all needed Variables
         """
         self.module = module
-        self.module.log("PostfixVirtualBackends::__init__()")
+        # self.module.log("PostfixVirtualBackends::__init__()")
 
         self.dest = module.params.get("dest")
         self.backends = module.params.get("backends")
         self.force = module.params.get("force")
         self.cache_directory = "/var/cache/ansible/postfix"
         self.backup = module.params.get("backup")
+
+        self.tmp_directory = os.path.join(
+            "/run/.ansible", f"postfix_backends.{os.getpid()!s}"
+        )
 
     def run(self):
         """
@@ -136,13 +138,15 @@ class PostfixVirtualBackends:
         Returns a result mapping with failed, changed and the per file
         state.
         """
-        self.module.log("PostfixVirtualBackends::run()")
+        # self.module.log("PostfixVirtualBackends::run()")
 
         _changed = False
         _failed = True
         _msg = "module init"
 
         self.checksum = Checksum(self.module)
+        create_directory(directory=self.tmp_directory, mode="0750")
+
         self.template = TemplateHandler(self.module)
 
         result_state = []
@@ -154,6 +158,7 @@ class PostfixVirtualBackends:
         create_directory(self.cache_directory)
         checksum_file = os.path.join(self.cache_directory, "backends")
 
+        # checksum about given backends
         changed, checksum, old_checksum = self.checksum.validate(
             checksum_file=checksum_file, data=self.backends
         )
@@ -162,6 +167,8 @@ class PostfixVirtualBackends:
         # check written files!
         if not changed:
             """ """
+            shutil.rmtree(self.tmp_directory)
+
             return dict(
                 changed=False, msg="The backend configuration has not been changed."
             )
@@ -169,7 +176,7 @@ class PostfixVirtualBackends:
         for backend_type, backend_def in self.backends.items():
             res = {}
 
-            self.module.log(f"  - dest: {self.dest},  backend_type: {backend_type}, backend_def: {backend_def}")
+            # self.module.log(f"  - dest: {self.dest},  backend_type: {backend_type}, backend_def: {backend_def}")
 
             if not self.module.check_mode:
                 create_directory(os.path.join(self.dest, backend_type))
@@ -210,10 +217,13 @@ class PostfixVirtualBackends:
             self.module, result_state
         )
 
+        # write global checksum for all backend files
         if not _failed and not self.module.check_mode:
             self.checksum.write_checksum(checksum_file=checksum_file, checksum=checksum)
 
         result = dict(changed=_changed, failed=_failed, result=result_state)
+
+        shutil.rmtree(self.tmp_directory)
 
         return result
 
@@ -227,7 +237,7 @@ class PostfixVirtualBackends:
 
         Returns (valid, msg).
         """
-        self.module.log("PostfixVirtualBackends::_validate_backend(backend_data)")
+        # self.module.log("PostfixVirtualBackends::_validate_backend(backend_data)")
 
         valid = False
         msg = "not validated yet"
@@ -278,9 +288,19 @@ class PostfixVirtualBackends:
         and no handler fires. An existing file is backed up with a timestamp
         suffix when backup is on.
 
-        Returns (changed, failed, msg).
+        Returns (failed, changed, msg).
         """
-        self.module.log(f"PostfixVirtualBackends::_write_template(file_name: {file_name}, data)")
+        # self.module.log(f"PostfixVirtualBackends::_write_template(file_name: {file_name}, data)")
+
+        _msg_created = "The configuration file was written successfully."
+        _msg_changed = "The configuration file was successfully changed."
+        _msg_not_changed = "The configuration file has not been changed."
+        _msg_check_mode_not_changed = "CHECK MODE: " + _msg_not_changed
+        _msg_check_mode_changed = "CHECK MODE: " + _msg_changed
+
+        _return_failed = False
+        _return_changed = False
+        _return_msg = None
 
         if isinstance(data, dict):
             """
@@ -290,36 +310,48 @@ class PostfixVirtualBackends:
             if isinstance(data, str):
                 data = json.loads(data)
 
-        checksum_file = os.path.join(
-            self.cache_directory, f"{os.path.basename(file_name)}.checksum"
-        )
+        # ----------------------------------------------------------------------
 
-        changed, checksum, old_checksum = self.checksum.validate(
-            checksum_file=checksum_file, data=data
-        )
+        file_temporary = os.path.join(self.tmp_directory, os.path.basename(file_name))
 
-        if not changed:
-            return False, False, "The configuration file has not been changed."
+        # write temporary file
+        self.template.write_template(file_temporary, TPL_BACKEND, data)
+
+        # define checksums
+        old_checksum = self.checksum.checksum_from_file(file_name)
+        new_checksum = self.checksum.checksum_from_file(file_temporary)
+
+        changed = not (new_checksum == old_checksum)
+        new_file = None
+        _return_msg = _msg_not_changed
+
+        # self.module.log(f"   file_name {file_name}")
+        # self.module.log(f"   file_temporary {file_temporary}")
+        # self.module.log(f"   old_checksum {old_checksum}")
+        # self.module.log(f"   new_checksum {new_checksum}")
+        # self.module.log(f"   changed {changed}")
+
+        # if not changed:
+        # _return_msg = _msg_not_changed
 
         if self.module.check_mode:
-            # report the pending change, but write neither the file nor the
-            # checksum - otherwise the next real run would think it is done
-            return False, True, "The configuration file would be written."
+            if changed:
+                _return_msg = _msg_check_mode_changed
+            else:
+                _return_msg = _msg_check_mode_not_changed
 
-        create_backup(self.backup, file_name)
+        if changed and not self.module.check_mode:
+            _return_changed = True
+            create_backup(self.backup, file_name)
 
-        # if self.backup and os.path.exists(file_name):
-        #     _dir = os.path.dirname(file_name)
-        #     _file = os.path.basename(file_name)
-        #     _datetime = time.strftime("%Y%m%d-%H%M")
-        #     backup_file = os.path.join(_dir, f"{_file}-{_datetime}")
-        #     shutil.copy2(file_name, backup_file)
+            new_file = old_checksum is None
+            shutil.move(file_temporary, file_name)
+            _return_msg = _msg_changed
 
-        self.template.write_template(file_name, TPL_BACKEND, data)
+        if new_file:
+            _return_msg = _msg_created
 
-        self.checksum.write_checksum(checksum_file=checksum_file, checksum=checksum)
-
-        return False, True, "The configuration file was written successfully."
+        return (_return_failed, _return_changed, _return_msg)
 
 
 # ===========================================
@@ -338,11 +370,7 @@ def main():
             default=False,
         ),
         dest=dict(required=True, type="str"),
-        backup=dict(
-            required=False,
-            type="bool",
-            default=False
-        ),
+        backup=dict(required=False, type="bool", default=False),
     )
 
     module = AnsibleModule(

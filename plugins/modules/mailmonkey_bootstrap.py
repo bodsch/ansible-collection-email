@@ -136,9 +136,7 @@ def main():
     """
     spec = dict(
         config=dict(
-            required=False,
-            type="str",
-            default="/etc/mailmonkey/mailmonkey.yaml"
+            required=False, type="str", default="/etc/mailmonkey/mailmonkey.yaml"
         )
     )
 

@@ -944,13 +944,14 @@ dovecot_defaults_dict_server:
 ##
 ## The values here are the 2.3 spelling; vars/dovecot-2.4.yml carries the 2.4
 ## one, where "args" was replaced by per driver settings.
-dovecot_defaults_authentications:
-  system:
-    passdb:
-      driver: pam
-      args: dovecot
-    userdb:
-      driver: passwd
+dovecot_defaults_authentications: {}
+  # system:
+  #   passdb:
+  #     driver: pam
+  #     args: dovecot
+  #   userdb:
+  #     driver: passwd
+
   # sql:
   #   passdb:
   #     driver: sql

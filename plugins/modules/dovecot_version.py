@@ -87,11 +87,7 @@ class DovecotVersion:
         that value decides which configuration format is written.
         """
         dovecot_version = None
-        result = dict(
-            failed=True,
-            changed=False,
-            version = dovecot_version
-        )
+        result = dict(failed=True, changed=False, version=dovecot_version)
 
         args = []
         args.append(self.dovecot_bin)

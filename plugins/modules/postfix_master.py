@@ -5,10 +5,12 @@
 
 from __future__ import annotations
 
+import os
 import re
 from typing import Any
 
 from ansible.module_utils.basic import AnsibleModule
+from ansible_collections.bodsch.email.plugins.module_utils.backup import create_backup
 
 # ----------------------------------------------------------------------
 
@@ -317,7 +319,7 @@ class PostfixMaster:
         Initialize all needed Variables
         """
         self.module = module
-        self.module.log("PostfixMaster::__init__()")
+        # self.module.log("PostfixMaster::__init__()")
 
         self._postconf = module.get_bin_path("postconf", True)
         self.services = module.params.get("services") or []
@@ -328,7 +330,7 @@ class PostfixMaster:
         """
         runner
         """
-        self.module.log("PostfixMaster::run()")
+        # self.module.log("PostfixMaster::run()")
 
         error = self._validate()
         if error:
@@ -359,7 +361,7 @@ class PostfixMaster:
             elif current is not None:
                 # absent and disabled both drop the active line
                 res["changed"] = True
-                res["after"] = None if state == "absent" else f"#{current_line}"
+                res["after"] = None if state == "absent" else f"# {current_line}"
                 self._postconf_cmd(["-MX" if state == "absent" else "-#M", key])
 
             if res["changed"]:
@@ -387,7 +389,7 @@ class PostfixMaster:
         """
         Reject duplicate services and present services without a command.
         """
-        self.module.log("PostfixMaster::_validate()")
+        # self.module.log("PostfixMaster::_validate()")
 
         seen: set[str] = set()
         problems: list[str] = []
@@ -409,7 +411,7 @@ class PostfixMaster:
         """
         Return the active master.cf line of a service, or None.
         """
-        self.module.log(f"PostfixMaster::_current(key: {key})")
+        # self.module.log(f"PostfixMaster::_current(key: {key})")
 
         _rc, out, _err = self._exec(self._base_cmd() + ["-M", key])
         for line in out.splitlines():
@@ -423,10 +425,16 @@ class PostfixMaster:
         """
         Run a changing postconf call, unless in check mode.
         """
-        self.module.log(f"PostfixMaster::_postconf_cmd(args: {args})")
+        # self.module.log(f"PostfixMaster::_postconf_cmd(args: {args})")
 
         if self.module.check_mode:
             return
+
+        file_name = "/etc/postfix/master.cf"
+        if self.config_directory:
+            file_name = os.path.join(self.config_directory, "master.cf")
+
+        create_backup(self.backup, file_name)
 
         self._exec(self._base_cmd() + args)
 
@@ -485,11 +493,7 @@ def main() -> None:
                 args=dict(type="raw"),
             ),
         ),
-        backup=dict(
-            required=False,
-            type="bool",
-            default=False
-        ),
+        backup=dict(required=False, type="bool", default=False),
         config_directory=dict(required=False, type="path"),
     )
 

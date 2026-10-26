@@ -1,8 +1,11 @@
 ---
 
+postfix_compatibility_level: auto
+
 postfix_inet:
   interfaces:
-    - "{{ ansible_facts.default_ipv4.address }}"
+    - all
+    # - "{{ ansible_facts.default_ipv4.address }}"
 
 postfix_aliases:
   - root: you@yourdomain.org
@@ -59,7 +62,7 @@ postfix_smtpd:
     - inet:127.0.0.1:11332
 
 postfix_smtp:
-  use_tls: true
+  use_tls: false
   generic_maps_file: "lmdb:/etc/postfix/generic"
   header_checks_file: "lmdb:/etc/postfix/header_checks"
   sasl:
@@ -158,11 +161,6 @@ postfix_postscreen:
     - ix.dnsbl.manitu.net*2
     - bl.spamcop.net*2
     - bl.suomispam.net*2
-    # - hostkarma.junkemailfilter.com=127.0.0.2*3
-    # - hostkarma.junkemailfilter.com=127.0.0.4*2
-    # - hostkarma.junkemailfilter.com=127.0.1.2*1
-
-
 
 # postfix_proxy:
 #   read_maps:
@@ -196,11 +194,9 @@ postfix_mydestinations:
   - localdomain
   - localhost
   - localhost.localdomain
-  # - 192.168.11.10/32
 
 postfix_mynetworks:
   - 127.0.0.0/8
-  # - 192.168.11.10/32
 
 # # postfix_raw_options:
 # #   - |
@@ -213,8 +209,27 @@ postfix_mynetworks:
 postfix_handle_mastercf: true
 
 postfix_master:
+  # local smtp on port 26
+  - name: 127.0.0.1:26
+    type: inet
+    # enabled: false
+    private: false
+    chroot: false
+    command: smtpd
+    options:
+      syslog_name: postfix/local26
+      smtpd_tls_security_level: none
+      smtpd_tls_auth_only: false
+      smtpd_sasl_auth_enable: true
+      smtpd_client_restrictions:
+        - permit_sasl_authenticated
+        - reject
+      smtpd_receipient_restrictions:
+        - permit_sasl_authenticated
+        - reject
 
   - name: submission
+    state: disabled
     type: inet
     # enabled: false
     private: false
@@ -228,21 +243,31 @@ postfix_master:
       smtpd_relay_restrictions:
         - permit_sasl_authenticated
         - reject
+
+  - name: dnsblog
+    type: unix
+    # private: false
+    chroot: true
+    maxproc: 0
+    command: dnsblog
+
+  - name: smtp
+    type: inet
+    private: false
+    chroot: false
+    command: postscreen
+
   - name: smtps
     type: inet
     private: false
     chroot: false
     command: postscreen
-  - name: smtp
-    type: inet
-    state: disabled
 
-      # smtpd_reject_unlisted_recipient: no
-      # smtpd_client_restrictions: "$mua_client_restrictions"
-      # smtpd_helo_restrictions: "$mua_helo_restrictions"
-      # smtpd_sender_restrictions: "$mua_sender_restrictions"
-      # smtpd_recipient_restrictions: ""
-      # smtpd_relay_restrictions: permit_sasl_authenticated,reject
-      # milter_macro_daemon_name: ORIGINATING
+  - name: dovecot
+    type: unix
+    unpriv: false
+    chroot: false
+    command: pipe
+    args: "flags=DRhu user=vmail:vmail argv=/usr/lib/dovecot/deliver -f ${sender} -d ${recipient}"
 
 ...

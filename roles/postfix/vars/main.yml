@@ -7,7 +7,7 @@ postfix_packages: []
 # default values
 postfix_config_directory: /etc/postfix
 postfix_maps_directory: "{{ postfix_config_directory }}/maps.d"
-postfix_virtual_directory: "{{ postfix_config_directory }}/virtual"
+postfix_virtual_directory: "{{ postfix_config_directory }}/virtual.d"
 postfix_dynamicmaps_directory: "{{ postfix_config_directory }}/dynamicmaps.cf.d"
 
 postfix_cf: "{{ postfix_config_directory }}/main.cf"

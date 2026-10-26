@@ -29,30 +29,6 @@
     # postfix_master: "{{ postfix_defaults_master | combine(postfix_master, recursive=True) }}"
   no_log: true
 
-- name: handle virtual configs
-  when:
-    - not running_in_check_mode
-    - ansible_facts.distribution | lower in ["archlinux", "artix linux"]
-  block:
-
-    - name: detect virtual file
-      ansible.builtin.stat:
-        path: "{{ postfix_virtual_directory }}"
-        get_checksum: false
-      register: stat_postfix_virtual
-      ignore_errors: true
-      no_log: true
-
-    - name: remove virtual file
-      ansible.builtin.file:
-        state: absent
-        path: "{{ postfix_virtual_directory }}"
-      when:
-        - stat_postfix_virtual is defined
-        - stat_postfix_virtual.stat is defined
-        - stat_postfix_virtual.stat.isdir is defined
-        - not stat_postfix_virtual.stat.isdir
-
 - name: create postfix directories
   when:
     - not running_in_check_mode
@@ -75,10 +51,6 @@
     - not running_in_check_mode
   ansible.builtin.set_fact:
     postfix_version: "{{ _postfix_version.postconf_value }}"
-
-# - name: postconf 'mail_version'
-#   ansible.builtin.debug:
-#     msg: "{{ postfix_version }}"
 
 - name: define postfix_compatibility_level
   when:
@@ -175,21 +147,6 @@
     - postfix
     - postfix-aliases
 
-# - name: check if aliases.db exists
-#   ansible.builtin.stat:
-#     path: "{{ postfix_aliases_file }}.db"
-#   register: _aliasesdb
-#   changed_when: not _aliasesdb.stat.exists
-#   when:
-#     - postfix_default.database_type == 'lmdb'
-#   notify:
-#     - new aliases
-#     - restart postfix
-#   tags:
-#     - configuration
-#     - postfix
-#     - postfix-aliases
-
 - name: create postfix maps
   when:
     - not running_in_check_mode
@@ -281,22 +238,13 @@
     - postfix
     - postfix-configuration
 
-- name: d
-  debug:
-    var: postfix_master
-
 - name: update master configuration file
   when:
     - not running_in_check_mode
     - postfix_handle_mastercf
   bodsch.email.postfix_master:
     services: "{{ postfix_master }}"
-    # src: etc/postfix/master.cf.j2
-    # dest: "{{ postfix_config_directory }}/master.cf"
-    # owner: root
-    # group: root
-    # mode: "0644"
-    # backup: true
+    backup: true
   notify:
     - validate config
     - restart postfix
@@ -304,25 +252,6 @@
     - configuration
     - postfix
     - postfix-configuration
-
-# - name: update master configuration file
-#   when:
-#     - not running_in_check_mode
-#     - postfix_handle_mastercf
-#   ansible.builtin.template:
-#     src: etc/postfix/master.cf.j2
-#     dest: "{{ postfix_config_directory }}/master.cf"
-#     owner: root
-#     group: root
-#     mode: "0644"
-#     backup: true
-#   notify:
-#     - validate config
-#     - restart postfix
-#   tags:
-#     - configuration
-#     - postfix
-#     - postfix-configuration
 
 - name: flush handlers at this point to avoid double restart
   when:

@@ -482,8 +482,8 @@ smtp_starttls_timeout                     = {{ values.starttls_timeout }}
         values.tcp_port | string | length > 0 %}
 smtp_tcp_port                             = {{ values.tcp_port }}
   {% endif %}
-  {% if values.use_tls is defined and
-        values.use_tls | bool %}
+  {% if (values.use_tls is defined and values.use_tls | bool) or
+        (values.tls.security_level is defined and values.tls.security_level | string | length > 0 and values.tls.security_level != "none") %}
     {% if values.tls.ca_file is defined and
           values.tls.ca_file | string | length > 0 %}
 smtp_tls_CAfile                           = {{ values.tls.ca_file }}
@@ -648,7 +648,9 @@ smtp_tls_secure_cert_match                = {{ values.tls.secure_cert_match }}
       {% endif %}
     {% endif %}
     {% if values.tls.security_level is defined and
-          values.tls.security_level | string | length > 0 %}
+          values.tls.security_level | string | length > 0 and
+          values.tls.security_level in ["none", "may", "encrypt", "dane", "dane-only", "fingerprint", "verify", "secure"] %}
+{# https://www.postfix.org/postconf.5.html#smtp_tls_security_level #}
 smtp_tls_security_level                   = {{ values.tls.security_level }}
     {% endif %}
     {% if values.tls.servername is defined and
@@ -684,6 +686,9 @@ smtp_transport_rate_delay                 = {{ values.transport_rate_delay }}
   {% endif %}
   {% if values.use_tls is defined and
         values.use_tls | string | length > 0 %}
+    {% if postfix_version is version_compare('3.11',  '>=') %}
+# OBSOLETE: support for parameter "smtp_use_tls" will be removed; instead, specify "smtp_tls_security_level"
+    {% endif %}
 smtp_use_tls                              = {{ values.use_tls | bool | bodsch.core.config_bool(true_as='yes', false_as='no') }}
   {% endif %}
   {% if values.xforward_timeout is defined and

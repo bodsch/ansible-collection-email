@@ -108,7 +108,7 @@ class PostfixMaps:
         Initialize all needed Variables
         """
         self.module = module
-        self.module.log("PostfixMaps::__init__()")
+        # # self.module.log("PostfixMaps::__init__()")
 
         self._postmap = module.get_bin_path("postmap", True)
         self.maps = module.params.get("maps")
@@ -119,7 +119,7 @@ class PostfixMaps:
         """
         runner
         """
-        self.module.log("PostfixMaps::run()")
+        # self.module.log("PostfixMaps::run()")
 
         _changed = False
         _failed = True
@@ -195,7 +195,7 @@ class PostfixMaps:
 
         Returns (valid, msg).
         """
-        self.module.log("PostfixMaps::_validate_map(map_data)")
+        # self.module.log("PostfixMaps::_validate_map(map_data)")
 
         valid = False
         msg = "not validated yet"
@@ -256,7 +256,7 @@ class PostfixMaps:
 
         Returns (changed, failed, msg).
         """
-        self.module.log(f"PostfixMaps::_write_template(file_name: {file_name}, data)")
+        # self.module.log(f"PostfixMaps::_write_template(file_name: {file_name}, data)")
 
         if isinstance(data, dict):
             """
@@ -309,7 +309,7 @@ class PostfixMaps:
             {'ann-katrin@yourdomain.com': 'ann@gmail.com, bob@gmail.com, katrin@gmail.com'}
         }
         """
-        self.module.log("PostfixMaps::map_data(data)")
+        # self.module.log("PostfixMaps::map_data(data)")
 
         key = None
         values = None
@@ -359,11 +359,7 @@ def main():
             required=True,
             type="list",
         ),
-        backup=dict(
-            required=False,
-            type="bool",
-            default=False
-        )
+        backup=dict(required=False, type="bool", default=False),
     )
 
     module = AnsibleModule(
