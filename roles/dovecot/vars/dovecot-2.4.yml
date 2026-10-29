@@ -24,7 +24,7 @@ _dovecot_version_defaults:
     # role (dovecot-imapd, -pop3d, -lmtpd, -submissiond).
     protocols:
       - imap
-      - pop3
+      # - pop3
       - lmtp
       - submission
 

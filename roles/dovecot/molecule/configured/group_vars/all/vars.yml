@@ -70,6 +70,31 @@ dovecot_master:
           #     mode: "0660"
           #     user: vmail
           #     group: vmail
+    - imap:
+        client_limit: 1
+        process_limit: 1024
+        service_count: 1
+        process_min_avail: 4
+        vsz_limit: 256M
+
+    # configure imap-login
+    - imap-login:
+        service_count: 1
+        process_min_avail: 1
+        process_limit: 100
+        # client_limit: 1000
+        vsz_limit: 64M
+        listeners:
+          - imap:
+              type: inet
+              port: 143
+          # - imaps:
+          #     type: inet
+          #     port: 993
+          #     ssl: true
+
+    # disable pop3-login
+    - pop3-login: {}
 
 dovecot_tcpwrapper:
   login_access_sockets: tcpwrap
