@@ -157,6 +157,12 @@ redis:
   {% endif %}
 {% endif %}
 
+# ------------------------------------------------------------------ rspamd ----
+{% if values.rspamd.controller | default('') | string | length > 0 %}
+rspamd:
+  controller: {{ values.rspamd.controller }}
+{% endif %}
+
 # -------------------------------------------------------------- bootstrap -----
 {% if values.bootstrap.admin | default('') | string | length > 0 and
       values.bootstrap.password | default('') | string | length > 0 %}

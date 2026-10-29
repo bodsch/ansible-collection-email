@@ -86,6 +86,10 @@ mailmonkey_defaults_config:
     password_file: ""                             # /etc/mailmonkey/redis-password
     db: 0
 
+  # ------------------------------------------------------------------ rspamd ----
+  rspamd:
+    controller: ""                                # http://127.0.0.1:11334
+
   # -------------------------------------------------------------- bootstrap -----
   bootstrap:
     admin: ""                                     # admin@example.com
