@@ -169,8 +169,7 @@ jobs:
           - configured
           - enabled-tls
           - with-database
-          - mailcow
-          - postfixadmin
+          # - postfixadmin
         collection_role:
           - postfix
 

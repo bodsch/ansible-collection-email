@@ -17,7 +17,7 @@ def test_directories(host, get_vars):
         "/etc/postfix/maps.d",
         "/etc/postfix/postfix-files.d",
         "/etc/postfix/dynamicmaps.cf.d",
-        "/etc/postfix/virtual",
+        "/etc/postfix/virtual.d",
     ]
     directories.append(get_vars.get("postfix_config_directory"))
 
@@ -40,10 +40,10 @@ def test_files(host, get_vars):
         "/etc/postfix/maps.d/transport_maps",
         "/etc/postfix/maps.d/virtual",
         "/etc/postfix/master.cf",
-        "/etc/postfix/virtual/mysql/alias_maps.cf",
-        "/etc/postfix/virtual/mysql/domains_maps.cf",
-        "/etc/postfix/virtual/mysql/login_maps.cf",
-        "/etc/postfix/virtual/mysql/mailbox_maps.cf",
+        "/etc/postfix/virtual.d/mysql/alias_maps.cf",
+        "/etc/postfix/virtual.d/mysql/domains_maps.cf",
+        "/etc/postfix/virtual.d/mysql/login_maps.cf",
+        "/etc/postfix/virtual.d/mysql/mailbox_maps.cf",
     ]
 
     files.append(get_vars.get("postfix_mailname_file"))
