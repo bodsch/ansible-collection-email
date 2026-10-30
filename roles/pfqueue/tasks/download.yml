@@ -1,0 +1,145 @@
+---
+
+- name: define download information
+  ansible.builtin.set_fact:
+    pfqueue_release: "{{ pfqueue_defaults_release | combine(pfqueue_release, recursive=True) }}"
+
+- name: resolve pfqueue release
+  when:
+    - not running_in_check_mode
+  delegate_to: localhost
+  become: false
+  run_once: true
+  bodsch.scm.scm_release:
+    provider: "{{ pfqueue_release.provider }}"
+    host: "{{ pfqueue_release.host }}"
+    project: "{{ pfqueue_release.project }}"
+    repository: "{{ pfqueue_release.repository }}"
+    # asset: "pfqueue-{version}.tar.gz"
+    architecture: "{{ ansible_facts.architecture }}"
+    system: "{{ ansible_facts.system }}"
+    version: "{{ pfqueue_version }}"
+    password: "{{ _pfqueue_scm_token | default(omit, true) }}"
+  register: _release
+
+- name: re-define pfqueue_version
+  when:
+    - not running_in_check_mode
+    - pfqueue_version == "latest"
+    - _release.version is defined
+    - _release.version | length > 0
+  ansible.builtin.set_fact:
+    pfqueue_version: "{{ _release.version }}"
+
+- name: detect the downloaded pfqueue archive
+  when:
+    - not running_in_check_mode
+  become: false
+  delegate_to: "{{ pfqueue_delegate_to }}"
+  run_once: "{{ 'false' if pfqueue_direct_download else 'true' }}"
+  ansible.builtin.stat:
+    path: "{{ pfqueue_local_tmp_directory }}/{{ pfqueue_release.file }}"
+  register: pfqueue_stat_archive
+
+- name: define delegate instance for download handling
+  when:
+    - not running_in_check_mode
+    - pfqueue_direct_download
+  ansible.builtin.set_fact:
+    pfqueue_delegate_to: "{{ ansible_facts.host }}"
+    pfqueue_local_tmp_directory: "{{
+      lookup('env', 'CUSTOM_LOCAL_TMP_DIRECTORY') |
+      default('/var/cache/ansible/pfqueue', true) }}/{{ pfqueue_version }}"
+
+- name: create download directory
+  when:
+    - not running_in_check_mode
+  become: false
+  delegate_to: "{{ pfqueue_delegate_to }}"
+  run_once: "{{ 'false' if pfqueue_direct_download else 'true' }}"
+  ansible.builtin.file:
+    path: "{{ pfqueue_local_tmp_directory }}"
+    state: directory
+    mode: "0750"
+  check_mode: false
+
+- name: detect the downloaded pfqueue archive
+  when:
+    - not running_in_check_mode
+  become: false
+  delegate_to: "{{ pfqueue_delegate_to }}"
+  run_once: "{{ 'false' if pfqueue_direct_download else 'true' }}"
+  ansible.builtin.stat:
+    path: "{{ pfqueue_local_tmp_directory }}/{{ _release.file }}"
+  register: stat_pfqueue_archive
+
+- name: download
+  when:
+    - not running_in_check_mode
+    - pfqueue_stat_archive.stat is defined
+    - not pfqueue_stat_archive.stat.exists | default('false')
+  block:
+
+    - name: download pfqueue binary archive
+      become: false
+      delegate_to: "{{ pfqueue_delegate_to }}"
+      run_once: "{{ 'false' if pfqueue_direct_download else 'true' }}"
+      ansible.builtin.get_url:
+        url: "{{ _release.download_url }}"
+        username: "{{ _pfqueue_scm_user | default(omit, true) }}"
+        password: "{{ _pfqueue_scm_token | default(omit, true) }}"
+        dest: "{{ pfqueue_local_tmp_directory }}/{{ _release.file }}"
+        checksum: "{{ _release.checksum_string | default(omit) }}"
+        mode: "0640"
+      register: _download_archive
+      until: _download_archive is succeeded
+      retries: 5
+      delay: 2
+      check_mode: false
+
+  rescue:
+    - name: delete download directory
+      become: false
+      delegate_to: "{{ pfqueue_delegate_to }}"
+      run_once: "{{ 'false' if pfqueue_direct_download else 'true' }}"
+      ansible.builtin.file:
+        path: "{{ pfqueue_local_tmp_directory }}"
+        state: absent
+
+    - name: exit with fail
+      ansible.builtin.fail:
+        msg: A serious error occurred when downloading the archive.
+
+- name: detect downloaded file
+  become: false
+  delegate_to: "{{ pfqueue_delegate_to }}"
+  run_once: "{{ 'false' if pfqueue_direct_download else 'true' }}"
+  ansible.builtin.stat:
+    path: "{{ pfqueue_local_tmp_directory }}/{{ _release.file }}"
+  register: pfqueue_stat_archive
+
+- name: detect extracted binary
+  become: false
+  delegate_to: "{{ pfqueue_delegate_to }}"
+  run_once: "{{ 'false' if pfqueue_direct_download else 'true' }}"
+  ansible.builtin.stat:
+    path: "{{ pfqueue_local_tmp_directory }}/{{ pfqueue_release.binary }}"
+  register: pfqueue_stat_binary
+
+- name: extract pfqueue archive
+  when:
+    - not running_in_check_mode
+    - pfqueue_stat_archive.stat is defined
+    - pfqueue_stat_archive.stat.exists | default('false') | bool
+    - pfqueue_stat_archive.stat.mimetype in ["application/zip","application/gzip"]
+    - pfqueue_stat_binary.stat is defined
+    - not pfqueue_stat_binary.stat.exists | default('false') | bool
+  become: false
+  delegate_to: "{{ pfqueue_delegate_to }}"
+  run_once: "{{ 'false' if pfqueue_direct_download else 'true' }}"
+  ansible.builtin.unarchive:
+    src: "{{ pfqueue_local_tmp_directory }}/{{ _release.file }}"
+    dest: "{{ pfqueue_local_tmp_directory }}/"
+    remote_src: "{{ 'true' if pfqueue_direct_download else 'false' }}"
+    extra_opts:
+      - --strip-components=1

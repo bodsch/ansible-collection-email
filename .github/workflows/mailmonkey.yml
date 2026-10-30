@@ -38,6 +38,10 @@ on:
       - 'roles/mailmonkey/**'
       - '.github/workflows/mailmonkey.yml'
 
+concurrency:
+  group: mailmonkey-ci-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 env:
   COLLECTION_NAMESPACE: bodsch
   COLLECTION_NAME: email

@@ -10,13 +10,17 @@ Documentation for the collection.
 | [bodsch.email.dovecot](./roles/dovecot/README.md)          | [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/bodsch/ansible-collection-email/dovecot.yml?branch=main)][dovecot]        | This role will fully configure and install *dovecot*. |
 | [bodsch.email.mailcow](./roles/mailcow/README.md)          | [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/bodsch/ansible-collection-email/mailcow.yml?branch=main)][mailcow]        | This role will fully configure and install *mailcow*. |
 | [bodsch.email.rspamd](./roles/rspamd/README.md)            | [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/bodsch/ansible-collection-email/rspamd.yml?branch=main)][rspamd]          | This role will fully configure and install *rspamd*. |
-| [bodsch.email.webmail](./roles/webmail/README.md)            | [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/bodsch/ansible-collection-email/webmail.yml?branch=main)][webmail]          | This role will fully configure and install *webmail*. |
+| [bodsch.email.mailmonkey](./roles/mailmonkey/README.md)    | [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/bodsch/ansible-collection-email/mailmonkey.yml?branch=main)][mailmonkey]  | This role will fully configure and install *mailmonkey*. |
+| [bodsch.email.webmail](./roles/webmail/README.md)          | [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/bodsch/ansible-collection-email/webmail.yml?branch=main)][webmail]        | This role will fully configure and install *webmail*. |
+| [bodsch.email.pfqueue](./roles/pfqueue/README.md)          | [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/bodsch/ansible-collection-email/pfqueue.yml?branch=main)][pfqueue]        | This role will fully configure and install *pfqueue*. |
 
 [postfix]: https://github.com/bodsch/ansible-collection-email/actions/workflows/postfix.yml
 [dovecot]: https://github.com/bodsch/ansible-collection-email/actions/workflows/dovecot.yml
 [mailcow]: https://github.com/bodsch/ansible-collection-email/actions/workflows/mailcow.yml
 [rspamd]: https://github.com/bodsch/ansible-collection-email/actions/workflows/rspamd.yml
+[mailmonkey]: https://github.com/bodsch/ansible-collection-email/actions/workflows/mailmonkey.yml
 [webmail]: https://github.com/bodsch/ansible-collection-email/actions/workflows/webmail.yml
+[pfqueue]: https://github.com/bodsch/ansible-collection-email/actions/workflows/pfqueue.yml
 
 ## Modules
 

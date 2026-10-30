@@ -1,0 +1,15 @@
+---
+
+pfqueue_version: 1.0.0-rc
+
+pfqueue_direct_download: false
+
+pfqueue_release:
+  provider: github
+  host: https://github.com
+  project: bodsch
+  repository: pfqueue
+  file: pfqueue-{{ pfqueue_version }}-{{ ansible_facts.system | lower }}-{{ system_architecture }}.tar.gz
+  binary: pfqueue
+
+...

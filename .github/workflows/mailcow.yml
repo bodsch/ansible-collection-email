@@ -38,6 +38,10 @@ on:
       - 'roles/mailcow/**'
       - '.github/workflows/mailcow.yml'
 
+concurrency:
+  group: mailcow-ci-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 env:
   COLLECTION_NAMESPACE: bodsch
   COLLECTION_NAME: email

@@ -1,0 +1,30 @@
+---
+
+- name: create install directory
+  when:
+    - not running_in_check_mode
+  ansible.builtin.file:
+    path: "{{ pfqueue_install_path }}"
+    state: directory
+    mode: "0755"
+
+- name: deploy and activate pfqueue version {{ pfqueue_version }}
+  when:
+    - not running_in_check_mode
+  bodsch.core.deploy_and_activate:
+    src_dir: "{{ pfqueue_local_tmp_directory }}"
+    install_dir: "{{ pfqueue_install_path }}"
+    link_dir: "/usr/bin"
+    remote_src: "{{ ('true' if pfqueue_direct_download else 'false') | bool }}"
+    mode: "0755"
+    items:
+      - name: "pfqueue"
+
+- name: create custom fact file
+  when:
+    - not running_in_check_mode
+  bodsch.core.facts:
+    name: pfqueue
+    facts:
+      version: "{{ pfqueue_version }}"
+...

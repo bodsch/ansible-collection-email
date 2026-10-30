@@ -6,9 +6,8 @@ galaxy_info:
   author: Bodo Schulz
   description: installs and configure rspamd
 
-  license: BSD
-
-  min_ansible_version: 2.9
+  license: Apache
+  min_ansible_version: "2.9"
 
   platforms:
     - name: ArchLinux
