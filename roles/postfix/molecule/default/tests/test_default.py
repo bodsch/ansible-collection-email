@@ -102,7 +102,7 @@ def test_listening_socket(host, get_vars):
     distribution = host.system_info.distribution
     release = host.system_info.release
 
-    bind_address = "0.0.0.0" # eth[0]
+    bind_address = "127.0.0.1" # eth[0]
     bind_port = 25
     socket_name = "private/smtp"
 

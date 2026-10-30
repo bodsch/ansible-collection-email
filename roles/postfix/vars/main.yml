@@ -111,6 +111,7 @@ postfix_defaults_maillog:
   file_prefixes:
     - /var
     - /dev/stdout
+  file_permissions: "0644"
   file_rotate_suffix: "%Y%m%d-%H%M%S"
 
 postfix_defaults_message:
