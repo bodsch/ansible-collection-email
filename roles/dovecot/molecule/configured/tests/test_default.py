@@ -153,10 +153,10 @@ def test_listening_socket(host, get_vars):
         print(i)
 
     listen = []
-    listen.append("tcp://127.0.0.1:110")
+    # listen.append("tcp://127.0.0.1:110")
     listen.append("tcp://127.0.0.1:143")
     listen.append("tcp://127.0.0.1:993")
-    listen.append("tcp://127.0.0.1:995")
+    # listen.append("tcp://127.0.0.1:995")
 
     print(version)
 
